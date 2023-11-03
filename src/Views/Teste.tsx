@@ -13,22 +13,22 @@ export default function Teste() {
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<Data>({})
 
-  useEffect(() => {
-    setIsLoading(true)
-    const getData = async () => {
-      try {
-        const docRef = doc(db, "Establishment", "C1sOox4WzFxuDJ1fkxK5");
-        const docSnap = await getDoc(docRef)
-        if(docSnap.exists()){
-          setData(docSnap.data())
-          console.log(docSnap.data())
-        }
-      } catch (error) {
-        console.log(error)
-      }finally{setIsLoading(false)}
-    }
-    getData()
-  }, [])
+  // useEffect(() => {
+  //   setIsLoading(true)
+  //   const getData = async () => {
+  //     try {
+  //       const docRef = doc(db, "Establishment", "C1sOox4WzFxuDJ1fkxK5");
+  //       const docSnap = await getDoc(docRef)
+  //       if(docSnap.exists()){
+  //         setData(docSnap.data())
+  //         console.log(docSnap.data())
+  //       }
+  //     } catch (error) {
+  //       console.log(error)
+  //     }finally{setIsLoading(false)}
+  //   }
+  //   getData()
+  // }, [])
 
 
   return (
