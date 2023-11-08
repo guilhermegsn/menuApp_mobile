@@ -6,13 +6,19 @@ import { ActivityIndicator } from "react-native-paper";
 
 interface UserContextType {
   globalState: string;
-  setGlobalState: (value: string) => void;
- 
-  user: FirebaseAuthTypes.User | null;
-  setUser: (value: FirebaseAuthTypes.User) => void;
-  
+  setGlobalState: (value: string) => void
+
+  user: FirebaseAuthTypes.User | null
+  setUser: (value: FirebaseAuthTypes.User | null) => void
+
   isAuthenticated: Boolean
-  setIsAuthenticated: (value: Boolean) => void;
+  setIsAuthenticated: (value: Boolean) => void
+
+  estabName: string;
+  setEstabName: (value: string) => void
+
+  estabId: string;
+  setEstabId: (value: string) => void
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -23,20 +29,22 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<Boolean>(false)
+  const [estabName, setEstabName] = useState("")
+  const [estabId, setEstabId] = useState("")
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(_user => {
       if (initializing) {
         setInitializing(false);
       }
-      if(_user){
+      if (_user) {
         setUser(_user);
         setIsAuthenticated(true)
-      }else{
+      } else {
         setIsAuthenticated(false)
         setUser(null)
       }
-      
+
     });
     return unsubscribe;
   }, [initializing]);
@@ -51,7 +59,14 @@ function UserProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <UserContext.Provider value={{ globalState, setGlobalState, user, setUser, isAuthenticated, setIsAuthenticated}}>
+    <UserContext.Provider value={{
+      globalState, setGlobalState,
+      user, setUser, 
+      isAuthenticated,
+      setIsAuthenticated,
+      estabName, setEstabName,
+      estabId, setEstabId
+    }}>
       {children}
     </UserContext.Provider>
   );
