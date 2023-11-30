@@ -6,12 +6,19 @@ import { UserContext } from '../context/UserContext';
 import Home from '../Views/Home';
 import Login from '../Views/Login';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
-import Orders from '../Views/Orders';
+import PrintTest from '../Views/PrintTest';
 import ProductMenu from '../Views/ProductMenu';
+import { createStackNavigator } from '@react-navigation/stack';
+import ProductList from '../Views/ProductList';
+import { theme } from '../Services/ThemeConfig';
+import { CardStyleInterpolators } from '@react-navigation/stack';
+import Orders from '../Views/Orders';
+import Tables from '../Views/Tables';
 
 export default function AppBar() {
 
   const Drawer = createDrawerNavigator();
+  const Stack = createStackNavigator();
   const [name, setName] = useState("Smart Menu")
   const userContext = useContext(UserContext);
 
@@ -19,21 +26,18 @@ export default function AppBar() {
     console.log('hello App')
     console.log(userContext?.globalState)
     console.log('isAuthenticated: ' + userContext?.isAuthenticated)
-    if(userContext?.estabName){
+    if (userContext?.estabName) {
       setName(userContext.estabName)
     }
   }, [userContext])
 
-  return (
-    <NavigationContainer>
-       <StatusBar
-        backgroundColor="#6a51ae"
-        barStyle="light-content" // Define a cor do texto da barra de status (pode ser 'dark-content' ou 'light-content')
-      />
+  const DrawerNavigator = () => {
+    return (
       <Drawer.Navigator
         screenOptions={{
           drawerStyle: { marginTop: '14.5%' },
           overlayColor: 'transparent',
+          headerTintColor: theme.colors.onBackground,
         }}
         initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
       >
@@ -42,8 +46,8 @@ export default function AppBar() {
             <Drawer.Screen name="Home"
               component={Home}
               options={{
-                headerStyle: { backgroundColor: '#6a51ae' },
-                headerTitleStyle: { color: 'white' },
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
                 title: name,
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="store" size={size} color={color} />
@@ -53,19 +57,41 @@ export default function AppBar() {
             <Drawer.Screen name="ProductMenu"
               component={ProductMenu}
               options={{
-                headerStyle: { backgroundColor: '#6a51ae' },
-                headerTitleStyle: { color: 'white' },
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
                 title: "Cardápio",
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="summarize" size={size} color={color} />
                 ),
               }}
             />
-            <Drawer.Screen name="Print"
+             <Drawer.Screen name="Orders"
               component={Orders}
               options={{
-                headerStyle: { backgroundColor: '#6a51ae' },
-                headerTitleStyle: { color: 'white' },
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
+                title: "Pedidos",
+                drawerIcon: ({ color, size }) => (
+                  <MaterialIcons name="summarize" size={size} color={color} />
+                ),
+              }}
+            />
+            <Drawer.Screen name="Tables"
+              component={Tables}
+              options={{
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
+                title: "Comandas/Mesas",
+                drawerIcon: ({ color, size }) => (
+                  <MaterialIcons name="summarize" size={size} color={color} />
+                ),
+              }}
+            />
+            <Drawer.Screen name="Print"
+              component={PrintTest}
+              options={{
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="print" size={size} color={color} />
                 ),
@@ -76,8 +102,8 @@ export default function AppBar() {
             <Drawer.Screen name="Login"
               component={Login}
               options={{
-                headerStyle: { backgroundColor: '#6a51ae' },
-                headerTitleStyle: { color: 'white' },
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="account-circle" size={size} color={color} />
                 ),
@@ -86,6 +112,27 @@ export default function AppBar() {
           </>
         }
       </Drawer.Navigator>
+    )
+  }
+
+  return (
+    <NavigationContainer>
+      <StatusBar
+        backgroundColor="#6a51ae"
+      />
+      <Stack.Navigator initialRouteName="DrawerNavigator">
+        <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="Produtos"
+          component={ProductList}
+          options={{
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            headerTintColor: theme.colors.onBackground,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+          }}
+        />
+      </Stack.Navigator>
     </NavigationContainer>
   )
 }

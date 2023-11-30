@@ -57,7 +57,7 @@ export default function Home() {
         `[L]\n` +
         `[L]Acesse o QR Code para pedir:\n`  +
         `[L]\n` +
-        `[L]<qrcode size='20'>http://192.168.1.113:3000/establishment/menu/list</qrcode>\n` +
+        `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${dataEstab.id}</qrcode>\n` +
         `[L]\n` +
         `[L]\n` +
         `[L]${dataEstab.address}\n` +

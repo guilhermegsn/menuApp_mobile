@@ -8,7 +8,7 @@ import { UserContext } from '../context/UserContext';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { theme } from '../Services/ThemeConfig';
 
-export default function Orders() {
+export default function Tables() {
 
   const userContext = useContext(UserContext)
 
@@ -92,7 +92,32 @@ export default function Orders() {
     }
   })
 
-  
+  // useEffect(() => {
+  //   const getOrders = async () => {
+  //     const q = query(
+  //       collection(db, 'Order'),
+  //       where("establishment", "==", userContext?.estabId),
+  //       where('status', '==', 1)
+  //     );
+
+  //     try {
+  //       const querySnapshot = await getDocs(q);
+
+  //       const ordersData: DocumentData[] = []
+  //       querySnapshot.forEach((doc) => {
+  //         ordersData.push(doc.data());
+  //       });
+  //       setOrders(ordersData);
+  //     } catch (error) {
+  //       console.error("Erro ao obter documentos:", error);
+  //     }
+  //   };
+
+  //   getOrders();
+  // }, []);
+
+
+
 
   return (
     <View>
