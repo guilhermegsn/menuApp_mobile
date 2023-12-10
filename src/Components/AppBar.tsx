@@ -14,6 +14,7 @@ import { theme } from '../Services/ThemeConfig';
 import { CardStyleInterpolators } from '@react-navigation/stack';
 import Orders from '../Views/Orders';
 import Tables from '../Views/Tables';
+import OrderItems from '../Views/OrderItems';
 
 export default function AppBar() {
 
@@ -66,7 +67,7 @@ export default function AppBar() {
               }}
             />
              <Drawer.Screen name="Orders"
-              component={Orders}
+              component={OrderItems}
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
