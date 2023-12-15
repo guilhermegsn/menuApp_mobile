@@ -34,3 +34,9 @@ export const  generateUUID = () => {
   return uuid;
 }
 
+export const getHourMinuteSecond = (timestamp: Date) => {
+  const date = new Date(timestamp);
+  console.log(`${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`)
+  return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+}
+
