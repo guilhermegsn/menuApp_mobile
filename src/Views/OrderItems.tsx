@@ -1,12 +1,14 @@
-import { ScrollView, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { DocumentData, Timestamp, collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { DocumentData, Timestamp, collection, getDocs, limit, onSnapshot, orderBy, query, startAfter, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
 import { Avatar, Button, Card, IconButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderItemsData } from '../Interfaces/OrderItems_Interface';
 import { getHourMinuteSecond } from '../Services/Functions';
+import { OrderData } from '../Interfaces/Order_interface';
+import { theme } from '../Services/ThemeConfig';
 
 export default function OrderItems() {
 
@@ -19,7 +21,9 @@ export default function OrderItems() {
     const q = query(
       collection(db, 'OrderItems'),
       where("establishment", "==", userContext?.estabId),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+    
+      limit(15)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -33,13 +37,37 @@ export default function OrderItems() {
       }
       setFirstPrint(false)
       querySnapshot.forEach((doc) => {
-        ordersData.push(doc.data());
+        ordersData.push({id: doc.id, ...doc.data()});
       });
       setOrders(ordersData);
     });
     // O retorno de useEffect é utilizado para realizar a limpeza do ouvinte quando o componente é desmontado
     return () => unsubscribe();
   }, []);
+
+
+  const loadMoreData = async () => {
+    if (orders) {
+      const q = query(
+        collection(db, 'OrderItems'),
+        where("establishment", "==", userContext?.estabId),
+        orderBy('date', 'desc'),
+        limit(15),
+        startAfter(orders),
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      let dat: Array<OrderData> = [];
+      querySnapshot.forEach((item) => {
+        dat.push(item.data() as OrderData)
+      })
+
+      if (dat) {
+        console.log(dat)
+      }
+    };
+  }
 
 
 
@@ -73,17 +101,44 @@ export default function OrderItems() {
 
   }
 
+  const styles = StyleSheet.create({
+    scrollView: {
+      marginTop: "3%",
+      margin: "3%",
+    },
+    scrollViewContent: {
+      flexGrow: 1,
+    },
+  })
+
+  const handleCompleteOrder = (id: string) => {
+    console.log(id)
+    const order = orders.find((item) => item.id === id)
+    if(order){
+      if(order.status === 1)
+        order.status = 0
+      else
+        order.status = 1
+    }
+    setOrders([...orders])
+  }
+  
+
+
   return (
     <View>
-      <ScrollView>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         {orders?.map((order, index) => (
           <View key={index}>
-            <Card style={{ marginBottom: "2%", paddingRight: 10 }}>
+            <Card style={{ marginBottom: "2%", paddingRight: 10}}
+            onPress={()=> handleCompleteOrder(order.id)}
+            >
               <Card.Title title={`${order?.local}`} subtitle={""}
-                // left={(props) => <Avatar.Icon {...props} icon="folder" />} 
-                right={() => <Text>{getHourMinuteSecond(order.date.toDate())}</Text>}
+                 left={(props) => <Avatar.Icon {...props} icon={ order.status === 1 ?"alert-decagram" : "check-circle-outline"} />} 
+                 right={() => <Text>{getHourMinuteSecond(order.date.toDate())}</Text>}
               />
               <Card.Content>
+               <Text> {order.id}</Text>
                 {order.items.map((item: string | any) => (
                   <Text>{item.qty} x {item?.name}</Text>
                 ))}
@@ -94,7 +149,8 @@ export default function OrderItems() {
             ))} */}
           </View>
         ))}
-        <Button onPress={() => console.log(orders[0].date)}>DATA</Button>
+        <Button onPress={() => loadMoreData()}>Load more</Button>
+        <Button onPress={() => console.log(orders)}>DATA</Button>
         <Button onPress={() => getHourMinuteSecond(orders[0].date.toDate())}>Hora</Button>
       </ScrollView>
     </View>

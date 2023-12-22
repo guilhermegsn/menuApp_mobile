@@ -1,6 +1,7 @@
 import { ProductData } from "./ProductMenu_Interface";
 
 export interface OrderData {
+  id: string,
   user: string,
   establishment: string,
   username: string,

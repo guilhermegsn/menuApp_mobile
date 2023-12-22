@@ -40,3 +40,24 @@ export const getHourMinuteSecond = (timestamp: Date) => {
   return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 }
 
+
+export const formatToCurrencyBR = (number: number) => {
+  try{
+    return number.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+    });
+  }catch{
+    return ""
+  }
+}
+
+export const formatToDoubleBR = (number: number) => {
+  try{
+    return number.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  }catch{
+    return ""
+  }
+ 
+}

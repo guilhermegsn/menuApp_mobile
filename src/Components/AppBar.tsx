@@ -1,6 +1,6 @@
 import { View, Text, StatusBar } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, NavigationProp, ParamListBase  } from '@react-navigation/native'
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { UserContext } from '../context/UserContext';
 import Home from '../Views/Home';
@@ -9,12 +9,12 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 import PrintTest from '../Views/PrintTest';
 import ProductMenu from '../Views/ProductMenu';
 import { createStackNavigator } from '@react-navigation/stack';
-import ProductList from '../Views/ProductList';
 import { theme } from '../Services/ThemeConfig';
 import { CardStyleInterpolators } from '@react-navigation/stack';
 import Orders from '../Views/Orders';
 import Tables from '../Views/Tables';
 import OrderItems from '../Views/OrderItems';
+import CloseOrder from '../Views/CloseOrder';
 
 export default function AppBar() {
 
@@ -22,6 +22,8 @@ export default function AppBar() {
   const Stack = createStackNavigator();
   const [name, setName] = useState("Smart Menu")
   const userContext = useContext(UserContext);
+
+  
 
   useEffect(() => {
     console.log('hello App')
@@ -66,7 +68,7 @@ export default function AppBar() {
                 ),
               }}
             />
-             <Drawer.Screen name="Orders"
+             <Drawer.Screen name="OrderItems"
               component={OrderItems}
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
@@ -77,8 +79,8 @@ export default function AppBar() {
                 ),
               }}
             />
-            <Drawer.Screen name="Tables"
-              component={Tables}
+            <Drawer.Screen name="Orders"
+              component={Orders}
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
@@ -124,8 +126,8 @@ export default function AppBar() {
       <Stack.Navigator initialRouteName="DrawerNavigator">
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} options={{ headerShown: false }} />
         <Stack.Screen
-          name="Produtos"
-          component={ProductList}
+          name="CloseOrder"
+          component={CloseOrder}
           options={{
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
