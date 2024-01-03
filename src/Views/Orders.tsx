@@ -1,23 +1,26 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, Card, FAB, Text } from 'react-native-paper'
+import { Avatar, Button, Card, FAB, Text } from 'react-native-paper'
 import { collection, getDoc, getDocs, query, where, DocumentData, onSnapshot, orderBy } from 'firebase/firestore';
 import auth from '@react-native-firebase/auth'
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { theme } from '../Services/ThemeConfig';
-import { CommonActions, useNavigation,  } from '@react-navigation/native';
+import { CommonActions, useNavigation, } from '@react-navigation/native';
+import Loading from '../Components/Loading';
+import moment from 'moment';
 
 export default function Orders() {
 
   const userContext = useContext(UserContext)
 
   const [orders, setOrders] = useState<DocumentData[]>([]);
+  const [isLoading, setIsLoading] = useState(false)
   const navigation = useNavigation();
 
-  const closeOrder = (id: string, local: string) => {
-    navigation.navigate('CloseOrder',  { id: id, local: local})
+  const closeOrder = (id: string, local: string, date: Date) => {
+    navigation.navigate('CloseOrder', { id: id, local: local })
   };
 
   useEffect(() => {
@@ -27,13 +30,19 @@ export default function Orders() {
       where('status', '==', 1),
       orderBy('openingDate', 'desc'),
     );
-
+    setIsLoading(true)
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const ordersData: DocumentData[] = [];
-      querySnapshot.forEach((doc) => {
-        ordersData.push({id: doc.id, ...doc.data()})
-      });
-      setOrders(ordersData);
+      try{
+        const ordersData: DocumentData[] = [];
+        querySnapshot.forEach((doc) => {
+          ordersData.push({ id: doc.id, ...doc.data() })
+        });
+        setOrders(ordersData);
+      }catch{
+        Alert.alert('Erro ao carregar os dados. tente novamente.')
+      }finally{
+        setIsLoading(false)
+      }
     });
     // O retorno de useEffect é utilizado para realizar a limpeza do ouvinte quando o componente é desmontado
     return () => unsubscribe();
@@ -65,7 +74,7 @@ export default function Orders() {
   const styles = StyleSheet.create({
     scrollView: {
       marginTop: "5%",
-      margin: "3%",
+      //margin: "%",
     },
     scrollViewContent: {
       flexGrow: 1,
@@ -81,40 +90,40 @@ export default function Orders() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
-        <Text>Orders</Text>
-        {orders.map((order, index) => (
-          <View key={index}>
-            {/* <Text>{order?.username}</Text>
+      {isLoading ? <Loading /> :
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+          {orders.map((order, index) => (
+            <View key={index}>
+              {/* <Text>{order?.username}</Text>
             <Text>{order?.local}</Text> */}
-
-            <Card style={{ marginBottom: "2%", paddingRight: 10 }}>
-              <Card.Title title={`${order?.local}`} subtitle={order.id}
-                // left={(props) => <Avatar.Icon {...props} icon="folder" />} 
-                right={() => <Text>{(order?.date)}</Text>}
-              />
-               <Card.Actions>
-                  <Button onPress={()=> closeOrder(order.id, order.local)} mode="outlined">Fechar</Button>
+              <Card style={{ margin: "2%", marginTop: 0, paddingRight: 10 }}>
+                <Card.Title title={`${order?.local}`} subtitle={""}
+                  left={(props) => <Avatar.Icon {...props} icon="table-chair" />}
+                  right={() => <Text>{moment(order?.openingDate.toDate()).format('DD/MM/YYYY HH:mm ')}</Text>}
+                />
+                <Card.Content>
+                  <Text>{ }</Text>
+                </Card.Content>
+                <Card.Actions>
+                  <Button onPress={() => closeOrder(order.id, order.local, order.openingDate.toDate())} mode="outlined">Fechar</Button>
                 </Card.Actions>
-            </Card>
-           
+              </Card>
+            </View>
+          ))}
+          {/* <Button onPress={() => console.log(orders)}>DATA</Button>
+        <Button onPress={() => console.log(orders)}>DATA</Button> */}
+        </ScrollView>}
 
-          </View>
-        ))}
-        <Button onPress={() => console.log(orders)}>DATA</Button>
-        <Button onPress={() => console.log(orders)}>DATA</Button>
-      </ScrollView>
-
-      <FAB
-          color={theme.colors.background}
-          style={styles.fab}
-          icon="plus"
-          // onPress={() => [
-          //   setRegStage(2),
-          //   setProductData({ id: "", name: "", description: "", price: 0 }),
-          //   setIsEditing(false),
-          // ]}
-        />
+      {/* <FAB
+        color={theme.colors.background}
+        style={styles.fab}
+        icon="plus"
+      // onPress={() => [
+      //   setRegStage(2),
+      //   setProductData({ id: "", name: "", description: "", price: 0 }),
+      //   setIsEditing(false),
+      // ]}
+      /> */}
 
     </View>
   )

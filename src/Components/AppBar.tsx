@@ -15,6 +15,7 @@ import Orders from '../Views/Orders';
 import Tables from '../Views/Tables';
 import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
+import { Icon } from 'react-native-paper';
 
 export default function AppBar() {
 
@@ -64,7 +65,7 @@ export default function AppBar() {
                 headerTitleStyle: { color: theme.colors.onBackground },
                 title: "Cardápio",
                 drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="summarize" size={size} color={color} />
+                  <Icon source="book-open-variant" size={size} color={color} />
                 ),
               }}
             />
@@ -75,7 +76,7 @@ export default function AppBar() {
                 headerTitleStyle: { color: theme.colors.onBackground },
                 title: "Pedidos",
                 drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="summarize" size={size} color={color} />
+                  <Icon source="circle-slice-8" size={size} color={color} />
                 ),
               }}
             />
@@ -84,13 +85,13 @@ export default function AppBar() {
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
-                title: "Comandas/Mesas",
+                title: "Comandas",
                 drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="summarize" size={size} color={color} />
+                  <Icon source="credit-card-multiple-outline" size={size} color={color} />
                 ),
               }}
             />
-            <Drawer.Screen name="Print"
+            {/* <Drawer.Screen name="Print"
               component={PrintTest}
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
@@ -99,7 +100,7 @@ export default function AppBar() {
                   <MaterialIcons name="print" size={size} color={color} />
                 ),
               }}
-            />
+            /> */}
           </> :
           <>
             <Drawer.Screen name="Login"
@@ -121,7 +122,7 @@ export default function AppBar() {
   return (
     <NavigationContainer>
       <StatusBar
-        backgroundColor="#6a51ae"
+        backgroundColor={theme.colors.primary}
       />
       <Stack.Navigator initialRouteName="DrawerNavigator">
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} options={{ headerShown: false }} />
@@ -129,6 +130,7 @@ export default function AppBar() {
           name="CloseOrder"
           component={CloseOrder}
           options={{
+            title: "Fechar comanda",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,

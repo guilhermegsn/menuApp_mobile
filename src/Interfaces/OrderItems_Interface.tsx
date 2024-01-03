@@ -6,5 +6,5 @@ export interface OrderItemsData {
   local: string,
   date: Date,
   items: ProductData,
-  status: number
+  status: string
 }

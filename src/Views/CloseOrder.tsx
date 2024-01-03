@@ -9,15 +9,17 @@ import { theme } from '../Services/ThemeConfig';
 import { formatToCurrencyBR, formatToDoubleBR } from '../Services/Functions'
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { ScrollView } from 'react-native';
+import moment from 'moment';
 interface RouteParams {
   id: string
   local: string
+  openingDate: Date
 }
 
 export default function CloseOrder() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { id, local } = route.params as RouteParams || {};
+  const { id, local, openingDate } = route.params as RouteParams || {};
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<DocumentData[]>([]);
   const [isCloseOrder, setIsCloeOrder] = useState(false)
@@ -55,35 +57,32 @@ export default function CloseOrder() {
   const print = async () => {
     let total = 0
     const headerText =
-    `[C]<u><font size='big'>${local}</font></u>\n` +
+      `[C]<u><font size='big'>${local}</font></u>\n` +
       `[L]\n` +
+      `[L]Data impressao: ${moment().format('DD/MM/YYYY HH:mm')}\n` +
       `[C]================================\n` +
-      `[L]<b>${("#").padEnd(3)}${("PRODUTO").padEnd(13)}${("QT.").padEnd(2)}${("PRC").padEnd(7)}${("TOTAL").padEnd(5)}</b>\n`+
-      `[C]--------------------------------\n` 
-      const itemText = data
+      `[L]<b>${("#").padEnd(3)}${("PRODUTO").padEnd(13)}${("QT.").padEnd(2)}${("PRC").padEnd(7)}${("TOTAL").padEnd(5)}</b>\n` +
+      `[C]--------------------------------\n`
+    const itemText = data
       .map((item, index) => {
         total = total + (item.qty * item.price)
         const itemNumber = (index + 1).toString().padEnd(3);
         const itemName = item.name.slice(0, 12).padEnd(13);
         const itemQty = item.qty.toString().padEnd(2);
-        const itemPrice = formatToDoubleBR(item.price).toString().padEnd(7);
-        const itemTotal = formatToDoubleBR(item.qty * item.price).toString().padEnd(5);
+        const itemPrice = formatToDoubleBR(item.price).toString().padStart(6, " ");
+        const itemTotal = formatToDoubleBR(item.qty * item.price).toString().padStart(8, " ");
         return `[L]<font size='small'>${itemNumber}${itemName}${itemQty}${(itemPrice)}${itemTotal}</font>\n`;
       })
-      .join('');
+      .join('').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
 
     const footerText =
       `[C]================================\n` +
-      `[L]<font size='small'>TOTAL :  R$${formatToDoubleBR(total)}</font>\n` +
-      "[L]<font size='small'>Cliente :</font>\n" +
-      // `[L]<font size='small'>Guilherme Nunes</font>\n` +
-      `[L]<font size='small'>${local}</font>\n` 
-      // `[L]<font size='small'>Tel : +5518981257015</font>\n`;
-
+      `[L]<font size='small'>TOTAL:  R$${formatToDoubleBR(total)}</font>\n` +
+      `[L]<font size='small'>Cliente: ${local}</font>\n`
     const completeText = headerText + itemText + footerText;
 
     await ThermalPrinterModule.printBluetooth({
-      payload: completeText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(),
+      payload: completeText,
       printerNbrCharactersPerLine: 30
     });
 
@@ -98,7 +97,7 @@ export default function CloseOrder() {
     scrollViewContent: {
       flexGrow: 1,
     },
-   
+
   })
 
 
@@ -149,6 +148,7 @@ export default function CloseOrder() {
             {/* View da Esquerda */}
             <View style={{ flex: 1, justifyContent: 'flex-start' }}>
               <Text variant="headlineSmall">{local}</Text>
+              <Text>Abertura: {moment(openingDate).format('DD/MM/YYYY HH:mm')}</Text>
             </View>
 
             {/* View da Direita */}
@@ -160,7 +160,7 @@ export default function CloseOrder() {
                 onPress={() => setIsCloeOrder(true)}>
                 Imprimir
               </Button> */}
-             
+
               {/* <Button
                 style={styles.button}
                 mode="contained"
@@ -174,7 +174,7 @@ export default function CloseOrder() {
                 size={30}
                 onPress={() => setIsCloeOrder(true)}
               />
-               <IconButton
+              <IconButton
                 icon="printer"
                 iconColor={theme.colors.primary}
                 size={30}
@@ -195,7 +195,7 @@ export default function CloseOrder() {
 
             {data.map((item, index) => (
               // <Text>{item?.qty} x {item?.name} R$ {item?.price}</Text>
-              <DataTable.Row>
+              <DataTable.Row key={index}>
                 <DataTable.Cell style={{ flex: 1 }}>{index + 1}</DataTable.Cell>
                 <DataTable.Cell style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
                 <DataTable.Cell numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>
@@ -205,7 +205,7 @@ export default function CloseOrder() {
               </DataTable.Row>
             ))}
           </DataTable>
-       
+
           {/* Mensagem confirmação / fechar comanda */}
           <Portal>
             <Dialog visible={isCloseOrder} onDismiss={() => setIsCloeOrder(false)}>
@@ -221,7 +221,7 @@ export default function CloseOrder() {
           </Portal>
 
 
-
+              <Button onPress={()=> console.log(openingDate)}>openingDate</Button>
         </ScrollView>}
     </View>
   )
