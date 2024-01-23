@@ -38,7 +38,7 @@ export default function OrderItems() {
         for (const change of querySnapshot.docChanges()) {
           if (change.type === "added") {
             const newItemData = change.doc.data();
-            // printOrder(newItemData)
+            printOrder(newItemData)
             break;
           }
         }

@@ -61,3 +61,11 @@ export const formatToDoubleBR = (number: number) => {
   }
  
 }
+
+
+export const handleNumberInputChange = (text: string): number => {
+  const numericValue = text.replace(/[^0-9]/g, '')
+  const parsedValue = parseFloat(numericValue)
+  return isNaN(parsedValue) ? 0 : parsedValue
+}
+
