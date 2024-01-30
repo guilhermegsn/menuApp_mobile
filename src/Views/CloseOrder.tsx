@@ -1,9 +1,9 @@
-import { StyleSheet, View } from 'react-native'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { Alert, StyleSheet, View } from 'react-native'
+import React, { ChangeEvent, useContext, useEffect, useRef, useState } from 'react'
 import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import { ActivityIndicator, Button, DataTable, Dialog, IconButton, Portal, Text, TextInput } from 'react-native-paper';
-import { DocumentData, collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig';
 import { formatToCurrencyBR, formatToDoubleBR, handleNumberInputChange } from '../Services/Functions'
@@ -11,6 +11,7 @@ import ThermalPrinterModule from 'react-native-thermal-printer'
 import { ScrollView } from 'react-native';
 import moment from 'moment';
 import CurrencyInput from '../Components/CurrencyInput'
+import { UserContext } from '../context/UserContext';
 interface RouteParams {
   id: string
   local: string
@@ -18,6 +19,9 @@ interface RouteParams {
 }
 
 export default function CloseOrder() {
+
+  const userContext = useContext(UserContext);
+
   const navigation = useNavigation();
   const route = useRoute();
   const { id, local, openingDate } = route.params as RouteParams || {};
@@ -27,45 +31,49 @@ export default function CloseOrder() {
   const [totalOrder, setTotalOrder] = useState(0)
   const [isDiscount, setIsDiscount] = useState(false)
   const [isTax, setIsTax] = useState(false)
-  const [taxDiscount, setTaxDiscount] = useState<string>('')
-  const [taxPercent, setTaxPercent] = useState<string>('')
+  const [discountValue, setDiscountValue] = useState<string>('0')
+  const [percentTax, setPercentTax] = useState<string>('')
+  const [taxValue, setTaxValue] = useState<string>('0')
   const [resultTotal, setResultTotal] = useState<number | null>(0)
 
   useEffect(() => {
-    const fetchData = async () => {
-      const q = query(
-        collection(db, "OrderItems"),
-        where("order_id", "==", id)
-      );
-      try {
-        setIsLoading(true)
-        const querySnapshot = await getDocs(q)
-        const ordersData: DocumentData[] = [];
-        querySnapshot.forEach((doc) => {
-          ordersData.push(doc.data())
-        });
-        let orderItems: Array<DocumentData> = [];
-        ordersData.forEach((order) => {
-          orderItems.push(order?.items)
-        })
-        // Extrair os itens e criar um array plano
-        const flattenedArray = orderItems.flatMap(array => array);
-        setData(flattenedArray)
-
-        let total = 0
-        flattenedArray.forEach((item) => {
-          total = total + (item.qty * item.price)
-        })
-        setTotalOrder(total)
-        setResultTotal(total)
-      } catch (e) {
-        console.log(e)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+   
     fetchData()
   }, [])
+
+  const fetchData = async () => {
+    const q = query(
+      collection(db, "OrderItems"),
+      where("order_id", "==", id),
+      orderBy('date')
+    );
+    try {
+      setIsLoading(true)
+      const querySnapshot = await getDocs(q)
+      const ordersData: DocumentData[] = [];
+      querySnapshot.forEach((doc) => {
+        ordersData.push(doc.data())
+      });
+      let orderItems: Array<DocumentData> = [];
+      ordersData.forEach((order) => {
+        orderItems.push(order?.items)
+      })
+      // Extrair os itens e criar um array plano
+      const flattenedArray = orderItems.flatMap(array => array);
+      setData(flattenedArray)
+
+      let total = 0
+      flattenedArray.forEach((item) => {
+        total = total + (item.qty * item.price)
+      })
+      setTotalOrder(total)
+      setResultTotal(total)
+    } catch (e) {
+      console.log(e)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const print = async () => {
     let total = 0
@@ -82,9 +90,9 @@ export default function CloseOrder() {
       .map((item, index) => {
         total = total + (item.qty * item.price)
         const itemNumber = (index + 1).toString().padEnd(3);
-        const itemName = item.name.slice(0, 10).padEnd(11);
+        const itemName = item.name.slice(0, 11).padEnd(12);
         const itemQty = item.qty.toString().padEnd(2);
-        const itemPrice = formatToDoubleBR(item.price).toString().replaceAll(".", "").padStart(8, " ");
+        const itemPrice = formatToDoubleBR(item.price).toString().replaceAll(".", "").padStart(7, " ");
         const itemTotal = formatToDoubleBR(item.qty * item.price).replaceAll(".", "").toString().padStart(8, " ");
         return `[L]<font size='smallest'>${itemNumber}${itemName}${itemQty}${(itemPrice)}${itemTotal}</font>\n`;
       })
@@ -92,9 +100,9 @@ export default function CloseOrder() {
 
     const footerText =
       `[C]================================\n` +
-      `[R]<b>Total da conta: R$ ${formatToDoubleBR(totalOrder)}</b>\n`+
-      `[R]Desconto R$ ${taxDiscount !== '' ? formatToDoubleBR(parseFloat(taxDiscount)) : formatToDoubleBR(0)}\n` +
-      `[R]Taxa R$ ${formatToDoubleBR(0)}\n` +
+      `[R]<b>Total da conta: R$ ${formatToDoubleBR(totalOrder)}</b>\n` +
+      `[R]Desconto -R$ ${discountValue !== '' ? formatToDoubleBR(parseFloat(discountValue)) : formatToDoubleBR(0)}\n` +
+      `[R]Taxa R$ ${formatToDoubleBR(parseFloat(taxValue))}\n` +
       `[R]<font size='tall'>TOTAL:  R$ ${resultTotal !== null ? formatToDoubleBR(resultTotal).toString() : formatToDoubleBR(totalOrder)}</font>\n`
     const completeText = headerText + itemText + footerText;
 
@@ -117,15 +125,6 @@ export default function CloseOrder() {
 
   })
 
-  const [value, setValue] = useState<string>("0")
-
-  const handleTextChange = (text: string) => {
-    let formattedText = text.replace(/[^0-9]/g, '');
-    let reversedText = formattedText.split('').reverse().join('');
-    let finalText = reversedText.replace(/(\d{2})\d(?=\d)/g, '$1,').split('').reverse().join('');
-    setValue(finalText);
-  };
-
   const closeOrder = async () => {
     const docRef = doc(db, "Order", id)
     const close = await setDoc(docRef, { status: 0 }).then(() => {
@@ -135,39 +134,99 @@ export default function CloseOrder() {
     }).catch((e) => console.log(e))
   }
 
-  const calcTaxDiscount = (tax: number) => {
-    setTaxPercent(tax.toString())
+  const calcTax = (tax: number) => {
+    setPercentTax(tax.toString())
     const taxValue = (tax / 100) * totalOrder
-    const result = totalOrder - taxValue
-    setTaxDiscount(taxValue.toString())
-    setResultTotal(result)
+    if (isTax)
+      setTaxValue(taxValue.toString())
+    else
+      setDiscountValue(taxValue.toString())
   }
 
-  const handleBlurDiscount = () => {
-    const taxDiscountValue = parseFloat(taxDiscount);
-    if (!isNaN(taxDiscountValue)) {
-      setTaxPercent('')
-      setResultTotal(totalOrder - taxDiscountValue);
-    } else {
-      setResultTotal(totalOrder); 
-    }
-  }
+  useEffect(() => {
+    setResultTotal((totalOrder + parseFloat(taxValue)) - parseFloat(discountValue))
+  }, [totalOrder, taxValue, discountValue])
 
-  const handleBlurTotal = () => {
-    if (resultTotal !== null) {
-      const disc = totalOrder - resultTotal
-      setTaxDiscount(disc.toString())
-    }
-  }
+  // const handleBlurDiscount = () => {
+  //   const discountValueValue = parseFloat(discountValue);
+  //   if (!isNaN(discountValueValue)) {
+  //     setPercentTax('')
+  //     setResultTotal(totalOrder - discountValueValue);
+  //   } else {
+  //     setResultTotal(totalOrder);
+  //   }
+  // }
+
+  // const handleBlurTotal = () => {
+  //   if (resultTotal !== null) {
+  //     const disc = totalOrder - resultTotal
+  //     setDiscountValue(disc.toString())
+  //   }
+  // }
 
   const cancelTaxDiscount = () => {
     setResultTotal(totalOrder)
-    setIsDiscount(false) 
-    setIsTax(false) 
-    setTaxDiscount('')
-    setTaxPercent('')
+    setIsDiscount(false)
+    setIsTax(false)
+    setIsTax(false)
+    setDiscountValue('0')
+    setTaxValue('0')
+    setPercentTax('')
   }
-  
+
+  const confirmItemCancel = (index: number) => {
+    // Exibe um Alert com uma pergunta e botões de resposta
+    Alert.alert(
+      'Cancelar item',
+      'Deseja cancelar o item ' + (index + 1) + '?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sim',
+          onPress: () => {
+            cancelItem(index)
+          },
+        },
+      ],
+      { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
+    );
+  };
+
+  const cancelItem = async (index: number) => {
+    const dt = [...data]
+
+    const item = { ...dt[index] }
+    item.name = 'Canc it ' + (index + 1)
+    item.qty = (item.qty)
+    item.price = -(item.price)
+    console.log(item)
+
+    const cancelOrder = {
+      establishment: userContext?.estabId,
+      date: new Date (),
+      items: [item],
+      local: local,
+      order_id: id,
+      status: "3" //3 = cancelado
+    }
+
+    try {
+      const orderRef = collection(db, "OrderItems");
+      const saveOrder = await addDoc(orderRef, cancelOrder)
+     if(saveOrder){
+      fetchData()
+     }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+
+    // dt.push(item)
+    // setData(dt)
+  }
+
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -249,7 +308,7 @@ export default function CloseOrder() {
 
             {data.map((item, index) => (
               // <Text>{item?.qty} x {item?.name} R$ {item?.price}</Text>
-              <DataTable.Row key={index}>
+              <DataTable.Row key={index} onLongPress={() => confirmItemCancel(index)}>
                 <DataTable.Cell key={1} style={{ flex: 1 }}>{index + 1}</DataTable.Cell>
                 <DataTable.Cell key={2} style={{ flex: 4 }}>{item?.name}</DataTable.Cell>
                 <DataTable.Cell key={3} numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>
@@ -262,21 +321,17 @@ export default function CloseOrder() {
               <DataTable.Cell key={7} style={{ flex: 4 }}>Subtotal</DataTable.Cell>
               <DataTable.Cell key={8} numeric style={{ flex: 4 }}>{formatToCurrencyBR(totalOrder)}</DataTable.Cell>
             </DataTable.Row>
+            <DataTable.Row key={'tasx'} onPress={() => setIsTax(true)}>
+              <DataTable.Cell key={11} style={{ flex: 4 }}>
+                <Text>Taxa</Text>
+              </DataTable.Cell>
+              <DataTable.Cell key={12} numeric style={{ flex: 4 }}>{formatToCurrencyBR(parseFloat(taxValue))}</DataTable.Cell>
+            </DataTable.Row>
             <DataTable.Row key={'desc'} onPress={() => setIsDiscount(true)}>
               <DataTable.Cell key={9} style={{ flex: 4 }}>Desconto</DataTable.Cell>
-              <DataTable.Cell key={10} numeric style={{ flex: 4 }}>{!isNaN(parseFloat(taxDiscount)) ? formatToCurrencyBR(parseFloat(taxDiscount)) : formatToCurrencyBR(0)}</DataTable.Cell>
+              <DataTable.Cell key={10} numeric style={{ flex: 4 }}>-{!isNaN(parseFloat(discountValue)) ? formatToCurrencyBR(parseFloat(discountValue)) : formatToCurrencyBR(0)}</DataTable.Cell>
             </DataTable.Row>
-            <DataTable.Row key={'tasx'}>
-              <DataTable.Cell key={11} style={{ flex: 4 }}>
 
-                <Text>Taxa</Text>
-
-
-
-
-              </DataTable.Cell>
-              <DataTable.Cell key={12} numeric style={{ flex: 4 }}>{formatToCurrencyBR(0)}</DataTable.Cell>
-            </DataTable.Row>
             <DataTable.Row key={'total'}>
               <DataTable.Cell key={13} style={{ flex: 4 }}>TOTAL</DataTable.Cell>
               <DataTable.Cell key={14} numeric style={{ flex: 4 }}>
@@ -322,44 +377,45 @@ export default function CloseOrder() {
                 <Text style={{ marginTop: 10, marginBottom: 10 }}>Subtotal: {formatToCurrencyBR(totalOrder)}</Text>
                 <View style={{ flexDirection: 'row' }}>
                   <Button style={{ margin: 2 }}
-                    mode={taxPercent === '5' ? 'contained' : 'outlined'}
+                    mode={percentTax === '5' ? 'contained' : 'outlined'}
 
-                    onPress={() => calcTaxDiscount(5)}>5%
-                    </Button>
-                  <Button style={{ margin: 2 }}
-                    onPress={() => calcTaxDiscount(10)}
-                    mode={taxPercent === '10' ? 'contained' : 'outlined'}>10%
+                    onPress={() => isDiscount ? calcTax(5) : calcTax(5)}>5%
                   </Button>
                   <Button style={{ margin: 2 }}
-                    onPress={() => calcTaxDiscount(15)}
-                    mode={taxPercent === '15' ? 'contained' : 'outlined'}>15%
+                    onPress={() => isDiscount ? calcTax(10) : calcTax(10)}
+                    mode={percentTax === '10' ? 'contained' : 'outlined'}>10%
                   </Button>
                   <Button style={{ margin: 2 }}
-                    onPress={() => calcTaxDiscount(20)}
-                    mode={taxPercent === '20' ? 'contained' : 'outlined'}>20%
+                    onPress={() => isDiscount ? calcTax(15) : calcTax(15)}
+                    mode={percentTax === '15' ? 'contained' : 'outlined'}>15%
+                  </Button>
+                  <Button style={{ margin: 2 }}
+                    onPress={() => isDiscount ? calcTax(20) : calcTax(20)}
+                    mode={percentTax === '20' ? 'contained' : 'outlined'}>20%
                   </Button>
                 </View>
                 <TextInput
-                  style={{margin: 5, marginTop: 10}}
-                  label="Valor do desconto"
+                  style={{ margin: 5, marginTop: 10 }}
+                  label="Valor"
                   keyboardType='numeric'
-                  value={taxDiscount}
-                  onChangeText={(text) => setTaxDiscount(text)}
-                  onBlur={handleBlurDiscount}
+                  value={isTax ? taxValue : discountValue}
+                  onChangeText={(text) => isTax ? setTaxValue(text) : setDiscountValue(text)}
+                // onBlur={handleBlurDiscount}
                 />
 
                 <TextInput
-                style={{margin: 5}}
+                  style={{ margin: 5 }}
                   label="Valor final"
+                  keyboardType='numeric'
                   value={resultTotal?.toString()}
-                  
-                  //onBlur={handleBlurTotal}
+
+                //onBlur={handleBlurTotal}
                 />
 
               </Dialog.Content>
               <Dialog.Actions>
-                <Button onPress={() => cancelTaxDiscount()}>Cancelar</Button>
-                <Button onPress={() => setIsDiscount(false)}>Salvar</Button>
+                <Button onPress={() => cancelTaxDiscount()}>Cancelar / Limpar</Button>
+                <Button onPress={() => [setIsDiscount(false), setIsTax(false), setPercentTax('')]}>Salvar</Button>
               </Dialog.Actions>
             </Dialog>
           </Portal>

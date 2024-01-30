@@ -28,6 +28,8 @@ export default function OrderItems() {
     const q = query(
       collection(db, 'OrderItems'),
       where("establishment", "==", userContext?.estabId),
+      // orderBy('status'),
+      //   where("status", "!=", "3"), //nao pego os cancelamentos de pedidos
       orderBy('date', 'desc'),
       limit(15)
     );
@@ -38,12 +40,18 @@ export default function OrderItems() {
         for (const change of querySnapshot.docChanges()) {
           if (change.type === "added") {
             const newItemData = change.doc.data();
-            printOrder(newItemData)
+            //isNewOrder -> comparo se o pedido tem menos de 5min. Só imprime se tiver menos de 5min
+            //Evitando impressao indevido em um reload no app
+            if (isNewOrder(newItemData.date.toDate())) {
+              printOrder(newItemData)
+            }
             break;
           }
         }
         querySnapshot.forEach((doc) => {
-          ordersData.push({ id: doc.id, ...doc.data() });
+          //Não exibindo itens cancelados.
+          if (doc.data().status !== "3")
+            ordersData.push({ id: doc.id, ...doc.data() });
         });
         setOrders(ordersData.map((item) => ({
           ...item,
@@ -60,6 +68,20 @@ export default function OrderItems() {
     });
     return () => unsubscribe();
   }, []);
+
+  const isNewOrder = (date: Date): boolean => {
+    const now = new Date()
+    const dateOrder = new Date(date)
+    if (dateOrder.getDate() === now.getDate()) {
+      // Calcula a diferença em milissegundos
+      const diffMs = Math.abs(now.getTime() - dateOrder.getTime())
+      // Converte a diferença de milissegundos para minutos
+      const diffMin = Math.floor(diffMs / (1000 * 60))
+      // Retorna true se a diferença for maior ou igual a 5 minutos, caso contrário, retorna false
+      return diffMin <= 5;
+    }
+    return false
+  }
 
 
   // useEffect para atualizar o tempo
@@ -132,7 +154,7 @@ export default function OrderItems() {
       });
     } catch {
       Alert.alert(
-        "Não foi possível estabalecer comunicação com a impressora.\nVerifique a conexão e tente novamente."
+        `Não foi possível estabalecer comunicação com a impressora.\nVerifique a conexão e tente novamente.`
       )
     }
 
@@ -226,9 +248,9 @@ export default function OrderItems() {
                   />
                   <Card.Content>
 
-                    {order.items.map((item: string | any, index: number) => (
+                    {order?.items.map((item: string | any, index: number) => (
 
-                      <Text key={index}>{item.qty} x {item?.name}</Text>
+                      <Text key={index}>{item?.qty} x {item?.name}</Text>
                     ))}
                   </Card.Content>
                 </Card>
@@ -238,7 +260,7 @@ export default function OrderItems() {
             ))} */}
             </View>
           ))}
-          {isLoadingMoreData ? <ActivityIndicator size={20} style={{margin: 20}}/> :
+          {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> :
             <Button
               style={{ marginBottom: 20, margin: "2%" }}
               mode='contained'

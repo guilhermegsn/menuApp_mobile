@@ -101,11 +101,11 @@ export default function Orders() {
                   left={(props) => <Avatar.Icon {...props} icon="table-chair" />}
                   right={() => <Text>{moment(order?.openingDate.toDate()).format('DD/MM/YYYY HH:mm ')}</Text>}
                 />
-                <Card.Content>
+                {/* <Card.Content>
                   <Text>{ }</Text>
-                </Card.Content>
+                </Card.Content> */}
                 <Card.Actions>
-                  <Button onPress={() => closeOrder(order.id, order.local, order.openingDate.toDate())} mode="outlined">Fechar</Button>
+                  <Button onPress={() => closeOrder(order.id, order.local, order.openingDate)} mode="outlined">Fechar</Button>
                 </Card.Actions>
               </Card>
             </View>
