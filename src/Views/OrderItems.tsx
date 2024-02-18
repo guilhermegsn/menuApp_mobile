@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { DocumentData, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
-import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, RadioButton, Text } from 'react-native-paper';
+import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, Portal, RadioButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
 import moment from 'moment-timezone'
@@ -40,17 +40,20 @@ export default function OrderItems() {
         for (const change of querySnapshot.docChanges()) {
           if (change.type === "added") {
             const newItemData = change.doc.data();
-            //isNewOrder -> comparo se o pedido tem menos de 5min. Só imprime se tiver menos de 5min
-            //Evitando impressao indevido em um reload no app
-            if (isNewOrder(newItemData.date.toDate())) {
-              printOrder(newItemData)
+            //imprimo apenas pedidos com status 1 (aberto)
+            if (newItemData.status === 1) {
+              //isNewOrder -> comparo se o pedido tem menos de 5min. Só imprime se tiver menos de 5min
+              //Evitando impressao indevido em um reload no app
+              if (isNewOrder(newItemData.date.toDate())) {
+                printOrder(newItemData)
+              }
             }
             break;
           }
         }
         querySnapshot.forEach((doc) => {
           //Não exibindo itens cancelados.
-          if (doc.data().status !== "3")
+          if (doc.data().status !== 3)
             ordersData.push({ id: doc.id, ...doc.data() });
         });
         setOrders(ordersData.map((item) => ({
@@ -116,9 +119,6 @@ export default function OrderItems() {
           dat.push(item.data() as OrderData)
         })
         if (dat) {
-          dat.forEach((item) => {
-            orders.push(item)
-          })
           setOrders(prevOrders => [...prevOrders, ...dat])
         }
       } catch (e) {
@@ -132,24 +132,24 @@ export default function OrderItems() {
 
   const printOrder = async (newOrder: DocumentData) => {
     let itemsText = ""
-    newOrder?.items.forEach((item: string | any) => {
-      itemsText = itemsText + `[L]${item?.qty} x ${item?.name}\n`
+    newOrder?.items.forEach((item: string | any, index: number) => {
+      itemsText = itemsText + `[L]${(index + 1).toString().padEnd(0)} ${item?.qty.toString().padStart(4)} ${item?.name.padEnd(10)}\n`
     })
     const initialText =
-      `[C]<u><font size='big'>Pedido</font></u>\n` +
+      `[C]<u><font size='tall'>Pedido</font></u>\n` +
       `[L]\n` +
+      `[L]Data: ${moment(newOrder.date.toDate()).format('DD/MM/YYYY HH:mm')}\n` +
       `[C]================================\n` +
-      `[L]<b>Qtd. [R]Descricao</b>\n`
+      `[L]<b># ${("Qtd.").padEnd(2)} ${("Produto").padEnd(10)}</b>\n` +
+      `[C]--------------------------------\n`
     const finalText =
       `[C]================================\n` +
-      "[L]<font size='tall'>Cliente :</font>\n" +
-      // `[L]Guilherme Nunes\n` +
-      `[L]MESA: ${newOrder?.local}\n`
-    // `[L]Tel : +5518981257015\n`
-    const fullText = initialText + itemsText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() + finalText
+      `[L]Cliente: ${newOrder?.name}\n` +
+      `[L]Local: ${newOrder?.local}\n`
+    const fullText = initialText + itemsText + finalText
     try {
       await ThermalPrinterModule.printBluetooth({
-        payload: fullText,
+        payload: fullText.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
         printerNbrCharactersPerLine: 30
       });
     } catch {
@@ -202,7 +202,7 @@ export default function OrderItems() {
     const docRef = doc(db, 'OrderItems', id);
     setIsChangeStatus(false)
     try {
-      await updateDoc(docRef, { status: status });
+      await updateDoc(docRef, { status: parseInt(status) });
     } catch {
       Alert.alert(
         `Ocorreu um erro. Por favor, tente novamente`,
@@ -224,23 +224,24 @@ export default function OrderItems() {
             <View key={index}>
               <Card key={index}
                 style={{
-                  backgroundColor: order.status === '1' ? 'green' : order.status === '2' ? '#F39C12' : 'gray',
+                  backgroundColor: order.status === 1 ? 'green' : order.status === 2 ? '#F39C12' : 'gray',
                   margin: 8,
                   paddingRight: 7,
                 }}
 
               >
                 <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }} onPress={() => selectOrder(order.id)}>
-                  <Card.Title title={`${order?.local}`} subtitle={""}
-                    //  left={(props) => <Avatar.Icon {...props} icon={ order.status === 1 ?"alert-decagram" : "check-circle-outline"} />} 
+                  <Card.Title title={`${order?.name}`} subtitle={order?.local}
+                  //  left={(props) => <Avatar.Icon {...props} icon={ order?.type === 1 ? "account" : "account-group"} />} 
                     right={() => <View>
-                      <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).format('HH:mm') + `\n` + order.elapsedTime}
+                      <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).format('HH:mm') + `\n` + (order.elapsedTime ? order.elapsedTime : "")}
                       </Text>
+                    
                       <View style={{ alignItems: "flex-end", marginTop: 15, marginEnd: 10 }}>
                         <Icon
                           source="circle-slice-8"
-                          color={order.status === '1' ? 'green' :
-                            order.status === '2' ? '#F39C12' : 'gray'}
+                          color={order.status === 1 ? 'green' :
+                            order.status === 2 ? '#F39C12' : 'gray'}
                           size={18}
                         />
                       </View>
@@ -310,7 +311,7 @@ export default function OrderItems() {
         </Dialog>
       </Portal>
 
-
+{/* <Button onPress={()=> console.log(orders)}>orders</Button> */}
     </View>
   )
 }

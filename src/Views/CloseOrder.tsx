@@ -3,7 +3,7 @@ import React, { ChangeEvent, useContext, useEffect, useRef, useState } from 'rea
 import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import { ActivityIndicator, Button, DataTable, Dialog, IconButton, Portal, Text, TextInput } from 'react-native-paper';
-import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig';
 import { formatToCurrencyBR, formatToDoubleBR, handleNumberInputChange } from '../Services/Functions'
@@ -16,6 +16,7 @@ interface RouteParams {
   id: string
   local: string
   openingDate: Date
+  name: string,
 }
 
 export default function CloseOrder() {
@@ -24,7 +25,7 @@ export default function CloseOrder() {
 
   const navigation = useNavigation();
   const route = useRoute();
-  const { id, local, openingDate } = route.params as RouteParams || {};
+  const { id, local, openingDate, name } = route.params as RouteParams || {};
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<DocumentData[]>([]);
   const [isCloseOrder, setIsCloeOrder] = useState(false)
@@ -35,9 +36,10 @@ export default function CloseOrder() {
   const [percentTax, setPercentTax] = useState<string>('')
   const [taxValue, setTaxValue] = useState<string>('0')
   const [resultTotal, setResultTotal] = useState<number | null>(0)
+  const [amountReceived, setAmmountReceived] = useState<string>('0')
+  const [changeAmmount, setChangeAmmount] = useState<string>('0')
 
   useEffect(() => {
-   
     fetchData()
   }, [])
 
@@ -78,11 +80,12 @@ export default function CloseOrder() {
   const print = async () => {
     let total = 0
     const headerText =
-      `[C]<u><font size='big'>${local}</font></u>\n` +
+      `[C]<u><font size='tall'>${userContext?.estabName}</font></u>\n` +
       `[L]\n` +
       `[L] *** Conferencia de Consumo ***\n` +
       // `[L]<font size='small'>Cliente: ${local}</font>\n` +
       `[L]Data impressao: ${moment().format('DD/MM/YYYY HH:mm')}\n` +
+      `[L]Cliente: ${name}\n` +
       `[C]================================\n` +
       `[L]<b>${("#").padEnd(3)}${("PRODUTO").padEnd(11)}${("QT.").padEnd(2)}${("VL.UN.").padStart(8)}${("TOTAL").padStart(7)}</b>\n` +
       `[C]--------------------------------\n`
@@ -91,7 +94,7 @@ export default function CloseOrder() {
         total = total + (item.qty * item.price)
         const itemNumber = (index + 1).toString().padEnd(3);
         const itemName = item.name.slice(0, 11).padEnd(12);
-        const itemQty = item.qty.toString().padEnd(2);
+        const itemQty = item.qty.toString().padStart(2);
         const itemPrice = formatToDoubleBR(item.price).toString().replaceAll(".", "").padStart(7, " ");
         const itemTotal = formatToDoubleBR(item.qty * item.price).replaceAll(".", "").toString().padStart(8, " ");
         return `[L]<font size='smallest'>${itemNumber}${itemName}${itemQty}${(itemPrice)}${itemTotal}</font>\n`;
@@ -110,8 +113,6 @@ export default function CloseOrder() {
       payload: completeText,
       printerNbrCharactersPerLine: 30
     });
-
-    console.log(completeText);
   };
 
   const styles = StyleSheet.create({
@@ -126,12 +127,18 @@ export default function CloseOrder() {
   })
 
   const closeOrder = async () => {
-    const docRef = doc(db, "Order", id)
-    const close = await setDoc(docRef, { status: 0 }).then(() => {
-      console.log('ok. fechou')
+    const docRef = doc(db, "Ticket", id)
+    try {
+      await updateDoc(docRef, {
+        status: 0,
+        closingDate: serverTimestamp(),
+        totalValue: resultTotal
+      })
       setIsCloeOrder(false)
       navigation.goBack();
-    }).catch((e) => console.log(e))
+    } catch {
+      console.log('erro ao fechar')
+    }
   }
 
   const calcTax = (tax: number) => {
@@ -199,11 +206,9 @@ export default function CloseOrder() {
     item.name = 'Canc it ' + (index + 1)
     item.qty = (item.qty)
     item.price = -(item.price)
-    console.log(item)
-
     const cancelOrder = {
       establishment: userContext?.estabId,
-      date: new Date (),
+      date: new Date(),
       items: [item],
       local: local,
       order_id: id,
@@ -213,9 +218,9 @@ export default function CloseOrder() {
     try {
       const orderRef = collection(db, "OrderItems");
       const saveOrder = await addDoc(orderRef, cancelOrder)
-     if(saveOrder){
-      fetchData()
-     }
+      if (saveOrder) {
+        fetchData()
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -260,8 +265,8 @@ export default function CloseOrder() {
           <View style={{ flexDirection: 'row' }}>
             {/* View da Esquerda */}
             <View style={{ flex: 1, justifyContent: 'flex-start' }}>
-              <Text variant="headlineSmall">{local}</Text>
-              <Text>Abertura: {moment(openingDate).format('DD/MM/YYYY HH:mm')}</Text>
+              <Text variant="titleMedium">{name}</Text>
+              <Text>Abertura: {moment(new Date(openingDate)).format('DD/MM/YYYY HH:mm')}</Text>
             </View>
 
             {/* View da Direita */}
@@ -299,7 +304,7 @@ export default function CloseOrder() {
           <DataTable style={{ marginTop: 10 }}>
             <DataTable.Header>
               <DataTable.Title style={{ flex: 1 }}>It</DataTable.Title>
-              <DataTable.Title style={{ flex: 5 }}>Produto</DataTable.Title>
+              <DataTable.Title style={{ flex: 6 }}>Produto</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 1 }}>Qtd</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 1 }}>x</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 3 }}>Preço</DataTable.Title>
@@ -310,7 +315,7 @@ export default function CloseOrder() {
               // <Text>{item?.qty} x {item?.name} R$ {item?.price}</Text>
               <DataTable.Row key={index} onLongPress={() => confirmItemCancel(index)}>
                 <DataTable.Cell key={1} style={{ flex: 1 }}>{index + 1}</DataTable.Cell>
-                <DataTable.Cell key={2} style={{ flex: 4 }}>{item?.name}</DataTable.Cell>
+                <DataTable.Cell key={2} style={{ flex: 6 }}>{item?.name}</DataTable.Cell>
                 <DataTable.Cell key={3} numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>
                 <DataTable.Cell key={4} numeric style={{ flex: 1 }}>x</DataTable.Cell>
                 <DataTable.Cell key={5} numeric style={{ flex: 3 }}>{formatToDoubleBR(item?.price)}</DataTable.Cell>
@@ -359,9 +364,57 @@ export default function CloseOrder() {
           {/* Mensagem confirmação / fechar comanda */}
           <Portal>
             <Dialog visible={isCloseOrder} onDismiss={() => setIsCloeOrder(false)}>
-              <Dialog.Title>Atenção</Dialog.Title>
+              <Dialog.Title>Fechar comanda</Dialog.Title>
               <Dialog.Content>
-                <Text variant="bodyMedium">Finalizar a comanda?</Text>
+                <Text variant="bodyMedium" style={{ marginBottom: 10 }}>Forma de pagamento:</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  <Button style={{ margin: 2 }}
+                    mode={'outlined'}
+                    onPress={() => []}>Crédito
+                  </Button>
+                  <Button style={{ margin: 2 }}
+                    mode={'outlined'}
+                    onPress={() => []}>Débito
+                  </Button>
+
+                  <Button style={{ margin: 2 }}
+                    mode={'outlined'}
+                    onPress={() => []}>Cripto
+                  </Button>
+                  <Button style={{ margin: 2 }}
+                    mode={'outlined'}
+                    onPress={() => []}>Dinheiro
+                  </Button>
+
+                  <Button style={{ margin: 2 }}
+                    mode={'outlined'}
+                    onPress={() => []}>Cheque
+                  </Button>
+                  <Button style={{ margin: 2 }}
+                    mode={'outlined'}
+                    onPress={() => []}>Pix
+                  </Button>
+                </View>
+
+
+               <Text style={{margin: 10}}>Valor a ser pago: {resultTotal?.toString()}</Text>
+                 <TextInput
+                  style={{ margin: 5 }}
+                  label="Valor recebido"
+                  keyboardType='numeric'
+                  value={amountReceived}
+                  onChangeText={(e)=> setAmmountReceived(e)}
+                />
+                 <TextInput
+                  style={{ margin: 5 }}
+                  label="Troco"
+                  disabled
+                  keyboardType='numeric'
+                  value={resultTotal !== null  && !isNaN(resultTotal) && !isNaN(parseFloat(amountReceived)) ? (parseFloat(amountReceived) - resultTotal).toString() : '0'}
+                />
+
+
+
               </Dialog.Content>
               <Dialog.Actions>
                 <Button onPress={() => setIsCloeOrder(false)}>Cancelar</Button>
