@@ -115,13 +115,13 @@ export default function Orders() {
       `[C]<b><font size='tall'>ATENCAO</font></b>\n` +
       `[L]Este ticket deve ser armazenado em local seguro.\n` +
       `[L]A perda deste ticket pode acarretar prejuizo financeiro.\n`
-    try{
+    try {
       await ThermalPrinterModule.printBluetooth({
         payload: text,
         printerNbrCharactersPerLine: 30
       });
       setParamsTicket(emptyParamsTicket)
-    }catch{
+    } catch {
       Alert.alert("Erro", "Erro ao imprimir")
     }
   }
@@ -187,6 +187,23 @@ export default function Orders() {
     };
   }
 
+  const getInitialsName = (name: string) => {
+    const splitName = name.split(' ')
+    // Pega as iniciais de cada parte do nome
+    const initial = splitName.map((part) => part.charAt(0));
+    // Verifica o número de partes
+    let initialsName = ''
+    if (splitName.length === 1) {
+      // Se houver apenas um nome, pegue a primeira inicial
+      initialsName = initial[0]
+    } else {
+      // Se houver mais de um nome, pegue as duas primeiras iniciais
+      initialsName = initial.slice(0, 2).join('')
+    }
+    return initialsName.toUpperCase()
+  }
+
+
   const styles = StyleSheet.create({
     scrollView: {
       marginTop: 10,
@@ -250,33 +267,33 @@ export default function Orders() {
 
           {orders.map((item, index) => (
             <Card key={index}
-              style={[styles.card, {backgroundColor: item.status === 1 ? '#196F3D' : '#C0392B'}]}
+              style={[styles.card, { backgroundColor: item.status === 1 ? '#196F3D' : '#C0392B' }]}
             >
               <Card style={{ backgroundColor: '#EBEDEF' }}
-               onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name)]}
-               onLongPress={() => Alert.alert(
-                'Reimprimir Ticket?',
-                item.name,
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  {
-                    text: 'Sim',
-                    onPress: () => {
-                      printTicket({
-                        id: item.id, 
-                        name: item.name, 
-                        document: item.document, 
-                        local: item.local
-                      })
+                onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name)]}
+                onLongPress={() => Alert.alert(
+                  'Reimprimir Ticket?',
+                  item.name,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Sim',
+                      onPress: () => {
+                        printTicket({
+                          id: item.id,
+                          name: item.name,
+                          document: item.document,
+                          local: item.local
+                        })
+                      },
                     },
-                  },
-                ],
-                { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
-              )}
-               >
+                  ],
+                  { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
+                )}
+              >
                 <Card.Title
                   title={`${item?.name}`}
-                  subtitleStyle={{fontSize: 10, marginTop: -10, color: 'gray'}}
+                  subtitleStyle={{ fontSize: 10, marginTop: -10, color: 'gray' }}
                   subtitle={item.type === 1 &&
                     item.status === 1 && item.openingDate !== '' && item.openingDate !== undefined ?
                     `Aberta em: ${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` : item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}`}
@@ -284,11 +301,12 @@ export default function Orders() {
                     <View >
                       {item?.type === 1 ?
                         <View style={{ alignItems: 'center' }}>
-                          <Icon
+                          {/* <Icon
                             source="account"
                             color={theme.colors.primary}
                             size={30}
-                          />
+                          /> */}
+                          <Avatar.Text size={40} label={getInitialsName(item.name)} />
                           <Text style={{ fontSize: 10, color: theme.colors.primary }}>{item.local}</Text>
                         </View> : item.type === 2 &&
                         <View style={{ alignItems: 'center' }}>
@@ -297,7 +315,7 @@ export default function Orders() {
                             color={theme.colors.primary}
                             size={30}
                           />
-                            <Text style={{ fontSize: 10 }}>{item.local}</Text>
+                          <Text style={{ fontSize: 10 }}>{item.local}</Text>
                         </View>
 
                       }

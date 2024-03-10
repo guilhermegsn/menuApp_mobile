@@ -16,6 +16,7 @@ import Tables from '../Views/Tables';
 import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
 import { Icon } from 'react-native-paper';
+import ProductList from '../Views/ProductList';
 
 export default function AppBar() {
 
@@ -131,6 +132,17 @@ export default function AppBar() {
           component={CloseOrder}
           options={{
             title: "Fechar comanda",
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            headerTintColor: theme.colors.onBackground,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+          }}
+        />
+         <Stack.Screen
+          name="ProductList"
+          component={ProductList}
+          options={{
+            title: "Cardápio",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,

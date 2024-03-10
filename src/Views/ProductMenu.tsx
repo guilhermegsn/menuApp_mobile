@@ -1,8 +1,8 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB } from 'react-native-paper'
+import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar } from 'react-native-paper'
 import { MenuData, ProductData } from '../Interfaces/ProductMenu_Interface'
-import { generateUUID } from '../Services/Functions'
+import { generateUUID, openImagePicker, uploadImage } from '../Services/Functions'
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext'
@@ -10,6 +10,18 @@ import auth from '@react-native-firebase/auth'
 import { useNavigation } from '@react-navigation/native'
 import { BackHandler } from 'react-native';
 import { theme } from '../Services/ThemeConfig'
+import Loading from '../Components/Loading'
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import ImagePicker, { ImageLibraryOptions, ImagePickerResponse, launchImageLibrary } from 'react-native-image-picker';
+
+
+
+
+
+
+
+
+
 
 
 export default function ProductMenu() {
@@ -26,6 +38,15 @@ export default function ProductMenu() {
   const [isDataModified, setIsDataModified] = useState(false)
 
 
+  const [imageUri, setImageUri] = useState(null);
+  const [image, setImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false)
+
+  const storage = getStorage();
+  const storageRef = ref(storage, 'some-child');
+
+
+
   const [menuData, setMenuData] = useState<MenuData>({
     id: "",
     name: "",
@@ -40,12 +61,12 @@ export default function ProductMenu() {
   })
 
   useEffect(() => {
-    if(regStage === -1){
+    if (regStage === -1) {
       fetchData()
       setRegStage(0)
     }
     if (regStage === 0) {
-      if(isDataModified){
+      if (isDataModified) {
         fetchData()
         setIsDataModified(false)
       }
@@ -120,12 +141,12 @@ export default function ProductMenu() {
             ...prevMenuData,
             items: prevMenuData.items.map((item) => {
               if (item.id === productData.id) {
-                return { ...item, ...productData };
+                return { ...item, ...productData }
               }
-              return item;
+              return item
             })
-          };
-        });
+          }
+        })
         setIsEditing(false)
       } else {
         productData.id = generateUUID()
@@ -243,11 +264,43 @@ export default function ProductMenu() {
     }
   }
 
+
+  const updateMenuImage = async () => {
+    setIsLoading(true)
+    try {
+      const uri = await openImagePicker()
+      if (uri) {
+        setMenuData((items) => ({
+          ...items,
+          urlImg: uri
+        }))
+
+        if (userContext) {
+          const docRef = doc(db, 'Establishment', userContext.estabId);
+          const docSnapshot = await getDoc(docRef);
+          const estab = docSnapshot.data()
+          const menuIndex = estab?.menu.findIndex((item: MenuData) => item.id === menuData.id);
+          //  const urlImageSave = await uploadImage(uri)
+          if (estab) {
+            const urlImageSave = await uploadImage(uri)
+            estab.menu[menuIndex].urlImg = urlImageSave
+            await updateDoc(docRef, {
+              menu: estab.menu
+            })
+            setIsDataModified(true)
+            console.log('Imagem alterada!')
+          }
+        }
+      }
+    } catch {
+      console.log('erro ao salvar imagem')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+
   const styles = StyleSheet.create({
-    scrollView: {
-      marginTop: "5%",
-      margin: "3%",
-    },
     scrollViewContent: {
       flexGrow: 1,
     },
@@ -257,24 +310,58 @@ export default function ProductMenu() {
       right: 10,
       bottom: 10,
       backgroundColor: theme.colors.primary
+    },
+    imagem: {
+      width: '100%', // Ajusta para ocupar toda a largura
+      height: 200,    // Altura fixa de 300
+      resizeMode: 'cover', // Mantém a proporção e cobre completamente o contêiner
+      marginBottom: 15
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject, // Isso faz com que o contêiner cubra toda a área do pai (a imagem)
+      flexDirection: 'row',
+    },
+    textWrapper: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: theme.colors.primary, // Cor do contorno
+      borderRadius: 7
+    },
+    text: {
+      fontSize: 24,
+      color: '#fff', // Cor do texto
+      textShadowColor: '#000', // Cor do contorno
+    },
+    thumbnail: {
+      width: 150,
+      height: 150,
+      marginVertical: 20,
+    },
+    loadingImage: {
+      position: 'absolute',
+      bottom: 25,
+      right: 20,
+      zIndex: 1
     }
   })
 
 
+
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
 
         {/* REG STAGE 0 = LISTA DE MENUS */}
-        {isLoading ? <ActivityIndicator /> :
+        {isLoading ? <Loading /> :
           regStage === 0 &&
           <>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', flexWrap: "wrap" }}>
               {listMenu?.map((menu, index) => (
                 <Card key={index} style={{ width: "46%", margin: "2%", height: 240 }}
                   onPress={() => [setMenuData(menu), setRegStage(3)]}
+                //  onLongPress={() => [navigation.navigate('ProductList', menu)]}
                 >
-                  <Card.Cover source={{ uri: menu.urlImg }} />
+                  <Card.Cover source={{ uri: menu.urlImg !== null ? menu.urlImg : '' }} />
                   <Card.Content style={{ marginTop: "2%" }}>
                     <Text style={{ marginTop: "2%" }} variant="titleMedium">{menu.name}</Text>
                   </Card.Content>
@@ -299,7 +386,7 @@ export default function ProductMenu() {
 
         {/* REG STAGE 1 = CADASTRAR NOME DO MENU */}
         {regStage === 1 &&
-          <>
+          <View style={{ margin: 10 }}>
             <Text style={{ fontSize: 20, marginBottom: "10%" }}>Vamos começar a criar o seu menu de produtos.</Text>
             <Text style={{ fontSize: 15, textAlign: "left" }}>Você pode criar diversos menus, exemplo:</Text>
             <Text style={{ fontSize: 15, marginBottom: "10%", textAlign: "left" }}>Pratos quentes, Sobremesas, Bebidas, etc.</Text>
@@ -340,11 +427,11 @@ export default function ProductMenu() {
             >
               Voltar
             </Button>
-          </>}
+          </View>}
 
         {/* REG STAGE 2 - CADASTRO DE PRODUTOS */}
         {regStage === 2 &&
-          <>
+          <View style={{ margin: 10 }}>
             <Text style={{ fontSize: 20, marginBottom: "5%" }}>Agora vamos incluir os produtos!</Text>
             <Text style={{ fontSize: 20, marginBottom: "10%" }}>Menu: {menuData?.name}</Text>
             <TextInput
@@ -386,6 +473,19 @@ export default function ProductMenu() {
                 }))
               }}
             />
+
+            <Button onPress={() => updateMenuImage()} >Selecionar imagem</Button>
+            <Button onPress={() => uploadImage(image)} >Salvar</Button>
+
+            {image && (
+              <>
+                <Text style={{ color: 'red' }}>OLA</Text>
+                <Image source={{ uri: image }} style={styles.thumbnail} resizeMode="contain" />
+              </>
+            )}
+
+
+
             {isLoadingSave && <ActivityIndicator animating />}
             <Button style={{ width: "100%", marginTop: "4%" }}
               mode="contained"
@@ -402,16 +502,60 @@ export default function ProductMenu() {
             >
               Voltar
             </Button>
-          </>}
+            <Button style={{ width: "100%", marginTop: "4%" }}
+              icon="skip-previous"
+              mode="text"
+              onPress={() => console.log(image)}
+            >
+              URI
+            </Button>
+          </View>}
 
         {/* REG STAGE 3 = LISTA DE PRODUTOS DO MENU  */}
         {regStage === 3 &&
           <View>
-            <View style={{ flexDirection: 'row' }}>
-              <Text onPress={() => setRegStage(1)} style={{ fontSize: 20, marginBottom: "5%" }}>Menu: {menuData?.name}</Text>
+            <View style={{ marginBottom: 15 }}>
+              <TouchableOpacity
+                onLongPress={() => Alert.alert(
+                  'Alterar imagem', 'Deseja alterar a imagem do menu?',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Sim',
+                      onPress: () => {
+                        updateMenuImage()
+                      },
+                    },
+                  ],
+                  { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
+                )}
+              >
+                {isLoading && <ActivityIndicator
+                  color='orange'
+                  style={styles.loadingImage} />}
+                <Image
+                  source={{ uri: menuData.urlImg !== null ? menuData.urlImg : '' }}
+                  style={styles.imagem}
+                />
+              </TouchableOpacity>
+
+              <View style={{ position: 'absolute', bottom: -5, alignSelf: 'center', }}>
+                <View style={styles.textWrapper}>
+                  <Text style={styles.text}>{menuData?.name}</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.overlay}>
+              <IconButton
+                icon="arrow-left"
+                size={30}
+                mode='contained'
+                onPress={() => isBatchAdd ? setRegStage(2) : setRegStage(0)}
+              />
+              {/* <Text onPress={() => setRegStage(1)} style={{ fontSize: 20, marginLeft: 20, marginTop: 15 }}>{menuData?.name}</Text> */}
             </View>
             {menuData.items.map((item, index) => (
-              <Card key={index} style={{ marginBottom: "2%" }}>
+              <Card key={index} style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}>
                 <Card.Title title={item.name} subtitle={item.description} />
                 <Card.Content>
                   {/* <Text variant="titleLarge">{item.name}</Text> */}
@@ -423,13 +567,13 @@ export default function ProductMenu() {
                 </Card.Actions>
               </Card>
             ))}
-            <Button style={{ width: "100%", marginTop: "4%", marginBottom: "20%" }}
+            {/* <Button style={{ width: "100%", marginTop: "4%", marginBottom: "20%" }}
               mode="text"
               icon="skip-previous"
               onPress={() => isBatchAdd ? setRegStage(2) : setRegStage(0)}
             >
               {"Voltar"}
-            </Button>
+            </Button> */}
             {isBatchAdd &&
               <>
                 {isLoadingSaveAll && <ActivityIndicator animating />}

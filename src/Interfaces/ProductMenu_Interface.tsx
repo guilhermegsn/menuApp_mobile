@@ -1,7 +1,7 @@
 export interface MenuData {
   id: string
   name: string
-  urlImg: string
+  urlImg: string | null
   items: ProductData[]
 }
 
