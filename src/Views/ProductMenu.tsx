@@ -1,6 +1,6 @@
 import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar } from 'react-native-paper'
+import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar, Portal, Dialog } from 'react-native-paper'
 import { MenuData, ProductData } from '../Interfaces/ProductMenu_Interface'
 import { generateUUID, openImagePicker, uploadImage } from '../Services/Functions'
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
@@ -36,6 +36,8 @@ export default function ProductMenu() {
   const [isLoadingSave, setIsLoadingSave] = useState(false)
   const [isLoadingSaveAll, setIsLoadingSaveAll] = useState(false)
   const [isDataModified, setIsDataModified] = useState(false)
+  const [isEditingNameMenu, setIsEditingNameMenu] = useState(false)
+  const [newNameMenu, setNewNameMenu] = useState('')
 
 
   const [imageUri, setImageUri] = useState(null);
@@ -129,6 +131,40 @@ export default function ProductMenu() {
       }
     }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
   };
+
+  const editNameMenu = () => {
+    setIsEditingNameMenu(true)
+    setNewNameMenu(menuData.name)
+  }
+
+  const saveNewNameMenu = async () => {
+    setIsLoadingSave(true)
+    try{
+      if (userContext) {
+        const docRef = doc(db, 'Establishment', userContext.estabId);
+        const docSnapshot = await getDoc(docRef);
+        const estab = docSnapshot.data()
+        const menuIndex = estab?.menu.findIndex((item: MenuData) => item.id === menuData.id);
+        //  const urlImageSave = await uploadImage(uri)
+        if (estab) {
+          estab.menu[menuIndex].name = newNameMenu
+          await updateDoc(docRef, {
+            menu: estab.menu
+          })
+          setIsDataModified(true)
+          setIsEditingNameMenu(false)
+          setMenuData((items) => ({
+            ...items,
+            name: newNameMenu
+          }))
+        }
+      }
+    }catch{
+      Alert.alert('Ocorreu um erro.')
+    }finally{
+      setIsLoadingSave(false)
+    }
+  }
 
 
 
@@ -541,7 +577,21 @@ export default function ProductMenu() {
 
               <View style={{ position: 'absolute', bottom: -5, alignSelf: 'center', }}>
                 <View style={styles.textWrapper}>
-                  <Text style={styles.text}>{menuData?.name}</Text>
+                  <Text style={styles.text}
+                    onLongPress={() => Alert.alert(
+                      'Editar menu', 'Deseja alterar o nome do menu?',
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Sim',
+                          onPress: () => {
+                            editNameMenu()
+                          },
+                        },
+                      ],
+                      { cancelable: true }
+                    )}
+                  >{menuData?.name}</Text>
                 </View>
               </View>
             </View>
@@ -607,6 +657,34 @@ export default function ProductMenu() {
         />
 
       }
+
+
+      <Portal>
+        <Dialog visible={isEditingNameMenu} onDismiss={() => [setIsEditingNameMenu(false)]}>
+          <Dialog.Title>{"Alterar nome"}</Dialog.Title>
+          <Dialog.Content style={{ margin: -10 }}>
+            <TextInput
+              style={{ margin: 5, marginTop: 10 }}
+              label="Valor"
+              keyboardType='default'
+              value={newNameMenu}
+              onChangeText={(text) => {
+                setNewNameMenu(text)
+              }}
+            />
+             <Dialog.Actions>
+                <Button onPress={() => setIsEditingNameMenu(false)}>Cancelar</Button>
+                <Button 
+                onPress={saveNewNameMenu}
+                loading={isLoadingSave}
+                
+                >
+                  Salvar
+                  </Button>
+              </Dialog.Actions>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
     </View>
   )
 

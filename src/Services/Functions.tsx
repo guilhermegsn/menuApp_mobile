@@ -2,6 +2,8 @@ import { useContext } from "react"
 import { UserContext } from "../context/UserContext"
 import { ImageLibraryOptions, ImagePickerResponse, PhotoQuality, launchImageLibrary } from "react-native-image-picker";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+import { PermissionsAndroid, Platform } from "react-native";
+import ThermalPrinterModule from 'react-native-thermal-printer'
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -116,4 +118,29 @@ export const uploadImage = async (image: string | null) => {
     }
   }
   return null
+}
+
+export const printThermalPrinter = async (text: string) => {
+  if (Platform.OS === 'android' && Platform.Version >= 12) {
+    try {
+      const granted = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      ]);
+      if (granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED) {
+        await ThermalPrinterModule.printBluetooth({
+          payload: text,
+          printerNbrCharactersPerLine: 30
+        });
+      } else {
+        console.log('Permissão Bluetooth Connect negada');
+      }
+    } catch (err) {
+      console.warn('Erro ao solicitar a permissão Bluetooth Connect:', err);
+    }
+  } else {
+    await ThermalPrinterModule.printBluetooth({
+      payload: text,
+      printerNbrCharactersPerLine: 30
+    });
+  }
 }

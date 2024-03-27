@@ -1,4 +1,4 @@
-import { ScrollView, View } from 'react-native'
+import { PermissionsAndroid, Platform, ScrollView, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
@@ -8,10 +8,11 @@ import { db } from '../Services/FirebaseConfig';
 import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
 import ThermalPrinterModule from 'react-native-thermal-printer'
+import { printThermalPrinter } from '../Services/Functions'
 
 export default function Home() {
 
-  
+
   const userContext = useContext(UserContext)
   const [regStage, setRegStage] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -49,25 +50,42 @@ export default function Home() {
     }
   }
 
-  const printEstablishment = async() => {
-      const text =
-        `[L]\n` +
-        `[L]\n` +
-        `[C]<u><font size='big'>${dataEstab.name}</font></u>\n` +
-        `[L]\n` +
-        `[L]Acesse o QR Code para pedir:\n`  +
-        `[L]\n` +
-        `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${dataEstab.id}</qrcode>\n` +
-        `[L]\n` +
-        `[L]\n` +
-        `[L]${dataEstab.address}\n` +
-        `[L]${dataEstab.neighborhood}\n` +
-        `[L]${dataEstab.city} - ${dataEstab.state}\n`  +
-        `[L]<font size='tall'>Fone: ${dataEstab.phone}</font>\n`
-      await ThermalPrinterModule.printBluetooth({
-        payload: text,
-        printerNbrCharactersPerLine: 30
-      });
+  const printEstablishment = async () => {
+    const text =
+      `[L]\n` +
+      `[L]\n` +
+      `[C]<u><font size='big'>${dataEstab.name}</font></u>\n` +
+      `[L]\n` +
+      `[L]Acesse o QR Code para pedir:\n` +
+      `[L]\n` +
+      `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${dataEstab.id}</qrcode>\n` +
+      `[L]\n` +
+      `[L]\n` +
+      `[L]${dataEstab.address}\n` +
+      `[L]${dataEstab.neighborhood}\n` +
+      `[L]${dataEstab.city} - ${dataEstab.state}\n` +
+      `[L]<font size='tall'>Fone: ${dataEstab.phone}</font>\n`
+      printThermalPrinter(text)  
+
+
+    // const text =
+    //   `[L]\n` +
+    //   `[L]\n` +
+    //   `[C]<u><font size='big'>${dataEstab.name}</font></u>\n` +
+    //   `[L]\n` +
+    //   `[L]Acesse o QR Code para pedir:\n`  +
+    //   `[L]\n` +
+    //   `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${dataEstab.id}</qrcode>\n` +
+    //   `[L]\n` +
+    //   `[L]\n` +
+    //   `[L]${dataEstab.address}\n` +
+    //   `[L]${dataEstab.neighborhood}\n` +
+    //   `[L]${dataEstab.city} - ${dataEstab.state}\n`  +
+    //   `[L]<font size='tall'>Fone: ${dataEstab.phone}</font>\n`
+    // await ThermalPrinterModule.printBluetooth({
+    //   payload: text,
+    //   printerNbrCharactersPerLine: 30
+    // });
   }
 
   const save = async () => {
@@ -122,6 +140,10 @@ export default function Home() {
     userContext?.setEstabId("")
     auth().signOut();
   }
+
+  const requestBluetoothConnectPermission = async () => {
+
+  };
 
   return (
     <ScrollView>
