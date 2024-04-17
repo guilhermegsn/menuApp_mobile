@@ -10,4 +10,5 @@ export interface ProductData {
   name: string
   description: string
   price: Number
+  strPrice: string
 }

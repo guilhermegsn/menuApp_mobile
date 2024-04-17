@@ -1,6 +1,6 @@
 import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar, Portal, Dialog } from 'react-native-paper'
+import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar, Portal, Dialog, Menu } from 'react-native-paper'
 import { MenuData, ProductData } from '../Interfaces/ProductMenu_Interface'
 import { generateUUID, openImagePicker, uploadImage } from '../Services/Functions'
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
@@ -13,16 +13,6 @@ import { theme } from '../Services/ThemeConfig'
 import Loading from '../Components/Loading'
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ImagePicker, { ImageLibraryOptions, ImagePickerResponse, launchImageLibrary } from 'react-native-image-picker';
-
-
-
-
-
-
-
-
-
-
 
 export default function ProductMenu() {
 
@@ -38,6 +28,8 @@ export default function ProductMenu() {
   const [isDataModified, setIsDataModified] = useState(false)
   const [isEditingNameMenu, setIsEditingNameMenu] = useState(false)
   const [newNameMenu, setNewNameMenu] = useState('')
+  const [isOpenMenuCardProduct, setIsOpenMenuCardProduct] = useState(-1)
+
 
 
   const [imageUri, setImageUri] = useState(null);
@@ -46,8 +38,6 @@ export default function ProductMenu() {
 
   const storage = getStorage();
   const storageRef = ref(storage, 'some-child');
-
-
 
   const [menuData, setMenuData] = useState<MenuData>({
     id: "",
@@ -59,7 +49,8 @@ export default function ProductMenu() {
     id: "",
     name: "",
     description: "",
-    price: 0
+    price: 0,
+    strPrice: ""
   })
 
   useEffect(() => {
@@ -98,14 +89,14 @@ export default function ProductMenu() {
       // Executa o comportamento padrão
       return false;
     }
-  };
+  }
 
   useEffect(() => {
     BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
     };
-  }, [regStage]);
+  }, [regStage])
 
   const clearMenuData = () => {
     setMenuData({
@@ -130,7 +121,7 @@ export default function ProductMenu() {
         }
       }
     }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
-  };
+  }
 
   const editNameMenu = () => {
     setIsEditingNameMenu(true)
@@ -139,7 +130,7 @@ export default function ProductMenu() {
 
   const saveNewNameMenu = async () => {
     setIsLoadingSave(true)
-    try{
+    try {
       if (userContext) {
         const docRef = doc(db, 'Establishment', userContext.estabId);
         const docSnapshot = await getDoc(docRef);
@@ -159,14 +150,12 @@ export default function ProductMenu() {
           }))
         }
       }
-    }catch{
+    } catch {
       Alert.alert('Ocorreu um erro.')
-    }finally{
+    } finally {
       setIsLoadingSave(false)
     }
   }
-
-
 
   const add = async () => {
     if (isBatchAdd) {
@@ -207,11 +196,16 @@ export default function ProductMenu() {
         console.log('atualizando..')
         // Atualiza o elemento do array
         if (isEditing) {
-          estab?.menu[menuIndex].items.splice(productIndex, 1, productData);
-          console.log(estab?.menu)
+          productData.price = parseFloat(productData.strPrice.replaceAll(".", "").replaceAll(",", "."))
+
+          let copyData = { ...productData }
+          const { strPrice, ...newData } = copyData //removendo srtPrice p/ nao salvar na base de dados
+
+          estab?.menu[menuIndex].items.splice(productIndex, 1, newData);
           //Atualiza o documento
         } else {
           //inserindo diratamente
+          productData.price = parseFloat(productData.strPrice.replaceAll(".", "").replaceAll(",", "."))
           productData.id = generateUUID(),
             estab?.menu[menuIndex].items.push(productData);
         }
@@ -268,8 +262,9 @@ export default function ProductMenu() {
   const editLine = (id: string) => {
     setRegStage(2)
     setIsEditing(true)
-    const line = menuData.items.find((item) => item.id === id)
+    let line = menuData.items.find((item) => item.id === id)
     if (line) {
+      line.strPrice = line.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       setProductData(line)
     }
   }
@@ -335,7 +330,6 @@ export default function ProductMenu() {
     }
   }
 
-
   const styles = StyleSheet.create({
     scrollViewContent: {
       flexGrow: 1,
@@ -345,7 +339,8 @@ export default function ProductMenu() {
       margin: 12,
       right: 10,
       bottom: 10,
-      backgroundColor: theme.colors.primary
+      backgroundColor: theme.colors.primary,
+      marginTop: 60
     },
     imagem: {
       width: '100%', // Ajusta para ocupar toda a largura
@@ -381,7 +376,11 @@ export default function ProductMenu() {
     }
   })
 
-
+  const formatCurrencyInput = (value: string) => {
+    value = value.toString().replace(/\D/g, "")
+    value = (parseFloat(value) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return value
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -468,8 +467,15 @@ export default function ProductMenu() {
         {/* REG STAGE 2 - CADASTRO DE PRODUTOS */}
         {regStage === 2 &&
           <View style={{ margin: 10 }}>
-            <Text style={{ fontSize: 20, marginBottom: "5%" }}>Agora vamos incluir os produtos!</Text>
-            <Text style={{ fontSize: 20, marginBottom: "10%" }}>Menu: {menuData?.name}</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+              <IconButton
+                icon="arrow-left"
+                size={30}
+                mode='contained'
+                onPress={() => isBatchAdd ? setRegStage(1) : setRegStage(3)}
+              />
+              <Text style={{ fontSize: 20, marginTop: 15, marginLeft: 10 }}>Menu: {menuData?.name}</Text>
+            </View>
             <TextInput
               style={{ width: "100%", marginBottom: "2%" }}
               mode="outlined"
@@ -501,49 +507,23 @@ export default function ProductMenu() {
               mode="outlined"
               label="Preço"
               keyboardType="numeric"
-              value={productData.price === 0 ? '' : productData.price.toString()}
+              //value={productData.price === 0 ? '' : productData.price.toString()}
+              value={productData.strPrice}
               onChangeText={(text) => {
                 setProductData((prevData) => ({
                   ...prevData,
-                  price: parseFloat(text)
+                  price: parseFloat(text),
+
+                  strPrice: formatCurrencyInput(text)
                 }))
               }}
             />
-
-            <Button onPress={() => updateMenuImage()} >Selecionar imagem</Button>
-            <Button onPress={() => uploadImage(image)} >Salvar</Button>
-
-            {image && (
-              <>
-                <Text style={{ color: 'red' }}>OLA</Text>
-                <Image source={{ uri: image }} style={styles.thumbnail} resizeMode="contain" />
-              </>
-            )}
-
-
-
-            {isLoadingSave && <ActivityIndicator animating />}
             <Button style={{ width: "100%", marginTop: "4%" }}
               mode="contained"
-              disabled={isLoadingSave}
+              loading={isLoadingSave}
               onPress={() => [add()]}
             >
               {"Salvar"}
-            </Button>
-
-            <Button style={{ width: "100%", marginTop: "4%" }}
-              icon="skip-previous"
-              mode="text"
-              onPress={() => { isBatchAdd ? setRegStage(1) : setRegStage(3) }}
-            >
-              Voltar
-            </Button>
-            <Button style={{ width: "100%", marginTop: "4%" }}
-              icon="skip-previous"
-              mode="text"
-              onPress={() => console.log(image)}
-            >
-              URI
             </Button>
           </View>}
 
@@ -602,28 +582,45 @@ export default function ProductMenu() {
                 mode='contained'
                 onPress={() => isBatchAdd ? setRegStage(2) : setRegStage(0)}
               />
-              {/* <Text onPress={() => setRegStage(1)} style={{ fontSize: 20, marginLeft: 20, marginTop: 15 }}>{menuData?.name}</Text> */}
             </View>
             {menuData.items.map((item, index) => (
               <Card key={index} style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}>
-                <Card.Title title={item.name} subtitle={item.description} />
+                <Card.Title
+                  titleVariant='titleMedium'
+                  title={item.name}
+                  subtitle={item.description}
+                  right={() => (
+                    <View>
+                      <Menu
+                        visible={isOpenMenuCardProduct === index}
+                        onDismiss={() => setIsOpenMenuCardProduct(-1)}
+                        anchor={<IconButton icon="dots-vertical" onPress={() => setIsOpenMenuCardProduct(index)} />}
+                      >
+                        <Menu.Item
+                          onPress={() => editLine(item.id)}
+                          title="Editar"
+                          leadingIcon="pencil"
+                        />
+                        <Menu.Item
+                          onPress={() => deleteLine(item.id)}
+                          title="Excluir"
+                          leadingIcon="delete"
+                        />
+                      </Menu>
+                    </View>
+                  )}
+                />
                 <Card.Content>
-                  {/* <Text variant="titleLarge">{item.name}</Text> */}
-                  <Text variant="bodyMedium">{item.price.toString()}</Text>
+                  <Text variant="bodyMedium">
+                    R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
                 </Card.Content>
-                <Card.Actions>
+                {/* <Card.Actions>
                   <Button onPress={() => deleteLine(item.id)}>Deletar</Button>
                   <Button mode="outlined" onPress={() => editLine(item.id)}>Editar</Button>
-                </Card.Actions>
+                </Card.Actions> */}
               </Card>
             ))}
-            {/* <Button style={{ width: "100%", marginTop: "4%", marginBottom: "20%" }}
-              mode="text"
-              icon="skip-previous"
-              onPress={() => isBatchAdd ? setRegStage(2) : setRegStage(0)}
-            >
-              {"Voltar"}
-            </Button> */}
             {isBatchAdd &&
               <>
                 {isLoadingSaveAll && <ActivityIndicator animating />}
@@ -636,7 +633,11 @@ export default function ProductMenu() {
                 </Button>
               </>
             }
+            <View style={{ marginBottom: 90 }}>
+              {/* Espaço p/ botao de add nao cubrir o card */}
+            </View>
           </View>
+
         }
         {/* <Button onPress={() => console.log(listMenu)}>menuData</Button>
         <Button onPress={() => setRegStage(0)}>0</Button>
@@ -651,7 +652,7 @@ export default function ProductMenu() {
           icon="plus"
           onPress={() => [
             setRegStage(2),
-            setProductData({ id: "", name: "", description: "", price: 0 }),
+            setProductData({ id: "", name: "", description: "", price: 0, strPrice: "" }),
             setIsEditing(false),
           ]}
         />
@@ -672,16 +673,16 @@ export default function ProductMenu() {
                 setNewNameMenu(text)
               }}
             />
-             <Dialog.Actions>
-                <Button onPress={() => setIsEditingNameMenu(false)}>Cancelar</Button>
-                <Button 
+            <Dialog.Actions>
+              <Button onPress={() => setIsEditingNameMenu(false)}>Cancelar</Button>
+              <Button
                 onPress={saveNewNameMenu}
                 loading={isLoadingSave}
-                
-                >
-                  Salvar
-                  </Button>
-              </Dialog.Actions>
+
+              >
+                Salvar
+              </Button>
+            </Dialog.Actions>
           </Dialog.Content>
         </Dialog>
       </Portal>
