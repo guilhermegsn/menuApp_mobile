@@ -1,9 +1,9 @@
 import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar, Portal, Dialog, Menu } from 'react-native-paper'
-import { MenuData, ProductData } from '../Interfaces/ProductMenu_Interface'
+import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar, Portal, Dialog, Menu, Badge } from 'react-native-paper'
+import { MenuData, ProductData, ItemCartData } from '../Interfaces/ProductMenu_Interface'
 import { generateUUID, openImagePicker, uploadImage } from '../Services/Functions'
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext'
 import auth from '@react-native-firebase/auth'
@@ -29,14 +29,14 @@ export default function ProductMenu() {
   const [isEditingNameMenu, setIsEditingNameMenu] = useState(false)
   const [newNameMenu, setNewNameMenu] = useState('')
   const [isOpenMenuCardProduct, setIsOpenMenuCardProduct] = useState(-1)
-
-
+  const [isAddShoppingCart, setIsAddShoppingCart] = useState(false)
 
   const [imageUri, setImageUri] = useState(null);
   const [image, setImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false)
 
   const storage = getStorage();
+
   const storageRef = ref(storage, 'some-child');
 
   const [menuData, setMenuData] = useState<MenuData>({
@@ -52,6 +52,18 @@ export default function ProductMenu() {
     price: 0,
     strPrice: ""
   })
+
+  const [selectedProduct, setSelectedProduct] = useState<ItemCartData>({
+    qty: 1,
+    product: {
+      id: "",
+      name: "",
+      description: "",
+      price: 0,
+      strPrice: ""
+    }
+  })
+
 
   useEffect(() => {
     if (regStage === -1) {
@@ -373,6 +385,13 @@ export default function ProductMenu() {
       bottom: 25,
       right: 20,
       zIndex: 1
+    },
+    badge: {
+      marginBottom: 0,
+      position: 'absolute',
+      marginTop: 20,
+      right: 15,
+      zIndex: 200
     }
   })
 
@@ -382,8 +401,78 @@ export default function ProductMenu() {
     return value
   }
 
+  const addShoppingCart = (item: ItemCartData) => {
+    const copyProducts = userContext?.shoppingCart
+    if (copyProducts) {
+      copyProducts.push(item)
+      userContext.setShoppingCart(copyProducts)
+      setIsAddShoppingCart(false)
+    }
+  }
+
+  const selectProduct = (product: ProductData) => {
+    setIsAddShoppingCart(true)
+    setSelectedProduct({
+      qty: 1,
+      product: product
+    })
+  }
+
+  const sendOrder = async (order_id: string) => {
+    const items = userContext?.shoppingCart.map((item) => ({
+      idItem: item.product.id,
+      name: item.product.name,
+      price: item.product.price,
+      qty: item.qty
+    }))
+
+    const dataOrder = {
+      date: new Date(),
+      establishment: userContext?.estabId,
+      items: items,
+      local: "",
+      order_id: order_id,
+      status: 1,
+      name: "Guilherme Nunes"
+    }
+    const orderItemsRef = collection(db, "OrderItems");
+    const saveOrder = await addDoc(orderItemsRef, dataOrder)
+    if (saveOrder) {
+      console.log('entrouaq')
+      userContext?.setShoppingCart([])
+
+    } else {
+      console.log('nao entyrou aq')
+    }
+  }
+
+  const clearShoppingCart = () => {
+    console.log('limpando')
+    userContext?.setShoppingCart([] as ItemCartData[]);
+  }
+
   return (
     <View style={{ flex: 1 }}>
+      <View style={{ position: 'absolute', right: 0, top: -60, zIndex: 100 }}>
+        {userContext?.shoppingCart &&
+          <Badge
+            style={styles.badge}
+            onPress={()=> navigation.navigate('ShoppingCart')}
+            size={13}>{userContext?.shoppingCart.length}
+          </Badge>
+        }
+        <Button
+          style={{ marginTop: 15 }}
+          // onPress={() => {
+          //   navigation.navigate('ShoppingCart', {
+          //     shoppingCart: shoppingCart
+          //   });
+          // }}
+          onPress={() => {
+            navigation.navigate('ShoppingCart');
+          }}
+        ><Icon source="cart" size={25} color={theme.colors.onBackground} /></Button>
+      </View>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
 
         {/* REG STAGE 0 = LISTA DE MENUS */}
@@ -584,7 +673,11 @@ export default function ProductMenu() {
               />
             </View>
             {menuData.items.map((item, index) => (
-              <Card key={index} style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}>
+              <Card
+                key={index}
+                style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}
+                onPress={() => selectProduct(item)}
+              >
                 <Card.Title
                   titleVariant='titleMedium'
                   title={item.name}
@@ -686,6 +779,60 @@ export default function ProductMenu() {
           </Dialog.Content>
         </Dialog>
       </Portal>
+
+
+
+      {/* Modal ADD ShoppingCart */}
+      <Portal>
+        <Dialog visible={isAddShoppingCart} onDismiss={() => [setIsAddShoppingCart(false)]}>
+          <Dialog.Title style={{ textAlign: 'center' }}>{selectedProduct.product.name}</Dialog.Title>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center' }}>
+            <IconButton
+
+              icon="minus"
+              size={25}
+              onPress={() => setSelectedProduct((prevData) => ({
+                ...prevData,
+                qty: prevData.qty - 1
+              }))}
+            />
+            <TextInput
+              style={{ margin: 5, marginTop: 10 }}
+              label=""
+              keyboardType='numeric'
+              value={selectedProduct.qty.toString()}
+              onChangeText={(text) => {
+                setNewNameMenu(text)
+              }}
+            />
+            <IconButton
+              icon="plus"
+              size={25}
+              onPress={() => setSelectedProduct((prevData) => ({
+                ...prevData,
+                qty: prevData.qty + 1
+              }))}
+            />
+          </View>
+
+          <Dialog.Content style={{ marginTop: 40 }}>
+            <Dialog.Actions>
+              <Button onPress={() => []}>Cancelar</Button>
+              <Button
+                onPress={() => addShoppingCart(selectedProduct)}
+              // loading={isLoadingSave}
+
+              >
+                Adicionar
+              </Button>
+            </Dialog.Actions>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
+      {/* <Button onPress={() => console.log(shoppingCart)} >Cart</Button>
+      <Button onPress={() => sendOrder("KqULPwqwiJFqFMfy2CZK")} >sendOrder</Button>
+      <Button onPress={() => clearShoppingCart()} >Limpar</Button> */}
     </View>
   )
 

@@ -3,6 +3,8 @@ import { ReactNode, createContext, useEffect, useState } from "react";
 import auth from '@react-native-firebase/auth';
 import { View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import { OrderItemsData } from "../Interfaces/OrderItems_Interface";
+import { ItemCartData } from "../Interfaces/ProductMenu_Interface";
 
 interface UserContextType {
   globalState: string;
@@ -19,6 +21,9 @@ interface UserContextType {
 
   estabId: string;
   setEstabId: (value: string) => void
+
+  shoppingCart: ItemCartData[];
+  setShoppingCart: React.Dispatch<React.SetStateAction<ItemCartData[]>>
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,6 +36,7 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<Boolean>(false)
   const [estabName, setEstabName] = useState("")
   const [estabId, setEstabId] = useState("")
+  const [shoppingCart, setShoppingCart] = useState<ItemCartData[]>([])
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(_user => {
@@ -61,11 +67,12 @@ function UserProvider({ children }: { children: ReactNode }) {
   return (
     <UserContext.Provider value={{
       globalState, setGlobalState,
-      user, setUser, 
+      user, setUser,
       isAuthenticated,
       setIsAuthenticated,
       estabName, setEstabName,
-      estabId, setEstabId
+      estabId, setEstabId,
+      shoppingCart, setShoppingCart
     }}>
       {children}
     </UserContext.Provider>

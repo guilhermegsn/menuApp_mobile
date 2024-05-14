@@ -17,6 +17,8 @@ import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
 import { Icon } from 'react-native-paper';
 import ProductList from '../Views/ProductList';
+import ShoppingCart from '../Views/ShoppingCart';
+import QrCodeReader from '../Views/QrCodeReader';
 
 export default function AppBar() {
 
@@ -28,9 +30,6 @@ export default function AppBar() {
   
 
   useEffect(() => {
-    console.log('hello App')
-    console.log(userContext?.globalState)
-    console.log('isAuthenticated: ' + userContext?.isAuthenticated)
     if (userContext?.estabName) {
       setName(userContext.estabName)
     }
@@ -143,6 +142,28 @@ export default function AppBar() {
           component={ProductList}
           options={{
             title: "Cardápio",
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            headerTintColor: theme.colors.onBackground,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+          }}
+        />
+        <Stack.Screen
+          name="ShoppingCart"
+          component={ShoppingCart}
+          options={{
+            title: "Carrinho",
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            headerTintColor: theme.colors.onBackground,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+          }}
+        />
+        <Stack.Screen
+          name="QrCodeReader"
+          component={QrCodeReader}
+          options={{
+            title: "Ler comanda",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,

@@ -12,3 +12,8 @@ export interface ProductData {
   price: Number
   strPrice: string
 }
+
+export interface ItemCartData {
+  product: ProductData
+  qty: number
+}
