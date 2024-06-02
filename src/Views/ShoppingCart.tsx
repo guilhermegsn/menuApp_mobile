@@ -1,14 +1,13 @@
-import { View } from 'react-native'
+import { Alert, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Button, Card, Dialog, Icon, IconButton, Modal, Portal, Text, TextInput } from 'react-native-paper'
+import { Card, Dialog, Icon, IconButton, Portal, Text } from 'react-native-paper'
 import { UserContext } from '../context/UserContext';
-import { ItemCartData } from '../Interfaces/ProductMenu_Interface';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
-import { OrderData } from '../Interfaces/Order_interface';
 import Loading from '../Components/Loading';
-import NfcManager, { NfcTech, Ndef, NfcEvents } from 'react-native-nfc-manager';
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+import { getDataNfcTicket, readTagNfc } from '../Services/Functions';
 
 interface RouteParams {
   qrCodeData: string
@@ -38,23 +37,17 @@ export default function ShoppingCart() {
   const readNFC = async () => {
     setIsOpenNFC(true)
     try {
-      // Checar se o NFC está suportado no dispositivo
-      const supported = await NfcManager.isSupported();
-      if (!supported) {
-        console.warn('NFC is not supported');
-        return;
-      }
-
-      // Iniciar a sessão de leitura NFC
-      await NfcManager.requestTechnology(NfcTech.Ndef);
-      const tag = await NfcManager.getTag();
-      console.log(tag);
-
+      const tag = await readTagNfc(setIsOpenNFC)
       if (tag?.id) {
-        getDataNfcTicket(tag.id)
-
+        const data = await getDataNfcTicket(tag.id)
+        if (data) {
+          setTicket(data?.id)
+          setDataTicket(data)
+        } else {
+          Alert.alert('Comanda inválida.')
+          setDataTicket({})
+        }
       }
-
     } catch (ex) {
       console.warn(ex);
     } finally {
@@ -115,26 +108,6 @@ export default function ShoppingCart() {
 
   }
 
-  const getDataNfcTicket = async (idTag: string) => {
-    setIsLoadingTicket(true)
-    try {
-      const q = query(
-        collection(db, "Ticket"),
-        where("idTag", "==", idTag)
-      )
-      const querySnapshot = await getDocs(q)
-      const doc = querySnapshot.docs[0]
-      const ticket = { id: doc.id, ...doc.data() };
-      setTicket(ticket?.id)
-      setDataTicket(ticket)
-    }
-    catch {
-      console.log('erro')
-    } finally {
-      setIsLoadingTicket(false)
-    }
-  }
-
   const sendOrder = async () => {
     setIsLoading(true)
     try {
@@ -158,6 +131,7 @@ export default function ShoppingCart() {
       const orderItemsRef = collection(db, "OrderItems");
       const saveOrder = await addDoc(orderItemsRef, dataOrder)
       if (saveOrder) {
+        Alert.alert('Pedido enviado.')
         navigation.goBack()
         userContext?.setShoppingCart([])
       } else {
@@ -172,7 +146,7 @@ export default function ShoppingCart() {
 
 
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       {isLoading ?
         <Loading />
         :
@@ -252,8 +226,12 @@ export default function ShoppingCart() {
           ))}
 
           {userContext?.shoppingCart && userContext.shoppingCart.length <= 0 &&
-            <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-              <Text>Vazio</Text>
+            <View style={{ alignItems: 'center', marginTop: '60%' }}>
+              <Icon
+                source="cart-off"
+                size={40}
+              />
+              <Text>Carrinho vazio</Text>
             </View>
           }
           {/* <Button onPress={() => console.log(userContext?.shoppingCart)}>cart</Button>

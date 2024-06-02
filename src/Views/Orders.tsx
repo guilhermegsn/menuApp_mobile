@@ -90,6 +90,8 @@ export default function Orders() {
         if (selectedTicket) {
           closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name)
         }
+      } else {
+        Alert.alert('Comanda inválida.')
       }
     }
   }
@@ -124,7 +126,8 @@ export default function Orders() {
     try {
       const q = query(
         collection(db, "Ticket"),
-        where("idTag", "==", idTag)
+        where("idTag", "==", idTag),
+        where("status", "==", 1)
       )
       const querySnapshot = await getDocs(q)
       if (querySnapshot.empty) {
@@ -139,17 +142,7 @@ export default function Orders() {
   const readNFC = async () => {
     setIsOpenNFC(true)
     try {
-      // Checar se o NFC está suportado no dispositivo
-      const supported = await NfcManager.isSupported();
-      if (!supported) {
-        console.log('NFC is not supported');
-        return;
-      }
-
-      // Iniciar a sessão de leitura NFC
-      await NfcManager.requestTechnology(NfcTech.Ndef);
-      const tag = await NfcManager.getTag();
-
+      const tag = await readTagNfc(setIsOpenNFC)
       if (tag?.id) {
         const validTicket = await isValidTicket(tag?.id)
         if (validTicket) {
@@ -158,7 +151,7 @@ export default function Orders() {
             idTag: tag?.id
           }))
         } else {
-          Alert.alert('Comanda inválida.')
+          Alert.alert('Comanda em uso.',`Comanda com dados cadastrados.\nPor favor, verifique.`)
           setTicketType(1)
         }
       }
@@ -340,8 +333,8 @@ export default function Orders() {
     <View style={{ flex: 1 }}>
       {isLoading ? <Loading /> :
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
-          <View style={{ flexDirection: 'row', marginBottom: 5 }}>
-            <View style={{ width: '50%', padding: 10 }}>
+          <View style={{ flexDirection: 'row', marginBottom: 10, margin: 5 }}>
+            <View style={{ width: '40%', padding: 10 }}>
               <SegmentedButtons
                 value={statusTicket}
                 onValueChange={setStatusTicket}
@@ -359,7 +352,7 @@ export default function Orders() {
                 ]}
               />
             </View>
-            <View style={{ width: '50%', flexDirection: 'row', justifyContent: 'flex-end', padding: 5 }}>
+            <View style={{ width: '60%', flexDirection: 'row', justifyContent: 'flex-end', padding: 5 }}>
               <IconButton
                 icon={'magnify'}
                 size={22}

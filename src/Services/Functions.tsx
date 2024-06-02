@@ -1,10 +1,8 @@
-import { useContext } from "react"
-import { UserContext } from "../context/UserContext"
 import { ImageLibraryOptions, ImagePickerResponse, PhotoQuality, launchImageLibrary } from "react-native-image-picker";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { PermissionsAndroid, Platform } from "react-native";
 import ThermalPrinterModule from 'react-native-thermal-printer'
-import NfcManager, { NfcTech, Ndef, NfcEvents, nfcManager } from 'react-native-nfc-manager';
+import NfcManager, { NfcTech } from 'react-native-nfc-manager';
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from '../Services/FirebaseConfig';
 
@@ -161,7 +159,7 @@ export const readTagNfc = async (setIsOpenNFC: React.Dispatch<React.SetStateActi
     await NfcManager.requestTechnology(NfcTech.Ndef);
     const tag = await NfcManager.getTag();
     return tag
-  } catch (_) {
+  } catch {
     return null
   } finally {
     setIsOpenNFC(false)
@@ -173,14 +171,15 @@ export const getDataNfcTicket = async (idTag: string) => {
   try {
     const q = query(
       collection(db, "Ticket"),
-      where("idTag", "==", idTag)
+      where("idTag", "==", idTag),
+      where("status", "==", 1)
     )
     const querySnapshot = await getDocs(q)
     const doc = querySnapshot.docs[0]
-    const ticket = { id: doc.id, ...doc.data()}
+    const ticket = { id: doc.id, ...doc.data() }
     return ticket
   }
   catch {
-    console.log('erro')
-  } 
+    return null
+  }
 }
