@@ -1,15 +1,17 @@
 import { View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Button, Card, IconButton, Text, TextInput } from 'react-native-paper'
+import { ActivityIndicator, Button, Card, Dialog, Icon, IconButton, Modal, Portal, Text, TextInput } from 'react-native-paper'
 import { UserContext } from '../context/UserContext';
 import { ItemCartData } from '../Interfaces/ProductMenu_Interface';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { DocumentData, addDoc, collection, doc, getDoc } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { OrderData } from '../Interfaces/Order_interface';
+import Loading from '../Components/Loading';
+import NfcManager, { NfcTech, Ndef, NfcEvents } from 'react-native-nfc-manager';
 
 interface RouteParams {
-  newData: string
+  qrCodeData: string
 }
 
 export default function ShoppingCart() {
@@ -19,10 +21,48 @@ export default function ShoppingCart() {
   const [dataTicket, setDataTicket] = useState<DocumentData>([])
   const [ticket, setTicket] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingTicket, setIsLoadingTicket] = useState(false)
+  const [isOpenNFC, setIsOpenNFC] = useState(false)
 
 
   const route = useRoute();
-  const { newData } = route.params as RouteParams || {};
+  const { qrCodeData } = route.params as RouteParams || {};
+
+  useEffect(() => {
+    return () => {
+      NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+      NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+  }, []);
+
+  const readNFC = async () => {
+    setIsOpenNFC(true)
+    try {
+      // Checar se o NFC está suportado no dispositivo
+      const supported = await NfcManager.isSupported();
+      if (!supported) {
+        console.warn('NFC is not supported');
+        return;
+      }
+
+      // Iniciar a sessão de leitura NFC
+      await NfcManager.requestTechnology(NfcTech.Ndef);
+      const tag = await NfcManager.getTag();
+      console.log(tag);
+
+      if (tag?.id) {
+        getDataNfcTicket(tag.id)
+
+      }
+
+    } catch (ex) {
+      console.warn(ex);
+    } finally {
+      setIsOpenNFC(false)
+      // Parar a sessão de leitura NFC
+      NfcManager.cancelTechnologyRequest();
+    }
+  };
 
   const add = (index: number) => {
     if (userContext) {
@@ -47,17 +87,18 @@ export default function ShoppingCart() {
   }
 
   const openQrCodeReader = () => {
-    navigation.navigate('QrCodeReader')
+    navigation.navigate('QrCodeReader', { backPage: 'ShoppingCart' })
   }
 
   useEffect(() => {
     getDataTicket()
-  }, [newData])
+  }, [qrCodeData])
 
   const getDataTicket = async () => {
-    const urlSplit = newData.split("/")
+    const urlSplit = qrCodeData.split("/")
     const ticketUrl = urlSplit[urlSplit.length - 1]
     setTicket(ticketUrl)
+    setIsLoadingTicket(true)
     try {
       const docRef = doc(db, 'Ticket', ticketUrl);
       const docSnapshot = await getDoc(docRef);
@@ -68,6 +109,29 @@ export default function ShoppingCart() {
     }
     catch {
       console.log('erro')
+    } finally {
+      setIsLoadingTicket(false)
+    }
+
+  }
+
+  const getDataNfcTicket = async (idTag: string) => {
+    setIsLoadingTicket(true)
+    try {
+      const q = query(
+        collection(db, "Ticket"),
+        where("idTag", "==", idTag)
+      )
+      const querySnapshot = await getDocs(q)
+      const doc = querySnapshot.docs[0]
+      const ticket = { id: doc.id, ...doc.data() };
+      setTicket(ticket?.id)
+      setDataTicket(ticket)
+    }
+    catch {
+      console.log('erro')
+    } finally {
+      setIsLoadingTicket(false)
     }
   }
 
@@ -94,7 +158,6 @@ export default function ShoppingCart() {
       const orderItemsRef = collection(db, "OrderItems");
       const saveOrder = await addDoc(orderItemsRef, dataOrder)
       if (saveOrder) {
-        console.log('Sucesso!')
         navigation.goBack()
         userContext?.setShoppingCart([])
       } else {
@@ -111,39 +174,48 @@ export default function ShoppingCart() {
   return (
     <View>
       {isLoading ?
-        <View>
-          <ActivityIndicator animating />
-        </View>
+        <Loading />
         :
         <View>
-          <View style={{ flexDirection: 'row' }}>
-            <View style={{ width: '50%' }}>
-              <View style={{ marginTop: 25, marginLeft: 10 }}>
-                {dataTicket.name ?
-                  <Text>{dataTicket.name}</Text>
-                  :
-                  <Text>{`Identifique o consumidor`}</Text>
-                }
+          {userContext?.shoppingCart && userContext?.shoppingCart.length > 0 &&
+            <View style={{ flexDirection: 'row' }}>
+              <View style={{ width: '50%' }}>
+                <View style={{ marginTop: 25, marginLeft: 10 }}>
+                  {dataTicket.name ?
+                    <Text>{dataTicket.name}</Text>
+                    :
+                    isLoadingTicket ?
+                      <Text>Carregando...</Text>
+                      :
+                      <Text>{`Identifique o consumidor`}</Text>
+                  }
+                </View>
               </View>
-            </View>
-            <View style={{ flexDirection: 'row', width: '50%', justifyContent: 'flex-end' }}>
-              <IconButton
-                icon={'qrcode-scan'}
-                size={25}
-                mode='outlined'
-                style={{ marginTop: 15, marginRight: 15 }}
-                onPress={() => openQrCodeReader()}
-              />
-              <IconButton
-                icon={'send'}
-                disabled={!dataTicket?.name}
-                size={25}
-                mode='outlined'
-                style={{ marginTop: 15, marginRight: 15 }}
-                onPress={() => sendOrder()}
-              />
-            </View>
-          </View>
+              <View style={{ flexDirection: 'row', width: '50%', justifyContent: 'flex-end' }}>
+                <IconButton
+                  icon={'contactless-payment'}
+                  size={25}
+                  mode='outlined'
+                  style={{ marginTop: 15, marginRight: 15 }}
+                  onPress={() => readNFC()}
+                />
+                <IconButton
+                  icon={'qrcode-scan'}
+                  size={25}
+                  mode='outlined'
+                  style={{ marginTop: 15, marginRight: 15 }}
+                  onPress={() => openQrCodeReader()}
+                />
+                <IconButton
+                  icon={'send'}
+                  disabled={!dataTicket?.name}
+                  size={25}
+                  mode='outlined'
+                  style={{ marginTop: 15, marginRight: 15 }}
+                  onPress={() => sendOrder()}
+                />
+              </View>
+            </View>}
           {userContext?.shoppingCart.map((item, index) => (
             <Card
               key={index}
@@ -178,14 +250,35 @@ export default function ShoppingCart() {
               />
             </Card>
           ))}
+
+          {userContext?.shoppingCart && userContext.shoppingCart.length <= 0 &&
+            <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+              <Text>Vazio</Text>
+            </View>
+          }
           {/* <Button onPress={() => console.log(userContext?.shoppingCart)}>cart</Button>
       <Button onPress={() => openQrCodeReader()}>QRCODE</Button>
-      <Button onPress={() => console.log('newData: ', newData)}>URL</Button>
+      <Button onPress={() => console.log('qrCodeData: ', qrCodeData)}>URL</Button>
       <Button onPress={() => sendOrder()}>SEND</Button>
   
       {dataTicket ? <Text>{dataTicket?.name}</Text> : null} */}
         </View>
       }
+
+
+      <Portal>
+        <Dialog visible={isOpenNFC} onDismiss={() => [setIsOpenNFC(false)]}>
+          <Dialog.Title style={{ textAlign: 'center' }}>Aproxime o cartão</Dialog.Title>
+          <View style={{ alignItems: "flex-end", marginTop: 15, marginEnd: 20, marginBottom: 30 }}>
+            <Icon
+              source="contactless-payment"
+              size={80}
+            />
+          </View>
+        </Dialog>
+      </Portal>
     </View>
+
+
   )
 }

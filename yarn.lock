@@ -8053,6 +8053,13 @@ react-native-linear-gradient@^2.8.3:
   resolved "https://registry.npmjs.org/react-native-linear-gradient/-/react-native-linear-gradient-2.8.3.tgz"
   integrity sha512-KflAXZcEg54PXkLyflaSZQ3PJp4uC4whM7nT/Uot9m0e/qxFV3p6uor1983D1YOBJbJN7rrWdqIjq0T42jOJyA==
 
+react-native-nfc-manager@^3.14.14:
+  version "3.14.14"
+  resolved "https://registry.npmjs.org/react-native-nfc-manager/-/react-native-nfc-manager-3.14.14.tgz"
+  integrity sha512-e0MjBz1yDpIGCBUUxwbx25K51eaSS4cy0OQgCiA+EOlXHjwfmp5tFEyaBI/X4pI6ifpsUOBCUX0hqSCC7/IQDg==
+  dependencies:
+    "@expo/config-plugins" "~7.8.0"
+
 react-native-paper@^5.11.0:
   version "5.11.0"
   resolved "https://registry.npmjs.org/react-native-paper/-/react-native-paper-5.11.0.tgz"

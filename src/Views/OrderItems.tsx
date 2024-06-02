@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { DocumentData, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
-import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, Portal, RadioButton, Text } from 'react-native-paper';
+import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
 import moment from 'moment-timezone'
@@ -232,11 +232,11 @@ export default function OrderItems() {
               >
                 <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }} onPress={() => selectOrder(order.id)}>
                   <Card.Title title={`${order?.name}`} subtitle={order?.local}
-                  //  left={(props) => <Avatar.Icon {...props} icon={ order?.type === 1 ? "account" : "account-group"} />} 
+                    //  left={(props) => <Avatar.Icon {...props} icon={ order?.type === 1 ? "account" : "account-group"} />} 
                     right={() => <View>
                       <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).format('HH:mm') + `\n` + (order.elapsedTime ? order.elapsedTime : "")}
                       </Text>
-                    
+
                       <View style={{ alignItems: "flex-end", marginTop: 15, marginEnd: 10 }}>
                         <Icon
                           source="circle-slice-8"
@@ -262,12 +262,18 @@ export default function OrderItems() {
             </View>
           ))}
           {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> :
-            <Button
-              style={{ marginBottom: 20, margin: "2%" }}
+            <View style={{ marginBottom: 20, marginTop: 10, alignItems: 'center' }}>
+              <IconButton
+              icon="dots-horizontal"
+              size={25}
               mode='contained'
-              onPress={() => loadMoreData()}>
-              Carregar mais
-            </Button>}
+              onPress={() => loadMoreData()}
+            />
+            </View>
+            
+            }
+
+
         </ScrollView>}
 
 
@@ -311,7 +317,7 @@ export default function OrderItems() {
         </Dialog>
       </Portal>
 
-{/* <Button onPress={()=> console.log(orders)}>orders</Button> */}
+      {/* <Button onPress={()=> console.log(orders)}>orders</Button> */}
     </View>
   )
 }

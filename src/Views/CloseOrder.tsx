@@ -37,7 +37,6 @@ export default function CloseOrder() {
   const [taxValue, setTaxValue] = useState<string>('0')
   const [resultTotal, setResultTotal] = useState<number | null>(0)
   const [amountReceived, setAmmountReceived] = useState<string>('0')
-  const [changeAmmount, setChangeAmmount] = useState<string>('0')
 
   useEffect(() => {
     fetchData()
@@ -303,23 +302,23 @@ export default function CloseOrder() {
 
           <DataTable style={{ marginTop: 10 }}>
             <DataTable.Header>
-              <DataTable.Title style={{ flex: 1 }}>It</DataTable.Title>
-              <DataTable.Title style={{ flex: 6 }}>Produto</DataTable.Title>
+              <DataTable.Title style={{ flex: 2 }}>It</DataTable.Title>
+              <DataTable.Title style={{ flex: 5 }}>Produto</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 1 }}>Qtd</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 1 }}>x</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 3 }}>Preço</DataTable.Title>
-              <DataTable.Title numeric style={{ flex: 3 }}>Total</DataTable.Title>
+              <DataTable.Title numeric style={{ flex: 4 }}>Total</DataTable.Title>
             </DataTable.Header>
 
             {data.map((item, index) => (
               // <Text>{item?.qty} x {item?.name} R$ {item?.price}</Text>
               <DataTable.Row key={index} onLongPress={() => confirmItemCancel(index)}>
-                <DataTable.Cell key={1} style={{ flex: 1 }}>{index + 1}</DataTable.Cell>
-                <DataTable.Cell key={2} style={{ flex: 6 }}>{item?.name}</DataTable.Cell>
+                <DataTable.Cell key={1} style={{ flex: 2 }}>{index + 1}</DataTable.Cell>
+                <DataTable.Cell key={2} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
                 <DataTable.Cell key={3} numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>
                 <DataTable.Cell key={4} numeric style={{ flex: 1 }}>x</DataTable.Cell>
                 <DataTable.Cell key={5} numeric style={{ flex: 3 }}>{formatToDoubleBR(item?.price)}</DataTable.Cell>
-                <DataTable.Cell key={6} numeric style={{ flex: 3 }}>{formatToDoubleBR(item?.qty * item?.price)}</DataTable.Cell>
+                <DataTable.Cell key={6} numeric style={{ flex: 4 }}>{formatToDoubleBR(item?.qty * item?.price)}</DataTable.Cell>
               </DataTable.Row>
             ))}
             <DataTable.Row key={'subt'} >
@@ -472,9 +471,6 @@ export default function CloseOrder() {
               </Dialog.Actions>
             </Dialog>
           </Portal>
-
-
-          <Button onPress={() => console.log(openingDate)}>openingDate</Button>
         </ScrollView>}
     </View>
   )

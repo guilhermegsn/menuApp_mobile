@@ -2,11 +2,17 @@ import { View, Text, Alert } from 'react-native'
 import React, { useState } from 'react'
 import QRCodeScanner from 'react-native-qrcode-scanner'
 import { RNCamera } from 'react-native-camera'
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { IconButton } from 'react-native-paper';
 
+interface RouteParams {
+ backPage: string
+}
 
 export default function QrCodeReader() {
+
+  const route = useRoute()
+  const { backPage } = route.params as RouteParams || {}
 
   const [flash, setFlash] = useState(false)
 
@@ -14,9 +20,12 @@ export default function QrCodeReader() {
 
   const redData = (data: string) => {
     if (data) {
-      console.log('comanda: ' + data)
-      navigation.goBack()
-      navigation.navigate('ShoppingCart', { newData: data });
+      if(backPage){
+        navigation.goBack()
+        navigation.navigate(backPage, { qrCodeData: data });
+      }else{
+        console.log('backPage: '+backPage)
+      }
     }
   }
 

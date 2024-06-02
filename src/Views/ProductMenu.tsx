@@ -454,7 +454,7 @@ export default function ProductMenu() {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ position: 'absolute', right: 0, top: -60, zIndex: 100 }}>
-        {userContext?.shoppingCart &&
+        {userContext?.shoppingCart && userContext?.shoppingCart.length > 0 &&
           <Badge
             style={styles.badge}
             onPress={()=> navigation.navigate('ShoppingCart')}

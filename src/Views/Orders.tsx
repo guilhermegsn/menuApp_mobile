@@ -6,17 +6,29 @@ import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { theme } from '../Services/ThemeConfig';
-import { useNavigation, } from '@react-navigation/native';
+import { useNavigation, useRoute, } from '@react-navigation/native';
 import Loading from '../Components/Loading';
 import { OrderItemsData } from '../Interfaces/OrderItems_Interface';
 import moment from 'moment';
+import NfcManager, { NfcTech, Ndef, NfcEvents, nfcManager } from 'react-native-nfc-manager';
+import { NfcReader } from '../Components/NfcReader';
+import QrCodeReader from './QrCodeReader';
+import { getDataNfcTicket, readTagNfc } from '../Services/Functions';
+
+interface RouteParams {
+  qrCodeData: string
+}
+
 
 export default function Orders() {
 
   const userContext = useContext(UserContext)
-  const [ticketType, setTicketType] = useState(1)
+  const [ticketType, setTicketType] = useState(1) //1-QrCode 2-Mesa 3-Delivey 4-Nfc
 
-  const [orders, setOrders] = useState<DocumentData[]>([]);
+  const route = useRoute()
+  const { qrCodeData } = route.params as RouteParams || {}
+
+  const [orders, setOrders] = useState<DocumentData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isOpenNewTicket, setIsOpenNewTicket] = useState(false)
   const [isLoadingSave, setIsLoadingSave] = useState(false)
@@ -30,17 +42,57 @@ export default function Orders() {
     openingDate: serverTimestamp(),
     closingDate: "",
     status: 1,
-    type: 1
+    type: 1,
+    idTag: ""
   })
   const [paramsTicket, setParamsTicket] = useState<DocumentData>(emptyParamsTicket)
   const [statusTicket, setStatusTicket] = useState('1')
   const [isLoadingMoreData, setIsLoadingMoreData] = useState(false)
+  const [isOpenNFC, setIsOpenNFC] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+      NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+  }, []);
 
 
+  useEffect(() => {
+    //Ao fazer leitura do QrCode, direciona para tela de fechamento.
+    if (qrCodeData) {
+      const urlSplit = qrCodeData.split("/")
+      const ticketNumber = urlSplit[urlSplit.length - 1]
+      const selectedTicket = orders.find((item) => item.id === ticketNumber)
+      if (selectedTicket) {
+        closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name)
+        //limpo o qrCode
+        navigation.setParams({ qrCodeData: '' });
+      }
+    }
+  }, [qrCodeData])
+
+  const handleCancelTechnologyRequest = () => {
+    console.log('cancelando..')
+    NfcManager.cancelTechnologyRequest()
+  }
 
   const closeOrder = (id: string, local: string, openingDate: Date, name: string) => {
     navigation.navigate('CloseOrder', { id: id, local: local, openingDate: openingDate.toISOString(), name: name })
-  };
+  }
+
+  const closeOrderNFC = async () => {
+    const tag = await readTagNfc(setIsOpenNFC)
+    if (tag?.id) {
+      const data = await getDataNfcTicket(tag.id)
+      if (data) {
+        const selectedTicket = orders.find((item) => item.id === data.id)
+        if (selectedTicket) {
+          closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name)
+        }
+      }
+    }
+  }
 
   useEffect(() => {
     const q = query(
@@ -68,23 +120,80 @@ export default function Orders() {
     return () => unsubscribe();
   }, [statusTicket]);
 
+  const isValidTicket = async (idTag: string) => {
+    try {
+      const q = query(
+        collection(db, "Ticket"),
+        where("idTag", "==", idTag)
+      )
+      const querySnapshot = await getDocs(q)
+      if (querySnapshot.empty) {
+        return true
+      }
+    } catch {
+      return false
+    }
+    return false
+  }
+
+  const readNFC = async () => {
+    setIsOpenNFC(true)
+    try {
+      // Checar se o NFC está suportado no dispositivo
+      const supported = await NfcManager.isSupported();
+      if (!supported) {
+        console.log('NFC is not supported');
+        return;
+      }
+
+      // Iniciar a sessão de leitura NFC
+      await NfcManager.requestTechnology(NfcTech.Ndef);
+      const tag = await NfcManager.getTag();
+
+      if (tag?.id) {
+        const validTicket = await isValidTicket(tag?.id)
+        if (validTicket) {
+          setParamsTicket((prevData) => ({
+            ...prevData,
+            idTag: tag?.id
+          }))
+        } else {
+          Alert.alert('Comanda inválida.')
+          setTicketType(1)
+        }
+      }
+    } catch (ex) {
+      console.log(ex);
+    } finally {
+      setIsOpenNFC(false)
+      // Parar a sessão de leitura NFC
+      NfcManager.cancelTechnologyRequest();
+    }
+  };
+
+
   const openNewTicket = async () => {
+    console.log('salvando...')
     setIsLoadingSave(true)
     try {
       const ticketRef = collection(db, "Ticket");
       paramsTicket.type = ticketType
       const saveTicket = await addDoc(ticketRef, paramsTicket)
       if (saveTicket) {
-        printTicket({
-          id: saveTicket.id,
-          name: paramsTicket.name,
-          local: paramsTicket.local,
-          document: paramsTicket.document,
-          phone: paramsTicket.phone
-        })
         setIsOpenNewTicket(false)
+        if (ticketType === 2) {
+          console.log('imprimindo...')
+          printTicket({
+            id: saveTicket.id,
+            name: paramsTicket.name,
+            local: paramsTicket.local,
+            document: paramsTicket.document,
+            phone: paramsTicket.phone
+          })
+        }
       }
     } catch (error) {
+      console.log('erro....')
       console.error(error);
     } finally {
       setIsLoadingSave(false);
@@ -145,6 +254,7 @@ export default function Orders() {
   }
 
   const printLocalTicket = async () => {
+    console.log('imprindo ticket local...')
     const text =
       `[C]<u><font size='tall'>${userContext?.estabName}</font></u>\n` +
       `[L]\n` +
@@ -203,12 +313,11 @@ export default function Orders() {
     return initialsName.toUpperCase()
   }
 
+  const openQrCodeReader = () => {
+    navigation.navigate('QrCodeReader', { backPage: 'Orders' });
+  }
 
   const styles = StyleSheet.create({
-    scrollView: {
-      marginTop: 10,
-      //margin: "%",
-    },
     scrollViewContent: {
       flexGrow: 1,
     },
@@ -230,7 +339,53 @@ export default function Orders() {
   return (
     <View style={{ flex: 1 }}>
       {isLoading ? <Loading /> :
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          <View style={{ flexDirection: 'row', marginBottom: 5 }}>
+            <View style={{ width: '50%', padding: 10 }}>
+              <SegmentedButtons
+                value={statusTicket}
+                onValueChange={setStatusTicket}
+                buttons={[
+                  {
+                    value: '1',
+                    label: '',
+                    icon: 'lock-open-variant-outline'
+                  },
+                  {
+                    value: '0',
+                    label: '',
+                    icon: 'lock'
+                  },
+                ]}
+              />
+            </View>
+            <View style={{ width: '50%', flexDirection: 'row', justifyContent: 'flex-end', padding: 5 }}>
+              <IconButton
+                icon={'magnify'}
+                size={22}
+                mode='outlined'
+                onPress={() => console.log(qrCodeData)}
+              />
+              <IconButton
+                icon={'contactless-payment'}
+                size={22}
+                mode='outlined'
+                onPress={() => closeOrderNFC()}
+              />
+              <IconButton
+                icon={'qrcode-scan'}
+                size={22}
+                mode='outlined'
+                onPress={() => openQrCodeReader()}
+              />
+              <IconButton
+                icon={'plus'}
+                size={22}
+                mode='outlined'
+                onPress={() => setIsOpenNewTicket(true)}
+              />
+            </View>
+          </View>
           {/* {orders.map((order, index) => (
             <View key={index}>
               <Card style={{ margin: "2%", marginTop: 0, paddingRight: 10 }}>
@@ -246,24 +401,6 @@ export default function Orders() {
           ))} */}
 
 
-          <View style={{ margin: 10, marginBottom: 20 }}>
-            <SegmentedButtons
-              value={statusTicket}
-              onValueChange={setStatusTicket}
-              buttons={[
-                {
-                  value: '1',
-                  label: 'Abertas',
-                  icon: 'lock-open-variant-outline'
-                },
-                {
-                  value: '0',
-                  label: 'Fechadas',
-                  icon: 'lock'
-                },
-              ]}
-            />
-          </View>
 
           {orders.map((item, index) => (
             <Card key={index}
@@ -294,12 +431,12 @@ export default function Orders() {
                 <Card.Title
                   title={`${item?.name}`}
                   subtitleStyle={{ fontSize: 10, marginTop: -10, color: 'gray' }}
-                  subtitle={item.type === 1 &&
+                  subtitle={item.type === 1 || item.type === 4 &&
                     item.status === 1 && item.openingDate !== '' && item.openingDate !== undefined ?
                     `Aberta em: ${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` : item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}`}
                   left={() =>
                     <View >
-                      {item?.type === 1 ?
+                      {item?.type === 1 || item?.type === 4 ?
                         <View style={{ alignItems: 'center' }}>
                           {/* <Icon
                             source="account"
@@ -383,24 +520,34 @@ export default function Orders() {
           <View style={{ marginBottom: 20, marginTop: 20, alignItems: 'center' }}>
             {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> :
               orders.length >= 3 &&
-              <Button
-                style={{ marginBottom: 20, width: 180 }}
+              // <Button
+              //   style={{ marginBottom: 20, width: 180 }}
+              //   mode='contained'
+              //   onPress={() => loadMoreData()}>
+              //   Carregar mais
+              // </Button>
+
+              <IconButton
+                icon="dots-horizontal"
+                iconColor={ticketType === 3 ? theme.colors.primary : theme.colors.secondary}
+                size={25}
                 mode='contained'
-                onPress={() => loadMoreData()}>
-                Carregar mais
-              </Button>}
+                onPress={() => loadMoreData()}
+              />
+
+            }
           </View>
 
           {/* <Button onPress={() => console.log(orders)}>data</Button> */}
 
         </ScrollView>}
 
-      <FAB
+      {/* <FAB
         color={theme.colors.background}
         style={styles.fab}
         icon="plus"
         onPress={() => setIsOpenNewTicket(true)}
-      />
+      /> */}
 
 
       <Portal>
@@ -410,9 +557,15 @@ export default function Orders() {
             <View style={{ flexDirection: 'row' }}>
               <IconButton
                 iconColor={ticketType === 1 ? theme.colors.primary : theme.colors.secondary}
-                icon="account"
+                icon="qrcode"
                 size={25}
                 onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(1)]}
+              />
+              <IconButton
+                iconColor={ticketType === 4 ? theme.colors.primary : theme.colors.secondary}
+                icon="contactless-payment"
+                size={25}
+                onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(4), readNFC()]}
               />
               <IconButton
                 icon="account-group"
@@ -435,7 +588,7 @@ export default function Orders() {
                 onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, name: text }))}
               />
             }
-            {ticketType === 1 &&
+            {ticketType !== 2 && ticketType !== 3 &&
               <>
                 <TextInput
                   style={{ margin: 5, marginTop: 10 }}
@@ -454,31 +607,52 @@ export default function Orders() {
               </>
             }
             {ticketType !== 3 &&
-              <TextInput
-                style={{ margin: 5, marginTop: 10 }}
-                label={ticketType === 2 ? "Referencia" : "Local"}
-                keyboardType='default'
-                value={paramsTicket.local}
-                onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, local: text }))}
-              />
+              <>
+                <TextInput
+                  style={{ margin: 5, marginTop: 10 }}
+                  label={ticketType === 2 ? "Referencia" : "Local"}
+                  keyboardType='default'
+                  value={paramsTicket.local}
+                  onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, local: text }))}
+                />
+                {ticketType === 4 && paramsTicket.idTag &&
+                  <View style={{ flexDirection: 'row', marginLeft: 5 }}>
+                    <Icon
+                      source="contactless-payment"
+                      size={15}
+                    />
+                    <Text variant='labelSmall'> {paramsTicket?.idTag}</Text>
+                  </View>
+                }
+              </>
             }
             {ticketType === 3 &&
               <Button style={{ margin: 15 }} mode='contained' onPress={() => printDelivery()}>Imprimir Ticket Delivery</Button>
             }
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setIsOpenNewTicket(false)}>Cancelar</Button>
+            <Button onPress={() => [setIsOpenNewTicket(false), setParamsTicket(emptyParamsTicket)]}>Cancelar</Button>
             <Button
               // disabled={isLoadingSave}
               loading={isLoadingSave}
-              onPress={() => ticketType === 1 ? openNewTicket() : printLocalTicket()}>
+              onPress={() => ticketType === 2 ? printLocalTicket() : openNewTicket()}>
               Salvar
             </Button>
           </Dialog.Actions>
+          <NfcReader
+            isOpenNFC={isOpenNFC}
+            setIsOpenNFC={setIsOpenNFC}
+            cancelTechnologyRequest={handleCancelTechnologyRequest}
+          />
         </Dialog>
 
       </Portal>
 
+      <NfcReader
+        isOpenNFC={isOpenNFC}
+        setIsOpenNFC={setIsOpenNFC}
+        cancelTechnologyRequest={handleCancelTechnologyRequest}
+      />
     </View>
   )
 }

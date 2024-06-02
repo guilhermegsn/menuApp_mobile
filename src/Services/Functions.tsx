@@ -4,6 +4,9 @@ import { ImageLibraryOptions, ImagePickerResponse, PhotoQuality, launchImageLibr
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { PermissionsAndroid, Platform } from "react-native";
 import ThermalPrinterModule from 'react-native-thermal-printer'
+import NfcManager, { NfcTech, Ndef, NfcEvents, nfcManager } from 'react-native-nfc-manager';
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from '../Services/FirebaseConfig';
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -143,4 +146,41 @@ export const printThermalPrinter = async (text: string) => {
       printerNbrCharactersPerLine: 30
     });
   }
+}
+
+export const readTagNfc = async (setIsOpenNFC: React.Dispatch<React.SetStateAction<boolean>>) => {
+  setIsOpenNFC(true)
+  try {
+    // Checar se o NFC está suportado no dispositivo
+    const supported = await NfcManager.isSupported();
+    if (!supported) {
+      console.log('NFC is not supported');
+      return;
+    }
+    // Iniciar a sessão de leitura NFC
+    await NfcManager.requestTechnology(NfcTech.Ndef);
+    const tag = await NfcManager.getTag();
+    return tag
+  } catch (_) {
+    return null
+  } finally {
+    setIsOpenNFC(false)
+    NfcManager.cancelTechnologyRequest();
+  }
+}
+
+export const getDataNfcTicket = async (idTag: string) => {
+  try {
+    const q = query(
+      collection(db, "Ticket"),
+      where("idTag", "==", idTag)
+    )
+    const querySnapshot = await getDocs(q)
+    const doc = querySnapshot.docs[0]
+    const ticket = { id: doc.id, ...doc.data()}
+    return ticket
+  }
+  catch {
+    console.log('erro')
+  } 
 }
