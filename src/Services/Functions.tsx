@@ -3,8 +3,12 @@ import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { PermissionsAndroid, Platform } from "react-native";
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import NfcManager, { NfcTech } from 'react-native-nfc-manager';
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
 import { db } from '../Services/FirebaseConfig';
+import { useContext } from "react";
+import { UserContext } from "../context/UserContext";
+import { Alert } from "react-native";
+
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -44,6 +48,7 @@ export const getHourMinuteSecond = (timestamp: Date) => {
   console.log(`${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`)
   return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 }
+
 
 
 export const formatToCurrencyBR = (number: number) => {
@@ -122,27 +127,36 @@ export const uploadImage = async (image: string | null) => {
 }
 
 export const printThermalPrinter = async (text: string) => {
-  if (Platform.OS === 'android' && Platform.Version >= 12) {
+  if (Platform.OS === 'android' && Platform.Version >= 31) { // Ajustado para Android 12+
     try {
       const granted = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
       ]);
-      if (granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED) {
+
+      if (
+        granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] === PermissionsAndroid.RESULTS.GRANTED &&
+        granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] === PermissionsAndroid.RESULTS.GRANTED
+      ) {
         await ThermalPrinterModule.printBluetooth({
           payload: text,
           printerNbrCharactersPerLine: 30
         });
       } else {
-        console.log('Permissão Bluetooth Connect negada');
+        console.log('Permissões Bluetooth negadas');
       }
     } catch (err) {
-      console.warn('Erro ao solicitar a permissão Bluetooth Connect:', err);
+      console.warn('Erro ao solicitar permissões Bluetooth:', err);
     }
   } else {
-    await ThermalPrinterModule.printBluetooth({
-      payload: text,
-      printerNbrCharactersPerLine: 30
-    });
+    try {
+      await ThermalPrinterModule.printBluetooth({
+        payload: text,
+        printerNbrCharactersPerLine: 30
+      });
+    } catch {
+      Alert.alert('Erro ao imprimir pedido.')
+    }
   }
 }
 
@@ -183,3 +197,44 @@ export const getDataNfcTicket = async (idTag: string) => {
     return null
   }
 }
+
+export const fetchOrders = async () => {
+
+  console.log('oi, entrei aq')
+  setTimeout(() => {
+    console.log('oiii')
+    return 'oie'
+  }, 3000);
+
+  // const userContext = useContext(UserContext);
+
+  // const q = query(
+  //   collection(db, 'OrderItems'),
+  //   where("establishment", "==", userContext?.estabId),
+  //   orderBy('date', 'desc'),
+  //   limit(15)
+  // );
+
+  // try {
+  //   const querySnapshot = await getDocs(q);
+  //   const ordersData: { id: string; }[] = [];
+
+  //   querySnapshot.forEach((doc) => {
+  //     // Não exibindo itens cancelados.
+  //     if (doc.data().status !== 3) {
+  //       ordersData.push({ id: doc.id, ...doc.data() });
+  //     }
+  //   });
+
+  //   // Atualize o estado ou faça o que for necessário com os dados recebidos
+  //   if (ordersData) {
+  //     console.log('ordersData',ordersData)
+  //   }else{
+  //     console.log('ordersData: erro')
+  //   }
+
+  // } catch (e) {
+  //   console.error('Error fetching orders: ', e);
+  // }
+};
+

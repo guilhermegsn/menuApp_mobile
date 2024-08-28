@@ -6,6 +6,7 @@ import { db } from '../Services/FirebaseConfig';
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
+import { printThermalPrinter } from '../Services/Functions'
 import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
@@ -147,16 +148,19 @@ export default function OrderItems() {
       `[L]Cliente: ${newOrder?.name}\n` +
       `[L]Local: ${newOrder?.local}\n`
     const fullText = initialText + itemsText + finalText
-    try {
-      await ThermalPrinterModule.printBluetooth({
-        payload: fullText.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
-        printerNbrCharactersPerLine: 30
-      });
-    } catch {
-      Alert.alert(
-        `Não foi possível estabalecer comunicação com a impressora.\nVerifique a conexão e tente novamente.`
-      )
-    }
+
+    printThermalPrinter(fullText)
+    
+    // try {
+    //   await ThermalPrinterModule.printBluetooth({
+    //     payload: fullText.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+    //     printerNbrCharactersPerLine: 30
+    //   });
+    // } catch {
+    //   Alert.alert(
+    //     `Não foi possível estabalecer comunicação com a impressora.\nVerifique a conexão e tente novamente.`
+    //   )
+    // }
 
   }
 
