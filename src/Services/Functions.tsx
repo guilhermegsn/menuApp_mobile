@@ -30,6 +30,12 @@ export const getCurrentDateTime = () => {
   return `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
 }
 
+export const removeAccents = (str: String) => {
+  return str
+    .normalize('NFD') // Decompõe caracteres acentuados em caracteres base e acento
+    .replace(/[\u0300-\u036f]/g, ''); // Remove os acentos
+}
+
 export const generateUUID = () => {
   let d = new Date().getTime();
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
@@ -151,7 +157,7 @@ export const printThermalPrinter = async (text: string) => {
   } else {
     try {
       await ThermalPrinterModule.printBluetooth({
-        payload: text,
+        payload: removeAccents(text),
         printerNbrCharactersPerLine: 30
       });
     } catch {

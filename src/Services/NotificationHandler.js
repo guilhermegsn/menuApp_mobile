@@ -10,7 +10,7 @@ const NotificationHandler = () => {
       console.log('Mensagem de segundo plano recebida:', remoteMessage);
 
         const text = `[L]Novo pedido!\n`;
-        await printThermalPrinter(text);
+        //await printThermalPrinter(text);
       
     });
 
@@ -19,7 +19,7 @@ const NotificationHandler = () => {
       if (remoteMessage.data.orderId) {
         // Imprima o pedido
         const text = `[L]Novo pedido!\n`;
-        printThermalPrinter(text);
+        //printThermalPrinter(text);
       } else {
         // Exiba a notificação normalmente
         // ...

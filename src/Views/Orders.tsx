@@ -1,6 +1,6 @@
 import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Avatar, Button, Card, DataTable, Dialog, FAB, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
+import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
 import { collection, query, where, DocumentData, onSnapshot, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext';
@@ -10,10 +10,10 @@ import { useNavigation, useRoute, } from '@react-navigation/native';
 import Loading from '../Components/Loading';
 import { OrderItemsData } from '../Interfaces/OrderItems_Interface';
 import moment from 'moment';
-import NfcManager, { NfcTech, Ndef, NfcEvents, nfcManager } from 'react-native-nfc-manager';
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import { NfcReader } from '../Components/NfcReader';
-import QrCodeReader from './QrCodeReader';
-import { getDataNfcTicket, readTagNfc } from '../Services/Functions';
+import { getDataNfcTicket, readTagNfc, printThermalPrinter } from '../Services/Functions';
+
 
 interface RouteParams {
   qrCodeData: string
@@ -151,7 +151,7 @@ export default function Orders() {
             idTag: tag?.id
           }))
         } else {
-          Alert.alert('Comanda em uso.',`Comanda com dados cadastrados.\nPor favor, verifique.`)
+          Alert.alert('Comanda em uso.', `Comanda com dados cadastrados.\nPor favor, verifique.`)
           setTicketType(1)
         }
       }
@@ -174,7 +174,7 @@ export default function Orders() {
       const saveTicket = await addDoc(ticketRef, paramsTicket)
       if (saveTicket) {
         setIsOpenNewTicket(false)
-        if (ticketType === 2) {
+        if (ticketType === 1) {
           console.log('imprimindo...')
           printTicket({
             id: saveTicket.id,
@@ -204,7 +204,7 @@ export default function Orders() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${userContext?.estabId}/${params.id}</qrcode>\n` +
+      `[L]<qrcode>http://192.168.1.114:3000/menu/${userContext?.estabId}/1/${params.id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
@@ -217,48 +217,30 @@ export default function Orders() {
       `[C]<b><font size='tall'>ATENCAO</font></b>\n` +
       `[L]Este ticket deve ser armazenado em local seguro.\n` +
       `[L]A perda deste ticket pode acarretar prejuizo financeiro.\n`
-    try {
-      await ThermalPrinterModule.printBluetooth({
-        payload: text,
-        printerNbrCharactersPerLine: 30
-      });
-      setParamsTicket(emptyParamsTicket)
-    } catch {
-      Alert.alert("Erro", "Erro ao imprimir")
-    }
+    await printThermalPrinter(text)
   }
 
   const printDelivery = async () => {
     const text3 =
       `[C]<u><font size='tall'>${userContext?.estabName} DELIVERY</font></u>\n` +
       `[L]\n` +
+      `[C]Peca de onde estiver.\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>http://192.168.1.113:3000/menu</qrcode>\n` +
-      `[L]\n` +
-      `[L]\n` +
-      `[R]__o\n` +
-      `[R] _ \\_\n` +
-      `[R](_)/(_)\n`
-    await ThermalPrinterModule.printBluetooth({
-      payload: text3,
-      printerNbrCharactersPerLine: 30
-    });
+      `[L]<qrcode size='20'>http://192.168.1.114:3000/menu/${userContext?.estabId}/3/Delivery</qrcode>\n\n` +
+      `[C]Agradecemos a preferencia!\n`
+    printThermalPrinter(text3)
   }
 
   const printLocalTicket = async () => {
-    console.log('imprindo ticket local...')
     const text =
-      `[C]<u><font size='tall'>${userContext?.estabName}</font></u>\n` +
+      `[C]<u><font size='tall'>CARDAPIO DIGITAL</font></u>\n` +
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${userContext?.estabId}/${'fix01' + encodeURIComponent(paramsTicket.name)}</qrcode>\n` +
+      `[L]<qrcode size='20'>http://192.168.1.114:3000/menu/${userContext?.estabId}/2/${encodeURIComponent(paramsTicket.name.trim())}</qrcode>\n` +
       `[L]${paramsTicket.name}\n`
-    await ThermalPrinterModule.printBluetooth({
-      payload: text,
-      printerNbrCharactersPerLine: 30
-    })
+    printThermalPrinter(text)
   }
 
   const loadMoreData = async () => {
@@ -424,12 +406,15 @@ export default function Orders() {
                 <Card.Title
                   title={`${item?.name}`}
                   subtitleStyle={{ fontSize: 10, marginTop: -10, color: 'gray' }}
-                  subtitle={item.type === 1 || item.type === 4 &&
+                  subtitle={item.type === 1 || item.type === 4 ? //QrCode || NFC
                     item.status === 1 && item.openingDate !== '' && item.openingDate !== undefined ?
-                    `Aberta em: ${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` : item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}`}
+                      `Aberta em: ${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` :
+                      item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}` :
+                    item.type === 3 && item.local
+                  }
                   left={() =>
                     <View >
-                      {item?.type === 1 || item?.type === 4 ?
+                      {item?.type === 1 || item?.type === 4 ? //QrCode || NFC
                         <View style={{ alignItems: 'center' }}>
                           {/* <Icon
                             source="account"
@@ -438,15 +423,23 @@ export default function Orders() {
                           /> */}
                           <Avatar.Text size={40} label={getInitialsName(item.name)} />
                           <Text style={{ fontSize: 10, color: theme.colors.primary }}>{item.local}</Text>
-                        </View> : item.type === 2 &&
-                        <View style={{ alignItems: 'center' }}>
-                          <Icon
-                            source="account-group"
-                            color={theme.colors.primary}
-                            size={30}
-                          />
-                          <Text style={{ fontSize: 10 }}>{item.local}</Text>
-                        </View>
+                        </View> : item.type === 2 ?
+                          <View style={{ alignItems: 'center' }}>
+                            <Icon
+                              source="account-group"
+                              color={theme.colors.primary}
+                              size={30}
+                            />
+                            <Text style={{ fontSize: 10 }}>{item.local}</Text>
+                          </View> : item.type === 3 && //Delivery
+                          <View style={{ alignItems: 'center' }}>
+                            <Icon
+                              source="moped-outline"
+                              color={theme.colors.primary}
+                              size={30}
+                            />
+                            <Text style={{ fontSize: 10 }}>Delivery</Text>
+                          </View>
 
                       }
 

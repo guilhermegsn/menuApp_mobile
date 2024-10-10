@@ -6,7 +6,7 @@ import { db } from '../Services/FirebaseConfig';
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
-import { printThermalPrinter } from '../Services/Functions'
+import { formatToDoubleBR, printThermalPrinter } from '../Services/Functions'
 import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
@@ -134,7 +134,8 @@ export default function OrderItems() {
   const printOrder = async (newOrder: DocumentData) => {
     let itemsText = ""
     newOrder?.items.forEach((item: string | any, index: number) => {
-      itemsText = itemsText + `[L]${(index + 1).toString().padEnd(0)} ${item?.qty.toString().padStart(4)} ${item?.name.padEnd(10)}\n`
+      const itemName = item?.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+      itemsText = itemsText + `[L]<font size='tall'>${(index + 1).toString().padEnd(0)} ${item?.qty.toString().padStart(4)} ${itemName.padStart(6)} </font>\n`
     })
     const initialText =
       `[C]<u><font size='tall'>Pedido</font></u>\n` +
@@ -143,11 +144,18 @@ export default function OrderItems() {
       `[C]================================\n` +
       `[L]<b># ${("Qtd.").padEnd(2)} ${("Produto").padEnd(10)}</b>\n` +
       `[C]--------------------------------\n`
-    const finalText =
+   
+   
+      const finalText =
       `[C]================================\n` +
-      `[L]Cliente: ${newOrder?.name}\n` +
-      `[L]Local: ${newOrder?.local}\n`
+      `[L]<font size='tall'>${newOrder?.name}</font>\n` +
+      `[C]--------------------------------\n` +
+      `[L]<font size='tall'>${newOrder?.local.replaceAll(" - ", "\n")}\n</font>`
+
     const fullText = initialText + itemsText + finalText
+
+    console.log(fullText)
+    console.log(newOrder)
 
     printThermalPrinter(fullText)
     
@@ -276,10 +284,7 @@ export default function OrderItems() {
             </View>
             
             }
-
-
         </ScrollView>}
-
 
 
       <Portal>

@@ -818,7 +818,7 @@ export default function ProductMenu() {
 
           <Dialog.Content style={{ marginTop: 40 }}>
             <Dialog.Actions>
-              <Button onPress={() => []}>Cancelar</Button>
+              <Button onPress={() => setIsAddShoppingCart(false)}>Cancelar</Button>
               <Button
                 onPress={() => addShoppingCart(selectedProduct)}
               // loading={isLoadingSave}
