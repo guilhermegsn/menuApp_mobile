@@ -138,6 +138,7 @@ export default function Home() {
     userContext?.setEstabName("")
     userContext?.setUser(null)
     userContext?.setEstabId("")
+    userContext?.setShoppingCart([])
     auth().signOut();
   }
 

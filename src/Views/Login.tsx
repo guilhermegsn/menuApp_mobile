@@ -27,6 +27,7 @@ export default function Login() {
         console.log(res?.user)
         userContext?.setUser(res?.user);
         userContext?.setIsAuthenticated(true)
+        userContext?.setShoppingCart([])
         navigation.dispatch(
           CommonActions.reset({
             index: 0,

@@ -16,6 +16,9 @@ interface UserContextType {
   isAuthenticated: Boolean
   setIsAuthenticated: (value: Boolean) => void
 
+  isUpdatedDataMenu: Boolean
+  setIsUpdatedDataMenu: (value: Boolean) => void
+
   estabName: string;
   setEstabName: (value: string) => void
 
@@ -37,6 +40,7 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [estabName, setEstabName] = useState("")
   const [estabId, setEstabId] = useState("")
   const [shoppingCart, setShoppingCart] = useState<ItemCartData[]>([])
+  const [isUpdatedDataMenu, setIsUpdatedDataMenu] = useState<Boolean>(false)
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(_user => {
@@ -72,7 +76,8 @@ function UserProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated,
       estabName, setEstabName,
       estabId, setEstabId,
-      shoppingCart, setShoppingCart
+      shoppingCart, setShoppingCart,
+      isUpdatedDataMenu, setIsUpdatedDataMenu
     }}>
       {children}
     </UserContext.Provider>

@@ -84,7 +84,7 @@ export default function Orders() {
   const closeOrderNFC = async () => {
     const tag = await readTagNfc(setIsOpenNFC)
     if (tag?.id) {
-      const data = await getDataNfcTicket(tag.id)
+      const data = await getDataNfcTicket(tag.id, userContext?.estabId || "")
       if (data) {
         const selectedTicket = orders.find((item) => item.id === data.id)
         if (selectedTicket) {

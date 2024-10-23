@@ -23,7 +23,6 @@ export default function OrderItems() {
   const [selectedOrder, setSelectedOrder] = useState<DocumentData | undefined>({})
   const [isLoadingSaveStatus, setIsLoadingSaveStatus] = useState(false)
 
-  const [relativeTimeOrders, setRelativeTimeOrders] = useState<DocumentData[]>([]);
 
   useEffect(() => {
     const q = query(

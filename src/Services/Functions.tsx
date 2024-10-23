@@ -5,10 +5,7 @@ import ThermalPrinterModule from 'react-native-thermal-printer'
 import NfcManager, { NfcTech } from 'react-native-nfc-manager';
 import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
 import { db } from '../Services/FirebaseConfig';
-import { useContext } from "react";
-import { UserContext } from "../context/UserContext";
 import { Alert } from "react-native";
-
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -75,7 +72,12 @@ export const formatToDoubleBR = (number: number) => {
   } catch {
     return ""
   }
+}
 
+export const formatCurrencyInput = (value: string) => {
+  value = value.toString().replace(/\D/g, "")
+  value = (parseFloat(value) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return value
 }
 
 export const handleNumberInputChange = (text: string): number => {
@@ -187,19 +189,22 @@ export const readTagNfc = async (setIsOpenNFC: React.Dispatch<React.SetStateActi
   }
 }
 
-export const getDataNfcTicket = async (idTag: string) => {
+export const getDataNfcTicket = async (idTag: string, idEstablishment: string) => {
   try {
     const q = query(
       collection(db, "Ticket"),
       where("idTag", "==", idTag),
-      where("status", "==", 1)
+      where("status", "==", 1),
+      where("establishment", "==", idEstablishment),
     )
     const querySnapshot = await getDocs(q)
     const doc = querySnapshot.docs[0]
+    console.log('ticket-->', doc)
     const ticket = { id: doc.id, ...doc.data() }
     return ticket
   }
-  catch {
+  catch (e) {
+    console.log('error-->', e)
     return null
   }
 }

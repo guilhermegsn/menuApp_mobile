@@ -1,22 +1,21 @@
-import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Avatar, ProgressBar, Portal, Dialog, Menu, Badge } from 'react-native-paper'
+import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Portal, Dialog, Menu, Badge } from 'react-native-paper'
 import { MenuData, ProductData, ItemCartData } from '../Interfaces/ProductMenu_Interface'
 import { generateUUID, openImagePicker, uploadImage } from '../Services/Functions'
-import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext'
 import auth from '@react-native-firebase/auth'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import { BackHandler } from 'react-native';
 import { theme } from '../Services/ThemeConfig'
 import Loading from '../Components/Loading'
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import ImagePicker, { ImageLibraryOptions, ImagePickerResponse, launchImageLibrary } from 'react-native-image-picker';
+import { getStorage, ref } from "firebase/storage";
+
 
 export default function ProductMenu() {
-
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<any>()
   const userContext = useContext(UserContext)
   const [regStage, setRegStage] = useState(-1)
   const [isEditing, setIsEditing] = useState(false)
@@ -30,14 +29,6 @@ export default function ProductMenu() {
   const [newNameMenu, setNewNameMenu] = useState('')
   const [isOpenMenuCardProduct, setIsOpenMenuCardProduct] = useState(-1)
   const [isAddShoppingCart, setIsAddShoppingCart] = useState(false)
-
-  const [imageUri, setImageUri] = useState(null);
-  const [image, setImage] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false)
-
-  const storage = getStorage();
-
-  const storageRef = ref(storage, 'some-child');
 
   const [menuData, setMenuData] = useState<MenuData>({
     id: "",
@@ -64,6 +55,14 @@ export default function ProductMenu() {
     }
   })
 
+  useFocusEffect(
+    React.useCallback(() => {
+        if(userContext?.isUpdatedDataMenu){
+          fetchData()
+          userContext.setIsUpdatedDataMenu(false)
+        }
+    }, [])
+  )
 
   useEffect(() => {
     if (regStage === -1) {
@@ -267,8 +266,6 @@ export default function ProductMenu() {
         }
       }
     }
-
-
   }
 
   const editLine = (id: string) => {
@@ -457,7 +454,7 @@ export default function ProductMenu() {
         {userContext?.shoppingCart && userContext?.shoppingCart.length > 0 &&
           <Badge
             style={styles.badge}
-            onPress={()=> navigation.navigate('ShoppingCart')}
+            onPress={() => navigation.navigate('ShoppingCart')}
             size={13}>{userContext?.shoppingCart.length}
           </Badge>
         }
@@ -482,8 +479,10 @@ export default function ProductMenu() {
             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', flexWrap: "wrap" }}>
               {listMenu?.map((menu, index) => (
                 <Card key={index} style={{ width: "46%", margin: "2%", height: 240 }}
-                  onPress={() => [setMenuData(menu), setRegStage(3)]}
-                //  onLongPress={() => [navigation.navigate('ProductList', menu)]}
+                  //  onPress={() => [setMenuData(menu), setRegStage(3)]}
+
+                  // passo o listMenu e o index do menu selecionado para a stack 
+                  onPress={() => [navigation.navigate('ProductMenuItens', { menu: menu, indexMenu: index })]}
                 >
                   <Card.Cover source={{ uri: menu.urlImg !== null ? menu.urlImg : '' }} />
                   <Card.Content style={{ marginTop: "2%" }}>
@@ -602,7 +601,6 @@ export default function ProductMenu() {
                 setProductData((prevData) => ({
                   ...prevData,
                   price: parseFloat(text),
-
                   strPrice: formatCurrencyInput(text)
                 }))
               }}

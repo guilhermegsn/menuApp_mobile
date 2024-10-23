@@ -1,24 +1,23 @@
-import { View, Text, StatusBar } from 'react-native'
+import { StatusBar } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { NavigationContainer, NavigationProp, ParamListBase  } from '@react-navigation/native'
+import { NavigationContainer } from '@react-navigation/native'
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { UserContext } from '../context/UserContext';
 import Home from '../Views/Home';
 import Login from '../Views/Login';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
-import PrintTest from '../Views/PrintTest';
 import ProductMenu from '../Views/ProductMenu';
 import { createStackNavigator } from '@react-navigation/stack';
 import { theme } from '../Services/ThemeConfig';
 import { CardStyleInterpolators } from '@react-navigation/stack';
 import Orders from '../Views/Orders';
-import Tables from '../Views/Tables';
 import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
 import { Icon } from 'react-native-paper';
-import ProductList from '../Views/ProductList';
 import ShoppingCart from '../Views/ShoppingCart';
 import QrCodeReader from '../Views/QrCodeReader';
+import ProductMenuItens from '../Views/ProductMenuItens';
+import MenuProducts from '../Views/MenuProducts';
 
 export default function AppBar() {
 
@@ -27,7 +26,6 @@ export default function AppBar() {
   const [name, setName] = useState("Smart Menu")
   const userContext = useContext(UserContext);
 
-  
 
   useEffect(() => {
     if (userContext?.estabName) {
@@ -69,7 +67,7 @@ export default function AppBar() {
                 ),
               }}
             />
-             <Drawer.Screen name="OrderItems"
+            <Drawer.Screen name="OrderItems"
               component={OrderItems}
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
@@ -91,16 +89,6 @@ export default function AppBar() {
                 ),
               }}
             />
-            {/* <Drawer.Screen name="Print"
-              component={PrintTest}
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="print" size={size} color={color} />
-                ),
-              }}
-            /> */}
           </> :
           <>
             <Drawer.Screen name="Login"
@@ -134,18 +122,18 @@ export default function AppBar() {
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           }}
         />
          <Stack.Screen
-          name="ProductList"
-          component={ProductList}
+          name="ProductMenuItens"
+          component={ProductMenuItens}
           options={{
-            title: "Cardápio",
+            title: "Produtos",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           }}
         />
         <Stack.Screen
@@ -156,7 +144,7 @@ export default function AppBar() {
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           }}
         />
         <Stack.Screen
@@ -167,7 +155,7 @@ export default function AppBar() {
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,             
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           }}
         />
       </Stack.Navigator>

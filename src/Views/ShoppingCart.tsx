@@ -3,11 +3,12 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Card, Dialog, Icon, IconButton, Portal, Text } from 'react-native-paper'
 import { UserContext } from '../context/UserContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { DocumentData, addDoc, collection, doc, getDoc } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import Loading from '../Components/Loading';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import { getDataNfcTicket, readTagNfc } from '../Services/Functions';
+import { DocumentReference } from '@google-cloud/firestore';
 
 interface RouteParams {
   qrCodeData: string
@@ -39,7 +40,7 @@ export default function ShoppingCart() {
     try {
       const tag = await readTagNfc(setIsOpenNFC)
       if (tag?.id) {
-        const data = await getDataNfcTicket(tag.id)
+        const data = await getDataNfcTicket(tag.id, userContext?.estabId || "")
         if (data) {
           setTicket(data?.id)
           setDataTicket(data)
@@ -84,28 +85,34 @@ export default function ShoppingCart() {
   }
 
   useEffect(() => {
-    getDataTicket()
+    getDataTicketQrCode()
   }, [qrCodeData])
 
-  const getDataTicket = async () => {
-    const urlSplit = qrCodeData.split("/")
-    const ticketUrl = urlSplit[urlSplit.length - 1]
-    setTicket(ticketUrl)
-    setIsLoadingTicket(true)
-    try {
-      const docRef = doc(db, 'Ticket', ticketUrl);
-      const docSnapshot = await getDoc(docRef);
-      const dataTicket = docSnapshot.data()
-      if (dataTicket) {
-        setDataTicket(dataTicket)
+  const getDataTicketQrCode = async () => {
+    if (qrCodeData) {
+      const urlSplit = qrCodeData.split("/")
+      const ticketId = urlSplit[urlSplit.length - 1]
+      setTicket(ticketId)
+      setIsLoadingTicket(true)
+      try {
+        const docRef = doc(db, 'Ticket', ticketId);
+        const docSnapshot = await getDoc(docRef);
+        const dataTicket = docSnapshot.data()
+        if (dataTicket) {
+          if (dataTicket?.establishment === userContext?.estabId) //valido se a comanda pertence a este estabelecimento
+            setDataTicket(dataTicket)
+          else
+            Alert.alert('Comanda inválida!')
+        } else {
+          Alert.alert('Comanda inválida!')
+        }
+      }
+      catch {
+        console.log('erro')
+      } finally {
+        setIsLoadingTicket(false)
       }
     }
-    catch {
-      console.log('erro')
-    } finally {
-      setIsLoadingTicket(false)
-    }
-
   }
 
   const sendOrder = async () => {
@@ -113,8 +120,8 @@ export default function ShoppingCart() {
     try {
       const items = userContext?.shoppingCart.map((item) => ({
         idItem: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
+        name: item?.product?.name,
+        price: item?.product?.price,
         qty: item.qty
       }))
 
@@ -128,8 +135,11 @@ export default function ShoppingCart() {
         name: dataTicket?.name
       }
 
+      console.log('dataOrder-->>', dataOrder)
+
       const orderItemsRef = collection(db, "OrderItems");
       const saveOrder = await addDoc(orderItemsRef, dataOrder)
+
       if (saveOrder) {
         Alert.alert('Pedido enviado.')
         navigation.goBack()
@@ -137,8 +147,8 @@ export default function ShoppingCart() {
       } else {
         console.log('nao entyrou aq')
       }
-    } catch {
-      console.log('erro...')
+    } catch (e) {
+      console.log('erro...', e)
     } finally {
       setIsLoading(false)
     }
@@ -155,8 +165,8 @@ export default function ShoppingCart() {
             <View style={{ flexDirection: 'row' }}>
               <View style={{ width: '50%' }}>
                 <View style={{ marginTop: 25, marginLeft: 10 }}>
-                  {dataTicket.name ?
-                    <Text>{dataTicket.name}</Text>
+                  {dataTicket?.name ?
+                    <Text>{dataTicket?.name}</Text>
                     :
                     isLoadingTicket ?
                       <Text>Carregando...</Text>
@@ -197,7 +207,7 @@ export default function ShoppingCart() {
             >
               <Card.Title
                 titleVariant='titleMedium'
-                title={item.product.name}
+                title={item?.product?.name}
                 //subtitle={item.description}
                 right={() => (
                   <View style={{ flexDirection: 'row', marginRight: 15 }}>
