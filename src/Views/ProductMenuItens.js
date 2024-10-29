@@ -6,7 +6,7 @@ import { UserContext } from '../context/UserContext';
 import { updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig'
-import { formatCurrencyInput, formatToDoubleBR, generateUUID, openImagePicker, uploadImage } from '../Services/Functions';
+import { formatCurrencyInput, generateUUID, openImagePicker, uploadImage } from '../Services/Functions';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function ProductMenuItens() {
@@ -228,7 +228,7 @@ export default function ProductMenuItens() {
         ><Icon source="cart" size={25} color={theme.colors.onBackground} /></Button>
       </View>
       <ScrollView>
-       <View style={{marginBottom: 10}}>
+       <View style={{marginBottom: 90}}>
        <View style={{ marginBottom: 15 }}>
           <TouchableOpacity
             onLongPress={() => Alert.alert(
@@ -346,6 +346,7 @@ export default function ProductMenuItens() {
               <>
                 <TextInput
                   numberOfLines={3}
+                  multiline
                   style={{ margin: 5, marginTop: 10 }}
                   label="Descrição"
                   keyboardType='default'

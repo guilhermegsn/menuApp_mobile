@@ -6,17 +6,19 @@ import { ActivityIndicator, Button, DataTable, Dialog, IconButton, Portal, Text,
 import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig';
-import { formatToCurrencyBR, formatToDoubleBR, handleNumberInputChange } from '../Services/Functions'
+import { formatCurrencyInput, formatToCurrencyBR, formatToDoubleBR, handleNumberInputChange } from '../Services/Functions'
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { ScrollView } from 'react-native';
 import moment from 'moment';
 import CurrencyInput from '../Components/CurrencyInput'
 import { UserContext } from '../context/UserContext';
+import { PaymentMethod } from '../Interfaces/PaymentMethod_interface';
 interface RouteParams {
   id: string
   local: string
   openingDate: Date
   name: string,
+  status: string
 }
 
 export default function CloseOrder() {
@@ -25,7 +27,7 @@ export default function CloseOrder() {
 
   const navigation = useNavigation();
   const route = useRoute();
-  const { id, local, openingDate, name } = route.params as RouteParams || {};
+  const { id, local, openingDate, name, status } = route.params as RouteParams || {};
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<DocumentData[]>([]);
   const [isCloseOrder, setIsCloeOrder] = useState(false)
@@ -35,12 +37,33 @@ export default function CloseOrder() {
   const [discountValue, setDiscountValue] = useState<string>('0')
   const [percentTax, setPercentTax] = useState<string>('')
   const [taxValue, setTaxValue] = useState<string>('0')
-  const [resultTotal, setResultTotal] = useState<number | null>(0)
+  const [resultTotal, setResultTotal] = useState<number>(0)
   const [amountReceived, setAmmountReceived] = useState<string>('0')
+  const [changeValueOrder, setChangeValueOorder] = useState('0')
 
   useEffect(() => {
     fetchData()
   }, [])
+
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [paymentMethod, setPaymentMethod] = useState("")
+
+  // Função para carregar métodos de pagamento
+  const loadPaymentMethods = () => {
+    const methods: PaymentMethod[] = [
+      { name: 'Crédito', id: 'CRD' },
+      { name: 'Débito', id: 'DBT' },
+      { name: 'Cripto', id: 'CRT' },
+      { name: 'Dinheiro', id: 'CASH' },
+      { name: 'Cheque', id: 'CHK' },
+      { name: 'Pix', id: 'PIX' },
+    ];
+    setPaymentMethods(methods);
+  };
+
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
 
   const fetchData = async () => {
     const q = query(
@@ -131,7 +154,8 @@ export default function CloseOrder() {
       await updateDoc(docRef, {
         status: 0,
         closingDate: serverTimestamp(),
-        totalValue: resultTotal
+        totalValue: resultTotal,
+        paymentMethod: paymentMethod
       })
       setIsCloeOrder(false)
       navigation.goBack();
@@ -211,7 +235,7 @@ export default function CloseOrder() {
       items: [item],
       local: local,
       order_id: id,
-      status: "3" //3 = cancelado
+      status: 3 //3 = cancelado
     }
 
     try {
@@ -289,6 +313,7 @@ export default function CloseOrder() {
                 icon="cash-check"
                 iconColor={theme.colors.primary}
                 size={30}
+                disabled={parseInt(status) !== 1}
                 onPress={() => setIsCloeOrder(true)}
               />
               <IconButton
@@ -344,22 +369,7 @@ export default function CloseOrder() {
 
             </DataTable.Row>
           </DataTable>
-          {/* <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }}>
-            <View  style={{ flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-              <IconButton  icon="percent" mode="contained" onPress={() => console.log('Pressed')}/>
-             
-             
-               
-            </View>
-            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end' }}>
-              <Text variant="bodyLarge" style={{ textAlign: 'right', margin: 10 }}>SUBTOTAL: {formatToCurrencyBR(totalOrder)}</Text>
-              <Text variant="bodyMedium" style={{ textAlign: 'right', marginRight: 10 }}>TAXA SERVIÇO:  {formatToCurrencyBR(0)}</Text>
-              <Text variant="bodyMedium" style={{ textAlign: 'right', marginRight: 10 }}>DESCONTO:  {formatToCurrencyBR(0)}</Text>
-              <Text variant="bodyLarge" style={{ textAlign: 'right', margin: 10 }}>TOTAL:  {formatToCurrencyBR(totalOrder)}</Text>
-            </View>
-          </View> */}
-
-
+          
           {/* Mensagem confirmação / fechar comanda */}
           <Portal>
             <Dialog visible={isCloseOrder} onDismiss={() => setIsCloeOrder(false)}>
@@ -367,53 +377,46 @@ export default function CloseOrder() {
               <Dialog.Content>
                 <Text variant="bodyMedium" style={{ marginBottom: 10 }}>Forma de pagamento:</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                  <Button style={{ margin: 2 }}
-                    mode={'outlined'}
-                    onPress={() => []}>Crédito
-                  </Button>
-                  <Button style={{ margin: 2 }}
-                    mode={'outlined'}
-                    onPress={() => []}>Débito
-                  </Button>
 
-                  <Button style={{ margin: 2 }}
-                    mode={'outlined'}
-                    onPress={() => []}>Cripto
-                  </Button>
-                  <Button style={{ margin: 2 }}
-                    mode={'outlined'}
-                    onPress={() => []}>Dinheiro
-                  </Button>
-
-                  <Button style={{ margin: 2 }}
-                    mode={'outlined'}
-                    onPress={() => []}>Cheque
-                  </Button>
-                  <Button style={{ margin: 2 }}
-                    mode={'outlined'}
-                    onPress={() => []}>Pix
-                  </Button>
+                  {paymentMethods.map(pay => (
+                    <Button style={{ margin: 2 }}
+                      mode={paymentMethod === pay.id ? 'contained' : 'outlined'}
+                      onPress={() => {
+                        if (pay.id === 'CASH') {
+                          setChangeValueOorder(formatToDoubleBR(0))
+                        }
+                        setPaymentMethod(pay.id)
+                        setAmmountReceived(pay.id === 'CASH' ? formatToDoubleBR(0) : formatToDoubleBR(totalOrder))
+                      }}>{pay.name}
+                    </Button>
+                  ))}
                 </View>
 
-
-               <Text style={{margin: 10}}>Valor a ser pago: {resultTotal?.toString()}</Text>
-                 <TextInput
+                <Text variant="titleLarge" style={{ margin: 10 }}>À pagar: R$ {formatToDoubleBR(resultTotal || 0)}</Text>
+                <TextInput
                   style={{ margin: 5 }}
                   label="Valor recebido"
                   keyboardType='numeric'
                   value={amountReceived}
-                  onChangeText={(e)=> setAmmountReceived(e)}
+                  onChangeText={(e) => setAmmountReceived(formatCurrencyInput(e))}
                 />
-                 <TextInput
-                  style={{ margin: 5 }}
-                  label="Troco"
-                  disabled
-                  keyboardType='numeric'
-                  value={resultTotal !== null  && !isNaN(resultTotal) && !isNaN(parseFloat(amountReceived)) ? (parseFloat(amountReceived) - resultTotal).toString() : '0'}
-                />
-
-
-
+                {paymentMethod === 'CASH' &&
+                  <View>
+                    <TextInput
+                      style={{ margin: 5 }}
+                      label="Troco"
+                      disabled
+                      keyboardType='numeric'
+                      value={changeValueOrder}
+                    />
+                    <Button
+                      onPress={() => {
+                        const result = parseFloat(amountReceived) - resultTotal
+                        setChangeValueOorder(formatToDoubleBR(result))
+                      }}
+                    >Calcular</Button>
+                  </View>
+                }
               </Dialog.Content>
               <Dialog.Actions>
                 <Button onPress={() => setIsCloeOrder(false)}>Cancelar</Button>
@@ -430,7 +433,6 @@ export default function CloseOrder() {
                 <View style={{ flexDirection: 'row' }}>
                   <Button style={{ margin: 2 }}
                     mode={percentTax === '5' ? 'contained' : 'outlined'}
-
                     onPress={() => isDiscount ? calcTax(5) : calcTax(5)}>5%
                   </Button>
                   <Button style={{ margin: 2 }}

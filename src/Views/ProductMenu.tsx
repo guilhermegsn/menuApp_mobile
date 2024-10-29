@@ -29,6 +29,9 @@ export default function ProductMenu() {
   const [newNameMenu, setNewNameMenu] = useState('')
   const [isOpenMenuCardProduct, setIsOpenMenuCardProduct] = useState(-1)
   const [isAddShoppingCart, setIsAddShoppingCart] = useState(false)
+  const [isNewMenu, setIsNewMenu] = useState(false)
+  const [imageMenu, setImageMenu] = useState("")
+  const [nameNewMenu, setNameNewMenu] = useState("")
 
   const [menuData, setMenuData] = useState<MenuData>({
     id: "",
@@ -57,10 +60,10 @@ export default function ProductMenu() {
 
   useFocusEffect(
     React.useCallback(() => {
-        if(userContext?.isUpdatedDataMenu){
-          fetchData()
-          userContext.setIsUpdatedDataMenu(false)
-        }
+      if (userContext?.isUpdatedDataMenu) {
+        fetchData()
+        userContext.setIsUpdatedDataMenu(false)
+      }
     }, [])
   )
 
@@ -448,6 +451,50 @@ export default function ProductMenu() {
     userContext?.setShoppingCart([] as ItemCartData[]);
   }
 
+  const openImageNewMenu = async () => {
+    const uri = await openImagePicker()
+    if (uri) {
+      setImageMenu(uri)
+    }
+  }
+
+  const addNewMenu = async () => {
+    setIsLoadingSave(true)
+    try {
+      if (userContext) {
+        const docRef = doc(db, 'Establishment', userContext.estabId)
+        const docSnapshot = await getDoc(docRef);
+        const estab = docSnapshot.data();
+
+        if (estab) {
+          const urlImageSave = await uploadImage(imageMenu)
+          const newMenuItem = {
+            id: generateUUID(),
+            urlImg: urlImageSave,
+            items: [],
+            name: nameNewMenu
+          };
+
+          // Adiciona o novo item ao menu
+          await updateDoc(docRef, {
+            menu: [...estab.menu, newMenuItem]
+          });
+
+          userContext.setIsUpdatedDataMenu(true);
+          console.log('Novo item de menu adicionado!');
+        }
+      }
+    } catch (e) {
+      console.log(e)
+      Alert.alert('Erro ao salvar');
+    } finally {
+      setIsLoadingSave(false);
+    }
+  }
+
+
+
+
   return (
     <View style={{ flex: 1 }}>
       <View style={{ position: 'absolute', right: 0, top: -60, zIndex: 100 }}>
@@ -491,7 +538,8 @@ export default function ProductMenu() {
                 </Card>
               ))}
               <Card style={{ width: "45%", margin: "2%", height: 240 }}
-                onPress={() => [setRegStage(1), setIsBatcAdd(true), clearMenuData()]}>
+                // onPress={() => [setRegStage(1), setIsBatcAdd(true), clearMenuData()]}>
+                onPress={() => setIsNewMenu(true)}>
                 <Card.Content style={{ marginTop: "2%" }}>
                   <Icon
                     source="plus"
@@ -823,6 +871,62 @@ export default function ProductMenu() {
 
               >
                 Adicionar
+              </Button>
+            </Dialog.Actions>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
+
+
+      {/* Modal ADD Novo menu */}
+      <Portal>
+        <Dialog visible={isNewMenu} onDismiss={() => [setIsNewMenu(false)]}>
+          <Dialog.Title style={{ textAlign: 'center' }}>{'Novo Menu'}</Dialog.Title>
+
+          <View style={{ padding: 15 }}>
+            <TextInput
+              style={{ margin: 5, marginTop: 10 }}
+              label="Nome"
+              placeholder='Exemplo: Lanches'
+              keyboardType='default'
+              value={nameNewMenu}
+              onChangeText={(text) => {
+                setNameNewMenu(text)
+              }}
+            />
+
+
+            <View>
+              {imageMenu ?
+                <TouchableOpacity
+                  onPress={openImageNewMenu}
+                >
+                  <Image
+                    source={{ uri: imageMenu }}
+                    style={styles.imagem}
+                  />
+                </TouchableOpacity> :
+                <View style={{ width: '80%', alignSelf: 'center', marginTop: 20 }}>
+                  <Button
+                    icon="image"
+                    mode="contained"
+                    onPress={openImageNewMenu}
+                  >Adicionar imagem
+                  </Button>
+                </View>
+              }
+            </View>
+          </View>
+
+          <Dialog.Content style={{ marginTop: 40 }}>
+            <Dialog.Actions>
+              <Button onPress={() => setIsNewMenu(false)}>Cancelar</Button>
+              <Button
+                onPress={() => addNewMenu()}
+                loading={isLoadingSave}
+
+              >
+                Salvar
               </Button>
             </Dialog.Actions>
           </Dialog.Content>

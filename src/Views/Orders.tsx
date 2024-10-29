@@ -4,7 +4,6 @@ import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Port
 import { collection, query, where, DocumentData, onSnapshot, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext';
-import ThermalPrinterModule from 'react-native-thermal-printer'
 import { theme } from '../Services/ThemeConfig';
 import { useNavigation, useRoute, } from '@react-navigation/native';
 import Loading from '../Components/Loading';
@@ -65,7 +64,7 @@ export default function Orders() {
       const ticketNumber = urlSplit[urlSplit.length - 1]
       const selectedTicket = orders.find((item) => item.id === ticketNumber)
       if (selectedTicket) {
-        closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name)
+        closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name, selectedTicket?.status)
         //limpo o qrCode
         navigation.setParams({ qrCodeData: '' });
       }
@@ -77,8 +76,8 @@ export default function Orders() {
     NfcManager.cancelTechnologyRequest()
   }
 
-  const closeOrder = (id: string, local: string, openingDate: Date, name: string) => {
-    navigation.navigate('CloseOrder', { id: id, local: local, openingDate: openingDate.toISOString(), name: name })
+  const closeOrder = (id: string, local: string, openingDate: Date, name: string, status: string) => {
+    navigation.navigate('CloseOrder', { id: id, local: local, openingDate: openingDate.toISOString(), name: name, status: status })
   }
 
   const closeOrderNFC = async () => {
@@ -88,7 +87,7 @@ export default function Orders() {
       if (data) {
         const selectedTicket = orders.find((item) => item.id === data.id)
         if (selectedTicket) {
-          closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name)
+          closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name, selectedTicket?.status)
         }
       } else {
         Alert.alert('Comanda inválida.')
@@ -382,7 +381,7 @@ export default function Orders() {
               style={[styles.card, { backgroundColor: item.status === 1 ? '#196F3D' : '#C0392B' }]}
             >
               <Card style={{ backgroundColor: '#EBEDEF' }}
-                onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name)]}
+                onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name, item.status)]}
                 onLongPress={() => Alert.alert(
                   'Reimprimir Ticket?',
                   item.name,
