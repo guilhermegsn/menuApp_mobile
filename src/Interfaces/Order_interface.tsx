@@ -9,4 +9,5 @@ export interface OrderData {
   local: string,
   items: ProductData,
   date: Date,
+  ticketType: number
 }

@@ -9,6 +9,8 @@ import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { printThermalPrinter } from '../Services/Functions'
+import NotificationService from '../Services/NotificationService'
+import messaging from '@react-native-firebase/messaging';
 
 export default function Home() {
 
@@ -34,6 +36,17 @@ export default function Home() {
     owner: auth().currentUser?.uid,
     id: ""
   })
+  const [tokenFcm, setTokenFcm] = useState("")
+
+  //registrando as push notifications
+  useEffect(() => {
+    const registerNotifications = async () => {
+      const fcmToken = await messaging().getToken();
+      setTokenFcm(fcmToken)
+      NotificationService.registerForPushNotifications(userContext?.estabId, fcmToken)
+    }
+    registerNotifications()
+  }, [userContext?.estabId])
 
   const getCepApi = async () => {
     if (dataEstab.zip_code.length === 8) {
@@ -65,7 +78,7 @@ export default function Home() {
       `[L]${dataEstab.neighborhood}\n` +
       `[L]${dataEstab.city} - ${dataEstab.state}\n` +
       `[L]<font size='tall'>Fone: ${dataEstab.phone}</font>\n`
-      printThermalPrinter(text)  
+    printThermalPrinter(text)
 
 
     // const text =
@@ -127,6 +140,7 @@ export default function Home() {
           if (userContext) {
             userContext.setEstabName(doc.data().name)
             userContext.setEstabId(doc.data().id)
+            userContext.setEstabTokenFCM(tokenFcm)
           }
         }
       }).catch((e) => console.log(e)).finally(() => setIsLoading(false))

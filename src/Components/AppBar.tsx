@@ -23,15 +23,8 @@ export default function AppBar() {
 
   const Drawer = createDrawerNavigator();
   const Stack = createStackNavigator();
-  const [name, setName] = useState("Smart Menu")
   const userContext = useContext(UserContext);
 
-
-  useEffect(() => {
-    if (userContext?.estabName) {
-      setName(userContext.estabName)
-    }
-  }, [userContext])
 
   const DrawerNavigator = () => {
     return (
@@ -50,7 +43,7 @@ export default function AppBar() {
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
-                title: name,
+                title: userContext?.estabName || "Smart Menu",
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="store" size={size} color={color} />
                 ),

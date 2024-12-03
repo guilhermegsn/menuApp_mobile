@@ -228,101 +228,104 @@ export default function ProductMenuItens() {
         ><Icon source="cart" size={25} color={theme.colors.onBackground} /></Button>
       </View>
       <ScrollView>
-       <View style={{marginBottom: 90}}>
-       <View style={{ marginBottom: 15 }}>
-          <TouchableOpacity
-            onLongPress={() => Alert.alert(
-              'Alterar imagem', 'Deseja alterar a imagem do menu?',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Sim',
-                  onPress: () => {
-                    updateMenuImage()
-                  },
-                },
-              ],
-              { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
-            )}
-          >
-            {isLoading && <ActivityIndicator
-              color='orange'
-              style={styles.loadingImage} />}
-            {imageMenu &&
-              <Image
-                source={{ uri: imageMenu }}
-                style={styles.imagem}
-              />
-            }
-          </TouchableOpacity>
-          <View style={{ position: 'absolute', bottom: -5, alignSelf: 'center', }}>
-            <View style={styles.textWrapper}>
-              <Text style={styles.text}
-                onLongPress={() => Alert.alert(
-                  'Editar menu', 'Deseja alterar o nome do menu?',
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Sim',
-                      onPress: () => {
-                        setIsEditingNameMenu(true)
-                        setNewNameMenu(menu.name)
-                      },
+        <View style={{ marginBottom: 90 }}>
+          <View style={{ marginBottom: 15 }}>
+            <TouchableOpacity
+              onLongPress={() => Alert.alert(
+                'Alterar imagem', 'Deseja alterar a imagem do menu?',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Sim',
+                    onPress: () => {
+                      updateMenuImage()
                     },
-                  ],
-                  { cancelable: true }
-                )}
-              >{nameMenu}</Text>
+                  },
+                ],
+                { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
+              )}
+            >
+              {isLoading && <ActivityIndicator
+                color='orange'
+                style={styles.loadingImage} />}
+              {imageMenu &&
+                <Image
+                  source={{ uri: imageMenu }}
+                  style={styles.imagem}
+                />
+              }
+            </TouchableOpacity>
+            <View style={{ position: 'absolute', bottom: -5, alignSelf: 'center', }}>
+              <View style={styles.textWrapper}>
+                <Text style={styles.text}
+                  onLongPress={() => Alert.alert(
+                    'Editar menu', 'Deseja alterar o nome do menu?',
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Sim',
+                        onPress: () => {
+                          setIsEditingNameMenu(true)
+                          setNewNameMenu(menu.name)
+                        },
+                      },
+                    ],
+                    { cancelable: true }
+                  )}
+                >{nameMenu}</Text>
+              </View>
             </View>
           </View>
-        </View>
-        {dataMenu?.map((item, index) => (
-          <Card
-            key={index}
-            style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}
-            onPress={() => selectProduct(item)}
-          >
-            <Card.Title
-              titleVariant='titleMedium'
-              title={item.name}
-              subtitle={item.description}
-              right={() => (
-                <View>
-                  <Menu
-                    visible={isOpenMenuCardProduct === index}
-                    onDismiss={() => setIsOpenMenuCardProduct(-1)}
-                    anchor={<IconButton icon="dots-vertical" onPress={() => [setIsOpenMenuCardProduct(index)]} />}
-                  >
-                    <Menu.Item
-                      onPress={() => {
-                        setIsEdit(true)
-                        setSelectedProduct(item)
-                        setIsOpenMenuCardProduct(-1)
-                      }}
-                      title="Editar"
-                      leadingIcon="pencil"
-                    />
-                    <Menu.Item
-                      onPress={() => {
-                        setSelectedProduct(item)
-                        setIsDelete(true)
-                        setIsOpenMenuCardProduct(-1)
-                      }}
-                      title="Excluir"
-                      leadingIcon="delete"
-                    />
-                  </Menu>
+          {dataMenu?.map((item, index) => (
+            <Card
+              key={index}
+              style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}
+              onPress={() => selectProduct(item)}
+            >
+              <Card.Title
+                titleVariant='titleMedium'
+                title={item.name}
+                subtitle={""}
+                right={() => (
+                  <View>
+                    <Menu
+                      visible={isOpenMenuCardProduct === index}
+                      onDismiss={() => setIsOpenMenuCardProduct(-1)}
+                      anchor={<IconButton icon="dots-vertical" onPress={() => [setIsOpenMenuCardProduct(index)]} />}
+                    >
+                      <Menu.Item
+                        onPress={() => {
+                          setIsEdit(true)
+                          setSelectedProduct(item)
+                          setIsOpenMenuCardProduct(-1)
+                        }}
+                        title="Editar"
+                        leadingIcon="pencil"
+                      />
+                      <Menu.Item
+                        onPress={() => {
+                          setSelectedProduct(item)
+                          setIsDelete(true)
+                          setIsOpenMenuCardProduct(-1)
+                        }}
+                        title="Excluir"
+                        leadingIcon="delete"
+                      />
+                    </Menu>
+                  </View>
+                )}
+              />
+              <Card.Content>
+                <View style={{ marginTop: -15, marginBottom: 10 }}>
+                  <Text variant='bodySmall'>{item?.description}</Text>
                 </View>
-              )}
-            />
-            <Card.Content>
-              <Text variant="bodyMedium">
-                R$ {item.strPrice}
-              </Text>
-            </Card.Content>
-          </Card>
-        ))}
-       </View>
+                <Text variant="bodyMedium">
+                  R$ {item.strPrice}
+                </Text>
+              </Card.Content>
+            </Card>
+          ))}
+        </View>
       </ScrollView>
 
       <Portal>
@@ -432,7 +435,10 @@ export default function ProductMenuItens() {
               keyboardType='numeric'
               value={selectedProduct?.qty?.toString()}
               onChangeText={(text) => {
-                setNewNameMenu(text)
+                setSelectedProduct(prevData => ({
+                  ...prevData,
+                  qty: text
+                }))
               }}
             />
             <IconButton

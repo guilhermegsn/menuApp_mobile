@@ -1,13 +1,18 @@
- // NotificationService.js
-import messaging from '@react-native-firebase/messaging';
+//import messaging from '@react-native-firebase/messaging';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../Services/FirebaseConfig';
 
-const registerForPushNotifications = async () => {
+const registerForPushNotifications = async (idEstablishment, token) => {
   try {
-    const fcmToken = await messaging().getToken();
-    console.log('Token FCM:', fcmToken);
-    // Envie o token FCM para o seu servidor para enviar notificações
+    //const fcmToken = await messaging().getToken();
+   // console.log('Token FCM:',)
+    const docRef = doc(db, "Establishment", idEstablishment);
+    await updateDoc(docRef, {
+      token: token
+    })
+    console.log('Token FCM atualizado com sucesso!', token)
   } catch (error) {
-    console.error('Erro ao registrar para notificações push:', error);
+    console.error('Erro ao registrar para notificações push ou ao atualizar o documento:', error)
   }
 };
 

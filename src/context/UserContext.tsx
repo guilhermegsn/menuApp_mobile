@@ -27,6 +27,9 @@ interface UserContextType {
 
   shoppingCart: ItemCartData[];
   setShoppingCart: React.Dispatch<React.SetStateAction<ItemCartData[]>>
+
+  estabTokenFCM: string;
+  setEstabTokenFCM: (value: string) => void
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -39,6 +42,7 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<Boolean>(false)
   const [estabName, setEstabName] = useState("")
   const [estabId, setEstabId] = useState("")
+  const [estabTokenFCM, setEstabTokenFCM] = useState("")
   const [shoppingCart, setShoppingCart] = useState<ItemCartData[]>([])
   const [isUpdatedDataMenu, setIsUpdatedDataMenu] = useState<Boolean>(false)
 
@@ -77,7 +81,8 @@ function UserProvider({ children }: { children: ReactNode }) {
       estabName, setEstabName,
       estabId, setEstabId,
       shoppingCart, setShoppingCart,
-      isUpdatedDataMenu, setIsUpdatedDataMenu
+      isUpdatedDataMenu, setIsUpdatedDataMenu,
+      estabTokenFCM, setEstabTokenFCM
     }}>
       {children}
     </UserContext.Provider>

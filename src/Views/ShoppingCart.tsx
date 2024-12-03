@@ -1,6 +1,6 @@
-import { Alert, View } from 'react-native'
+import { Alert, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Card, Dialog, Icon, IconButton, Portal, Text } from 'react-native-paper'
+import { ActivityIndicator, Button, Card, DataTable, Dialog, Icon, IconButton, Portal, Text, TextInput } from 'react-native-paper'
 import { UserContext } from '../context/UserContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
@@ -8,13 +8,25 @@ import { db } from '../Services/FirebaseConfig';
 import Loading from '../Components/Loading';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import { getDataNfcTicket, readTagNfc } from '../Services/Functions';
-import { DocumentReference } from '@google-cloud/firestore';
 
 interface RouteParams {
   qrCodeData: string
 }
 
 export default function ShoppingCart() {
+
+  const styles = StyleSheet.create({
+    container: {
+      maxHeight: 350,
+      borderStyle: 'solid',
+      borderWidth: 0.3,
+      marginBottom: 10
+    },
+    item: {
+      padding: 4,
+      marginLeft: 10,
+    },
+  });
 
   const userContext = useContext(UserContext)
   const navigation = useNavigation<any>()
@@ -23,6 +35,10 @@ export default function ShoppingCart() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingTicket, setIsLoadingTicket] = useState(false)
   const [isOpenNFC, setIsOpenNFC] = useState(false)
+  const [isOpenSearchConsumer, setIsOpenSearchConsumer] = useState(false)
+  const [dataOpenTickets, setDataOpenTickets] = useState<DocumentData>([])
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('');
 
 
   const route = useRoute();
@@ -115,6 +131,7 @@ export default function ShoppingCart() {
     }
   }
 
+
   const sendOrder = async () => {
     setIsLoading(true)
     try {
@@ -132,7 +149,8 @@ export default function ShoppingCart() {
         local: dataTicket?.local,
         order_id: ticket,
         status: 1,
-        name: dataTicket?.name
+        name: dataTicket?.name,
+        token: userContext?.estabTokenFCM
       }
 
       console.log('dataOrder-->>', dataOrder)
@@ -154,6 +172,41 @@ export default function ShoppingCart() {
     }
   }
 
+  const getOpenTickets = async () => {
+    setIsLoadingSearch(true)
+    try {
+      const q = query(
+        collection(db, "Ticket"),
+        where("status", "==", 1),
+        where("establishment", "==", userContext?.estabId),
+      )
+      const querySnapshot = await getDocs(q)
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs.map(item => (item.data()))
+        setDataOpenTickets(doc)
+      }
+    } catch (e) {
+      console.log(e)
+    } finally {
+      setIsLoadingSearch(false)
+    }
+  }
+
+  const filteredData = dataOpenTickets.filter((item: { name: string; }) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const selectConsumer = (item: DocumentData) => {
+    setDataTicket(item)
+    setIsOpenSearchConsumer(false)
+  }
+
+  const searchConsumer = () => {
+    setIsOpenSearchConsumer(true)
+    if (dataOpenTickets.length <= 0)
+      getOpenTickets()
+  }
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -166,7 +219,7 @@ export default function ShoppingCart() {
               <View style={{ width: '50%' }}>
                 <View style={{ marginTop: 25, marginLeft: 10 }}>
                   {dataTicket?.name ?
-                    <Text>{dataTicket?.name}</Text>
+                    <Text style={{ display: 'flex', flexWrap: 'wrap', marginTop: -5 }}>{dataTicket?.name}</Text>
                     :
                     isLoadingTicket ?
                       <Text>Carregando...</Text>
@@ -177,17 +230,24 @@ export default function ShoppingCart() {
               </View>
               <View style={{ flexDirection: 'row', width: '50%', justifyContent: 'flex-end' }}>
                 <IconButton
+                  icon={'magnify'}
+                  size={25}
+                  mode='outlined'
+                  style={{ marginTop: 15, marginRight: 5 }}
+                  onPress={searchConsumer}
+                />
+                <IconButton
                   icon={'contactless-payment'}
                   size={25}
                   mode='outlined'
-                  style={{ marginTop: 15, marginRight: 15 }}
+                  style={{ marginTop: 15, marginRight: 5 }}
                   onPress={() => readNFC()}
                 />
                 <IconButton
                   icon={'qrcode-scan'}
                   size={25}
                   mode='outlined'
-                  style={{ marginTop: 15, marginRight: 15 }}
+                  style={{ marginTop: 15, marginRight: 5 }}
                   onPress={() => openQrCodeReader()}
                 />
                 <IconButton
@@ -195,7 +255,7 @@ export default function ShoppingCart() {
                   disabled={!dataTicket?.name}
                   size={25}
                   mode='outlined'
-                  style={{ marginTop: 15, marginRight: 15 }}
+                  style={{ marginTop: 15, marginRight: 5 }}
                   onPress={() => sendOrder()}
                 />
               </View>
@@ -263,6 +323,46 @@ export default function ShoppingCart() {
               size={80}
             />
           </View>
+        </Dialog>
+      </Portal>
+
+
+      <Portal>
+        <Dialog visible={isOpenSearchConsumer} onDismiss={() => [setIsOpenSearchConsumer(false)]}>
+          <Dialog.Title >Buscar cliente</Dialog.Title>
+          <Dialog.Content style={{ marginTop: 10 }}>
+            <View style={styles.container}>
+              <TextInput
+                label="Pesquisar por nome"
+                keyboardType='default'
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {isLoadingSearch ?
+                <View style={{ padding: 20 }}>
+                  <ActivityIndicator />
+                </View> :
+                <FlatList
+                  data={filteredData}
+                  keyExtractor={item => item?.id?.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => selectConsumer(item)}>
+                      <Text style={styles.item}>{item.name}</Text>
+                    </TouchableOpacity>
+                  )}
+
+                // renderItem={({ item }) => <Text style={styles.item}>{item.name}</Text>}
+                />}
+            </View>
+
+
+
+            <Dialog.Actions>
+              <Button onPress={() => setIsOpenSearchConsumer(false)}>
+                Cancelar
+              </Button>
+            </Dialog.Actions>
+          </Dialog.Content>
         </Dialog>
       </Portal>
     </View>

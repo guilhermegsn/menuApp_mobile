@@ -8,9 +8,9 @@ import NotificationHandler from './src/Services/NotificationHandler';
 
 
 const App = () => {
-  useEffect(() => {
-    NotificationService.registerForPushNotifications();
-  }, [])
+  // useEffect(() => {
+  //   NotificationService.registerForPushNotifications();
+  // }, [])
 
   return (
     <PaperProvider theme={theme}>
