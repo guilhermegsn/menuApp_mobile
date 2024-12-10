@@ -209,6 +209,22 @@ export const getDataNfcTicket = async (idTag: string, idEstablishment: string) =
   }
 }
 
+export const getInitialsName = (name: string) => {
+  const splitName = name.split(' ')
+  // Pega as iniciais de cada parte do nome
+  const initial = splitName.map((part) => part.charAt(0));
+  // Verifica o número de partes
+  let initialsName = ''
+  if (splitName.length === 1) {
+    // Se houver apenas um nome, pegue a primeira inicial
+    initialsName = initial[0]
+  } else {
+    // Se houver mais de um nome, pegue as duas primeiras iniciais
+    initialsName = initial.slice(0, 2).join('')
+  }
+  return initialsName.toUpperCase()
+}
+
 export const fetchOrders = async () => {
 
   console.log('oi, entrei aq')

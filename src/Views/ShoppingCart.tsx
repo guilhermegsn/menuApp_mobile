@@ -150,7 +150,8 @@ export default function ShoppingCart() {
         order_id: ticket,
         status: 1,
         name: dataTicket?.name,
-        token: userContext?.estabTokenFCM
+        token: userContext?.estabTokenFCM,
+        type: dataTicket?.type
       }
 
       console.log('dataOrder-->>', dataOrder)

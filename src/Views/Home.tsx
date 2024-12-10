@@ -1,4 +1,4 @@
-import { PermissionsAndroid, Platform, ScrollView, View } from 'react-native'
+import {ScrollView, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
@@ -7,14 +7,9 @@ import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'fireb
 import { db } from '../Services/FirebaseConfig';
 import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
-import ThermalPrinterModule from 'react-native-thermal-printer'
 import { printThermalPrinter } from '../Services/Functions'
-import NotificationService from '../Services/NotificationService'
-import messaging from '@react-native-firebase/messaging';
 
 export default function Home() {
-
-
   const userContext = useContext(UserContext)
   const [regStage, setRegStage] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -36,17 +31,6 @@ export default function Home() {
     owner: auth().currentUser?.uid,
     id: ""
   })
-  const [tokenFcm, setTokenFcm] = useState("")
-
-  //registrando as push notifications
-  useEffect(() => {
-    const registerNotifications = async () => {
-      const fcmToken = await messaging().getToken();
-      setTokenFcm(fcmToken)
-      NotificationService.registerForPushNotifications(userContext?.estabId, fcmToken)
-    }
-    registerNotifications()
-  }, [userContext?.estabId])
 
   const getCepApi = async () => {
     if (dataEstab.zip_code.length === 8) {
@@ -140,7 +124,6 @@ export default function Home() {
           if (userContext) {
             userContext.setEstabName(doc.data().name)
             userContext.setEstabId(doc.data().id)
-            userContext.setEstabTokenFCM(tokenFcm)
           }
         }
       }).catch((e) => console.log(e)).finally(() => setIsLoading(false))

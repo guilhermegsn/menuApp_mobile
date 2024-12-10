@@ -6,7 +6,7 @@ import { db } from '../Services/FirebaseConfig';
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
-import { formatToDoubleBR, printThermalPrinter } from '../Services/Functions'
+import { formatToDoubleBR, getInitialsName, printThermalPrinter } from '../Services/Functions'
 import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
@@ -143,9 +143,9 @@ export default function OrderItems() {
       `[C]================================\n` +
       `[L]<b># ${("Qtd.").padEnd(2)} ${("Produto").padEnd(10)}</b>\n` +
       `[C]--------------------------------\n`
-   
-   
-      const finalText =
+
+
+    const finalText =
       `[C]================================\n` +
       `[L]<font size='tall'>${newOrder?.name}</font>\n` +
       `[C]--------------------------------\n` +
@@ -157,7 +157,7 @@ export default function OrderItems() {
     console.log(newOrder)
 
     printThermalPrinter(fullText)
-    
+
     // try {
     //   await ThermalPrinterModule.printBluetooth({
     //     payload: fullText.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
@@ -192,10 +192,6 @@ export default function OrderItems() {
 
 
   const styles = StyleSheet.create({
-    scrollView: {
-      marginTop: "3%",
-      // margin: "3%",
-    },
     scrollViewContent: {
       flexGrow: 1,
     },
@@ -230,7 +226,7 @@ export default function OrderItems() {
   return (
     <View style={{ flex: 1 }}>
       {isLoading ? <Loading /> :
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
           {orders?.map((order, index) => (
             <View key={index}>
               <Card key={index}
@@ -242,8 +238,14 @@ export default function OrderItems() {
 
               >
                 <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }} onPress={() => selectOrder(order.id)}>
-                  <Card.Title title={`${order?.name}`} subtitle={order?.local}
-                    //  left={(props) => <Avatar.Icon {...props} icon={ order?.type === 1 ? "account" : "account-group"} />} 
+                  <Card.Title
+                    titleStyle={{ marginBottom: -10 }}
+                    title={order?.name}
+                    subtitleVariant={'bodySmall'}
+                    titleVariant='titleMedium'
+                    subtitle={order.type !== 2 ? order?.local : ""}
+                    left={(props) => order?.type === 1 ? <Avatar.Text size={40} label={getInitialsName(order?.name)} /> : <Avatar.Icon {...props} icon={order?.type === 3 ? "moped-outline" :
+                      order?.type === 2 ? "account-group" : "account"} />}
                     right={() => <View>
                       <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).format('HH:mm') + `\n` + (order.elapsedTime ? order.elapsedTime : "")}
                       </Text>
@@ -259,11 +261,11 @@ export default function OrderItems() {
                     </View>}
                   />
                   <Card.Content>
-
-                    {order?.items.map((item: string | any, index: number) => (
-
-                      <Text key={index}>{item?.qty} x {item?.name}</Text>
-                    ))}
+                    <View style={{marginLeft: 3, marginTop: -5}}>
+                      {order?.items.map((item: string | any, index: number) => (
+                        <Text variant='labelLarge' key={index}>{item?.qty} x {item?.name}</Text>
+                      ))}
+                    </View>
                   </Card.Content>
                 </Card>
               </Card>
@@ -275,14 +277,14 @@ export default function OrderItems() {
           {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> :
             <View style={{ marginBottom: 20, marginTop: 10, alignItems: 'center' }}>
               <IconButton
-              icon="dots-horizontal"
-              size={25}
-              mode='contained'
-              onPress={() => loadMoreData()}
-            />
+                icon="dots-horizontal"
+                size={25}
+                mode='contained'
+                onPress={() => loadMoreData()}
+              />
             </View>
-            
-            }
+
+          }
         </ScrollView>}
 
 

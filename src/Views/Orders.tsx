@@ -11,7 +11,7 @@ import { OrderItemsData } from '../Interfaces/OrderItems_Interface';
 import moment from 'moment';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import { NfcReader } from '../Components/NfcReader';
-import { getDataNfcTicket, readTagNfc, printThermalPrinter } from '../Services/Functions';
+import { getDataNfcTicket, readTagNfc, printThermalPrinter, getInitialsName } from '../Services/Functions';
 
 
 interface RouteParams {
@@ -271,22 +271,6 @@ export default function Orders() {
     };
   }
 
-  const getInitialsName = (name: string) => {
-    const splitName = name.split(' ')
-    // Pega as iniciais de cada parte do nome
-    const initial = splitName.map((part) => part.charAt(0));
-    // Verifica o número de partes
-    let initialsName = ''
-    if (splitName.length === 1) {
-      // Se houver apenas um nome, pegue a primeira inicial
-      initialsName = initial[0]
-    } else {
-      // Se houver mais de um nome, pegue as duas primeiras iniciais
-      initialsName = initial.slice(0, 2).join('')
-    }
-    return initialsName.toUpperCase()
-  }
-
   const openQrCodeReader = () => {
     navigation.navigate('QrCodeReader', { backPage: 'Orders' });
   }
@@ -405,12 +389,12 @@ export default function Orders() {
                 <Card.Title
                   title={`${item?.name}`}
                   subtitleStyle={{ fontSize: 10, marginTop: -10, color: 'gray' }}
-                  subtitle={item.type === 1 || item.type === 4 ? //QrCode || NFC
+                  subtitle={ //QrCode || NFC
                     item.status === 1 && item.openingDate !== '' && item.openingDate !== undefined ?
-                      `Aberta em: ${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` :
-                      item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}` :
-                    item.type === 3 && item.local
+                      `${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` :
+                      item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}` 
                   }
+               //   subtitle={item?.status === 0}
                   left={() =>
                     <View >
                       {item?.type === 1 || item?.type === 4 ? //QrCode || NFC
