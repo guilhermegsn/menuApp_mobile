@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View, Vibration } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { DocumentData, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
@@ -11,6 +11,7 @@ import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
 import Sound from 'react-native-sound';
+import KeepAwake from 'react-native-keep-awake';
 
 export default function OrderItems() {
 
@@ -22,6 +23,32 @@ export default function OrderItems() {
   const [isChangeStatus, setIsChangeStatus] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DocumentData | undefined>({})
   const [isLoadingSaveStatus, setIsLoadingSaveStatus] = useState(false)
+
+  //Deixando a tela sempre ativa.
+  useEffect(() => {
+    KeepAwake.activate();
+    return () => KeepAwake.deactivate();
+  }, []);
+
+  const vibrar = () => {
+    const padrao = [0, 500, 200, 500]; // Vibra por 500ms, pausa 200ms, vibra novamente
+    Vibration.vibrate(padrao);
+  };
+
+  const tocarSomPadrao = () => {
+    const som = new Sound('deskbell.wav', Sound.MAIN_BUNDLE, (error) => {
+      if (error) {
+        console.log('Erro ao carregar o som:', error);
+        return;
+      }
+      som.play((success) => {
+        if (!success) {
+          console.log('Erro ao reproduzir o som.');
+        }
+        som.release(); // Libera o recurso após tocar
+      });
+    });
+  };
 
 
   useEffect(() => {
@@ -39,6 +66,8 @@ export default function OrderItems() {
       try {
         for (const change of querySnapshot.docChanges()) {
           if (change.type === "added") {
+            //vibrar()
+            tocarSomPadrao()
             const newItemData = change.doc.data();
             //imprimo apenas pedidos com status 1 (aberto)
             if (newItemData.status === 1) {
@@ -261,7 +290,7 @@ export default function OrderItems() {
                     </View>}
                   />
                   <Card.Content>
-                    <View style={{marginLeft: 3, marginTop: -5}}>
+                    <View style={{ marginLeft: 3, marginTop: -5 }}>
                       {order?.items.map((item: string | any, index: number) => (
                         <Text variant='labelLarge' key={index}>{item?.qty} x {item?.name}</Text>
                       ))}
