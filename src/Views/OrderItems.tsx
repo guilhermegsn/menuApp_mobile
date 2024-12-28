@@ -6,7 +6,7 @@ import { db } from '../Services/FirebaseConfig';
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
-import { formatToDoubleBR, getInitialsName, printThermalPrinter } from '../Services/Functions'
+import { formatToDoubleBR, getInitialsName, playSound, printThermalPrinter, removeAccents, vibrate } from '../Services/Functions'
 import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
@@ -30,27 +30,6 @@ export default function OrderItems() {
     return () => KeepAwake.deactivate();
   }, []);
 
-  const vibrar = () => {
-    const padrao = [0, 500, 200, 500]; // Vibra por 500ms, pausa 200ms, vibra novamente
-    Vibration.vibrate(padrao);
-  };
-
-  const tocarSomPadrao = () => {
-    const som = new Sound('deskbell.wav', Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        console.log('Erro ao carregar o som:', error);
-        return;
-      }
-      som.play((success) => {
-        if (!success) {
-          console.log('Erro ao reproduzir o som.');
-        }
-        som.release(); // Libera o recurso após tocar
-      });
-    });
-  };
-
-
   useEffect(() => {
     const q = query(
       collection(db, 'OrderItems'),
@@ -66,8 +45,8 @@ export default function OrderItems() {
       try {
         for (const change of querySnapshot.docChanges()) {
           if (change.type === "added") {
-            //vibrar()
-            tocarSomPadrao()
+            vibrate()
+            playSound('deskbell.wav')
             const newItemData = change.doc.data();
             //imprimo apenas pedidos com status 1 (aberto)
             if (newItemData.status === 1) {
@@ -163,7 +142,7 @@ export default function OrderItems() {
     let itemsText = ""
     newOrder?.items.forEach((item: string | any, index: number) => {
       const itemName = item?.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-      itemsText = itemsText + `[L]<font size='tall'>${(index + 1).toString().padEnd(0)} ${item?.qty.toString().padStart(4)} ${itemName.padStart(6)} </font>\n`
+      itemsText = itemsText + `[L]<font size='small'>${(index + 1).toString().padEnd(0)} ${item?.qty.toString().padStart(4)} ${itemName.padStart(6)} </font>\n`
     })
     const initialText =
       `[C]<u><font size='tall'>Pedido</font></u>\n` +
@@ -176,16 +155,28 @@ export default function OrderItems() {
 
     const finalText =
       `[C]================================\n` +
-      `[L]<font size='tall'>${newOrder?.name}</font>\n` +
+      `[L]<font size='small'>${newOrder?.name}</font>\n` +
       `[C]--------------------------------\n` +
-      `[L]<font size='tall'>${newOrder?.local.replaceAll(" - ", "\n")}\n</font>`
+      `[L]<font size='small'>${newOrder?.local.replaceAll(" - ", "\n")}</font>\n`
 
-    const fullText = initialText + itemsText + finalText
+    const deliveryText = `[C]--------------------------------\n` +
+      `[L]TOTAL ${newOrder?.totalOrder}\n` +
+      `[L]Pagamento: ${newOrder?.paymentType === 'CASH' ? 'Dinheiro' : newOrder?.paymentType === 'CRD' ? 'Credito' : 'Debito'}\n` +
+      `[L]${newOrder?.obs}\n`
+
+
+    let fullText = ""
+    console.log('newOrder', newOrder)
+    if (newOrder?.type === 3) {
+      fullText = initialText + itemsText + finalText + deliveryText
+    } else {
+      fullText = initialText + itemsText + finalText
+    }
 
     console.log(fullText)
     console.log(newOrder)
 
-    printThermalPrinter(fullText)
+    printThermalPrinter(removeAccents(fullText))
 
     // try {
     //   await ThermalPrinterModule.printBluetooth({
@@ -199,26 +190,6 @@ export default function OrderItems() {
     // }
 
   }
-
-  const playSound = () => {
-    const sound = new Sound('test.mp3', Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        console.log('Erro ao carregar o som', error);
-        return;
-      }
-      // Reproduz o som
-      sound.play((success) => {
-        if (success) {
-          console.log('O som foi reproduzido com sucesso');
-        } else {
-          console.log('Falha ao reproduzir o som');
-        }
-        // Libera os recursos do som
-        sound.release();
-      });
-    });
-  };
-
 
   const styles = StyleSheet.create({
     scrollViewContent: {

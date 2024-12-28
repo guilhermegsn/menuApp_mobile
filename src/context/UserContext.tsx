@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { OrderItemsData } from "../Interfaces/OrderItems_Interface";
 import { ItemCartData } from "../Interfaces/ProductMenu_Interface";
+import { DocumentData } from "@google-cloud/firestore";
 
 interface UserContextType {
   globalState: string;
@@ -30,6 +31,9 @@ interface UserContextType {
 
   estabTokenFCM: string;
   setEstabTokenFCM: (value: string) => void
+
+  dataEstablishment: DocumentData;
+  setDataEstablishment: (value: DocumentData) => void;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -45,6 +49,7 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [estabTokenFCM, setEstabTokenFCM] = useState("")
   const [shoppingCart, setShoppingCart] = useState<ItemCartData[]>([])
   const [isUpdatedDataMenu, setIsUpdatedDataMenu] = useState<Boolean>(false)
+  const [dataEstablishment, setDataEstablishment] = useState<DocumentData>({} as DocumentData);
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(_user => {
@@ -82,7 +87,8 @@ function UserProvider({ children }: { children: ReactNode }) {
       estabId, setEstabId,
       shoppingCart, setShoppingCart,
       isUpdatedDataMenu, setIsUpdatedDataMenu,
-      estabTokenFCM, setEstabTokenFCM
+      estabTokenFCM, setEstabTokenFCM,
+      dataEstablishment, setDataEstablishment
     }}>
       {children}
     </UserContext.Provider>

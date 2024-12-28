@@ -13,11 +13,13 @@ import { CardStyleInterpolators } from '@react-navigation/stack';
 import Orders from '../Views/Orders';
 import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
-import { Icon } from 'react-native-paper';
+import { Button, Icon } from 'react-native-paper';
 import ShoppingCart from '../Views/ShoppingCart';
 import QrCodeReader from '../Views/QrCodeReader';
 import ProductMenuItens from '../Views/ProductMenuItens';
 import MenuProducts from '../Views/MenuProducts';
+import UserConfig from '../Views/UserConfig';
+import auth from '@react-native-firebase/auth'
 
 export default function AppBar() {
 
@@ -25,6 +27,13 @@ export default function AppBar() {
   const Stack = createStackNavigator();
   const userContext = useContext(UserContext);
 
+  const signOut = () => {
+    userContext?.setEstabName("SmartMenu")
+    userContext?.setUser(null)
+    userContext?.setEstabId("")
+    userContext?.setShoppingCart([])
+    auth().signOut();
+  }
 
   const DrawerNavigator = () => {
     return (
@@ -82,6 +91,30 @@ export default function AppBar() {
                 ),
               }}
             />
+            <Drawer.Screen name="UserConfig"
+              component={UserConfig}
+              options={{
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
+                title: "Usuários",
+                drawerIcon: ({ color, size }) => (
+                  <Icon source="account-supervisor" size={size} color={color} />
+                ),
+              }}
+            />
+            <Drawer.Screen
+              name="Logoff"
+              options={{
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
+                title: 'Logoff',
+                drawerIcon: ({ color, size }) => (
+                  <Icon source="logout" size={size} color={color} />
+                ),
+              }}
+            >
+              {() => <Button onPress={signOut}>sair</Button>}
+            </Drawer.Screen>
           </> :
           <>
             <Drawer.Screen name="Login"
@@ -118,7 +151,7 @@ export default function AppBar() {
             cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           }}
         />
-         <Stack.Screen
+        <Stack.Screen
           name="ProductMenuItens"
           component={ProductMenuItens}
           options={{

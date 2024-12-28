@@ -1,11 +1,12 @@
 import { ImageLibraryOptions, ImagePickerResponse, PhotoQuality, launchImageLibrary } from "react-native-image-picker";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
-import { PermissionsAndroid, Platform } from "react-native";
+import { PermissionsAndroid, Platform, Vibration } from "react-native";
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import NfcManager, { NfcTech } from 'react-native-nfc-manager';
-import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from '../Services/FirebaseConfig';
 import { Alert } from "react-native";
+import Sound from "react-native-sound";
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -225,8 +226,27 @@ export const getInitialsName = (name: string) => {
   return initialsName.toUpperCase()
 }
 
-export const fetchOrders = async () => {
+export const playSound = (media: String) => {
+  const som = new Sound(media, Sound.MAIN_BUNDLE, (error) => {
+    if (error) {
+      console.log('Erro ao carregar o som:', error)
+      return;
+    }
+    som.play((success) => {
+      if (!success) {
+        console.log('Erro ao reproduzir o som.');
+      }
+      som.release(); // Libera o recurso após tocar
+    })
+  })
+}
 
+export const vibrate = () => {
+  const time = [0, 400, 200, 400]; // Vibra por 400ms, pausa 200ms, vibra novamente
+  Vibration.vibrate(time);
+};
+
+export const fetchOrders = async () => {
   console.log('oi, entrei aq')
   setTimeout(() => {
     console.log('oiii')

@@ -47,6 +47,8 @@ export default function Login() {
           userContext.setEstabName(doc.data().name || '')
           userContext.setEstabId(doc.id)
           userContext?.setEstabTokenFCM(fcmToken)
+          userContext?.setDataEstablishment(doc.data())
+          console.log('docdata->',doc.data())
           //registrando token
           NotificationService.registerForPushNotifications(doc.id, fcmToken)
         }
