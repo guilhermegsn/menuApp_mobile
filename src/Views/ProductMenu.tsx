@@ -122,20 +122,22 @@ export default function ProductMenu() {
   }
 
   const fetchData = async () => {
-    const q = query(
-      collection(db, "Establishment"),
-      where("owner", "==", auth().currentUser?.uid)
-    );
-    setIsLoading(true)
-    await getDocs(q).then((res) => {
-      if (!res.empty) {
-        const doc = res.docs[0];
-        if (doc.data().menu) {
-          setListMenu(doc.data()?.menu)
+    try {
+      if (userContext?.estabId) {
+        setIsLoading(true)
+        const docRef = doc(db, "Establishment", userContext?.estabId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setListMenu(docSnap.data()?.menu)
         }
       }
-    }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
+    } catch (e) {
+      console.log(e)
+    }finally{
+      setIsLoading(false)
+    }
   }
+
 
   const editNameMenu = () => {
     setIsEditingNameMenu(true)

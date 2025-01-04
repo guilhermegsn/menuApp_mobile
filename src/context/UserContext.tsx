@@ -57,8 +57,8 @@ function UserProvider({ children }: { children: ReactNode }) {
         setInitializing(false);
       }
       if (_user) {
-        setUser(_user);
-        setIsAuthenticated(true)
+        // setUser(_user);
+        // setIsAuthenticated(true)
       } else {
         setIsAuthenticated(false)
         setUser(null)

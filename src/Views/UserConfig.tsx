@@ -29,7 +29,8 @@ export default function UserConfig() {
     establishment: {
       id: userContext?.estabId,
       enabled: true,
-      type: 'ADM'
+      type: 'ADM',
+      name: userContext?.estabName
     },
     establishmentId: userContext?.estabId || ""
   })
@@ -81,7 +82,7 @@ export default function UserConfig() {
         const isEstablishmentLinked = userData.establishmentId?.includes(userContext?.estabId)
 
         if (isEstablishmentLinked) {
-          Alert.alert("E-mail já cadastrado.", "Este e-mail já está vinculado ao estabelecimento.")
+          Alert.alert("E-mail já cadastrado.", "Este e-mail já está vinculado ao estabelecimento. ")
           return
         }
 
@@ -136,7 +137,8 @@ export default function UserConfig() {
       right: 10,
       bottom: 10,
       backgroundColor: theme.colors.primary,
-      marginTop: 60
+      marginTop: 60,
+      zIndex: 100
     },
   })
   return (
@@ -242,6 +244,7 @@ export default function UserConfig() {
       />
 
       <Button onPress={() => console.log(dataUsers)}>doc</Button>
+      <Button onPress={() => console.log(userContext?.estabId)}>establishmentId</Button>
     </View>
   )
 }

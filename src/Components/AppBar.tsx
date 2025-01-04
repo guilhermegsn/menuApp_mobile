@@ -32,6 +32,7 @@ export default function AppBar() {
     userContext?.setUser(null)
     userContext?.setEstabId("")
     userContext?.setShoppingCart([])
+    userContext?.setDataEstablishment([])
     auth().signOut();
   }
 
@@ -43,7 +44,8 @@ export default function AppBar() {
           overlayColor: 'transparent',
           headerTintColor: theme.colors.onBackground,
         }}
-        initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
+       // initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
+        initialRouteName={'Login'}
       >
         {userContext?.isAuthenticated ?
           <>
