@@ -6,6 +6,7 @@ import { ActivityIndicator } from "react-native-paper";
 import { OrderItemsData } from "../Interfaces/OrderItems_Interface";
 import { ItemCartData } from "../Interfaces/ProductMenu_Interface";
 import { DocumentData } from "@google-cloud/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface UserContextType {
   globalState: string;
@@ -57,8 +58,8 @@ function UserProvider({ children }: { children: ReactNode }) {
         setInitializing(false);
       }
       if (_user) {
-        // setUser(_user);
-        // setIsAuthenticated(true)
+        setUser(_user);
+        setIsAuthenticated(true)
       } else {
         setIsAuthenticated(false)
         setUser(null)

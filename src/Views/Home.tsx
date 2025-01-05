@@ -1,16 +1,29 @@
-import { ScrollView, View } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
+import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
 import auth from '@react-native-firebase/auth'
-import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
 import { db } from '../Services/FirebaseConfig';
 import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
 import { printThermalPrinter } from '../Services/Functions'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import Loading from '../Components/Loading'
+import { theme } from '../Services/ThemeConfig'
+
+interface userEstablishmentInterface {
+  name: string
+  enabled: boolean
+  id: string
+  type: string
+}
 
 export default function Home() {
   const userContext = useContext(UserContext)
+  const [multipleEstablishment, setMultiEstablishment] = useState<userEstablishmentInterface[]>([])
+  const [isOpenDialogMultiple, setIsOpenDialogMultiple] = useState(false)
+  const [selectedEstablishment, setSelectedEstablishment] = useState("")
   const [regStage, setRegStage] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -89,62 +102,62 @@ export default function Home() {
     }
   }
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     const q = query(
-  //       collection(db, "Establishment"),
-  //       where("owner", "==", auth().currentUser?.uid)
-  //     );
-  //     setIsLoading(true)
-  //     await getDocs(q).then((res) => {
-  //       if (!res.empty) {
-  //         const doc = res.docs[0];
-  //         setDataEstab(doc.data() as EstablishmentData);
-  //         setRegStage(4)
-  //         if (userContext) {
-  //           userContext.setEstabName(doc.data().name)
-  //           userContext.setEstabId(doc.data().id)
-  //         }
-  //       }
-  //     }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
-  //   };
-  //   fetchData();
-  // }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       if (!userContext?.estabId) {
-        console.error("Nenhum estabelecimento associado.");
-        return;
-      }
-      const docRef = doc(db, "Establishment", userContext?.estabId);
-      try {
-        setIsLoading(true);
-        // Consulta o documento pelo ID
-        const docSnapshot = await getDoc(docRef);
-        if (docSnapshot.exists()) {
-          const data = docSnapshot.data() as EstablishmentData;
-          setDataEstab(data);
-          setRegStage(4);
-
-          if (userContext) {
-            userContext.setEstabName(data.name);
-            userContext.setEstabId(data.id);
+        console.log("Nenhum estabelecimento associado. Buscando..");
+        const q = query(
+          collection(db, "User"),
+          where("email", "==", auth().currentUser?.email)
+        )
+        setIsLoading(true)
+        try {
+          const querySnapshot = await getDocs(q)
+          if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0]
+            const data = doc.data()
+            if (data.establishment.length > 1) {
+              console.log('Multiple')
+              setMultiEstablishment(data.establishment)
+              setIsOpenDialogMultiple(true)
+            } else {
+              setContextData(data?.establishment[0]?.id)
+            }
+          } else {
+            Alert.alert("Sem acesso.", "Usuário sem acesso. Contate o administrador.")
           }
-        } else {
-          console.log("Documento não encontrado.");
+        } catch (error) {
+          console.error('erro ao ober documentos', error)
+        } finally {
+          setIsLoading(false)
         }
-      } catch (e) {
-        console.error("Erro ao buscar o documento:", e);
-      } finally {
-        setIsLoading(false);
+      } else {
+        const docRef = doc(db, "Establishment", userContext?.estabId);
+        try {
+          setIsLoading(true);
+          // Consulta o documento pelo ID
+          const docSnapshot = await getDoc(docRef);
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data() as EstablishmentData;
+            setDataEstab(data);
+            setRegStage(4);
+            if (userContext) {
+              userContext.setEstabName(data.name);
+              userContext.setEstabId(data.id);
+            }
+          } else {
+            console.log("Documento não encontrado.");
+          }
+        } catch (e) {
+          console.error("Erro ao buscar o documento:", e);
+        } finally {
+          setIsLoading(false);
+        }
       }
-    };
+    }
 
     fetchData();
   }, []);
-
-
 
   const signOut = () => {
     userContext?.setEstabName("")
@@ -154,16 +167,42 @@ export default function Home() {
     auth().signOut();
   }
 
-  const requestBluetoothConnectPermission = async () => {
 
-  };
+  const setContextData = (idEstablishment: string) => {
+    console.log('establishment: ', idEstablishment)
+    if (userContext) {
+      if (multipleEstablishment.length > 0) {
+        const document = multipleEstablishment.find((item: userEstablishmentInterface) => item.id === idEstablishment)
+        if (document && document.enabled) {
+          userContext.setIsAuthenticated(true)
+          userContext.setShoppingCart([])
+          userContext.setEstabId(idEstablishment)
+          setIsOpenDialogMultiple(false)
+        } else {
+          Alert.alert("Sem acesso.", "Usuário sem acesso. Contate o administrador.")
+        }
+      } else {
+        userContext.setIsAuthenticated(true)
+        userContext.setShoppingCart([])
+        userContext.setEstabId(idEstablishment)
+        setIsOpenDialogMultiple(false)
+      }
+    }
+  }
+
+  const styles = StyleSheet.create({
+    scrollViewContent: {
+      flexGrow: 1,
+      padding: 10
+    }
+  })
 
   return (
-    <ScrollView>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: "10%" }}>
-        {isLoading ? <ActivityIndicator /> :
+    <View style={{ flex: 1 }}>
+      {isLoading ? <Loading /> :
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
           <>
-            {regStage === 0 &&
+            {isOpenDialogMultiple ? null : regStage === 0 &&
               <>
                 <Text style={{ fontSize: 25 }}>Olá!</Text>
                 <Text style={{ fontSize: 17, padding: "6%", textAlign: 'center' }}>Falta pouco para dar um Up em seu estabelecimento e torna-lo ainda mais inteligente.</Text>
@@ -375,7 +414,7 @@ export default function Home() {
                     size={20}
                   />{"Sair"}
                 </Text>
-                <Card style={{ width: "96%" }}>
+                <Card >
                   {/* <Card.Title title="Card Title" subtitle="Card Subtitle"/> */}
                   <Card.Cover source={{ uri: 'https://picsum.photos/700' }} />
                   <Card.Content style={{ marginTop: "2%" }}>
@@ -387,8 +426,8 @@ export default function Home() {
                     <Text variant="titleMedium">{dataEstab.phone}</Text>
                   </Card.Content>
                   <Card.Actions>
-                    <Button style={{ marginTop: "5%" }} onPress={() => [setRegStage(1), setIsEditing(true)]}>Editar informações</Button>
-                    <Button style={{ marginTop: "5%" }} onPress={() => [printEstablishment()]}>Imprimir informações</Button>
+                    <Button onPress={() => [setRegStage(1), setIsEditing(true)]}>Editar informações</Button>
+                    <Button onPress={() => [printEstablishment()]}>Imprimir informações</Button>
                   </Card.Actions>
                   {/* <Button style={{ marginTop: "5%" }} onPress={() => console.log(dataEstab)}>stab</Button>
                 <Button style={{ marginTop: "5%" }} onPress={() => console.log(userContext?.user)}>userContext</Button>
@@ -412,8 +451,40 @@ export default function Home() {
                 </Dialog.Actions>
               </Dialog>
             </Portal>
-          </>}
-      </View>
-    </ScrollView>
+          </>
+
+
+
+          <Portal>
+            <Dialog visible={isOpenDialogMultiple} onDismiss={() => []}>
+              <Dialog.Title style={{ textAlign: 'center' }}>{'Selecione o estabelecimento'}</Dialog.Title>
+              <View style={{ padding: 15 }}>
+                <RadioButton.Group
+                  value={selectedEstablishment}
+                  onValueChange={(e) => {
+                    setSelectedEstablishment(e)
+                  }}
+                >
+                  {multipleEstablishment?.map((item: DocumentData, index) => (
+                    <RadioButton.Item key={`rb-${index}`} label={item?.name || ""} color='green' value={item?.id} />
+                  ))}
+                </RadioButton.Group>
+              </View>
+              <Dialog.Content style={{ marginTop: 40 }}>
+                <Dialog.Actions>
+                  <Button onPress={signOut}>Logout </Button>
+                  <Button
+                    onPress={() => setContextData(selectedEstablishment)}
+                  //  loading={isLoadingDialog}
+                  >
+                    Entrar
+                  </Button>
+                </Dialog.Actions>
+              </Dialog.Content>
+            </Dialog>
+          </Portal>
+        </ScrollView>}
+    </View >
+
   )
 }
