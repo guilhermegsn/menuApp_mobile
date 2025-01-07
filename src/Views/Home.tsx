@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
@@ -123,8 +123,6 @@ export default function Home() {
             } else {
               setContextData(data?.establishment[0]?.id)
             }
-          } else {
-            Alert.alert("Sem acesso.", "Usuário sem acesso. Contate o administrador.")
           }
         } catch (error) {
           console.error('erro ao ober documentos', error)
@@ -194,296 +192,527 @@ export default function Home() {
     scrollViewContent: {
       flexGrow: 1,
       padding: 10
+    },
+    container: {
+      flex: 1,
+      backgroundColor: '#f8f9fa',
+    },
+    banner: {
+      padding: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderBottomLeftRadius: 40,
+      borderBottomRightRadius: 40,
+      overflow: 'hidden', // Necessário para os cantos arredondados
+      height: 400, // Ajuste conforme necessário
+    },
+    bannerImage: {
+      borderBottomLeftRadius: 40,
+      borderBottomRightRadius: 40,
+    },
+    bannerTitle: {
+      color: '#fff',
+      fontSize: 28,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginBottom: 60
+    },
+    cardsContainer: {
+      padding: 20,
+    },
+    sectionTitle: {
+      marginTop: 30,
+      fontSize: 22,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      color: '#333',
+      textAlign: 'center',
+    },
+    sectionSubTitle: {
+      fontSize: 17,
+      marginBottom: 30,
+      color: '#566573',
+      textAlign: 'center',
+    },
+    card: {
+      backgroundColor: '#fff',
+      borderRadius: 10,
+      padding: 15,
+      marginBottom: 20,
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowRadius: 5,
+      elevation: 5,
+    },
+    cardImage: {
+      width: '100%',
+      height: 150,
+      borderRadius: 10,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      marginTop: 10,
+      color: theme.colors.primary,
+    },
+    cardDescription: {
+      fontSize: 12,
+      color: '#555',
+      marginTop: 5,
+    },
+    button: {
+      backgroundColor: '#6c63ff',
+      padding: 15,
+      borderRadius: 30,
+      alignItems: 'center',
+      margin: 20,
+    },
+    buttonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    footer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      // paddingBottom: 20, // Ajuste para que a imagem não fique colada na borda
+    },
+    footerImage: {
+      width: '100%',   // Ajuste o tamanho da imagem conforme necessário
+      height: 50,   // Ajuste o tamanho da imagem conforme necessário
+      borderBottomRightRadius: 40,
+      borderBottomLeftRadius: 40
+    },
+    buttomBar: {
+      position: 'absolute',
+      bottom: 10,
+      width: "100%",
+      display: 'flex',
+      flexDirection: 'row',
+      justifyContent: 'space-evenly'
     }
   })
 
   return (
-    <View style={{ flex: 1 }}>
-      {isLoading ? <Loading /> :
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
-          <>
-            {isOpenDialogMultiple ? null : regStage === 0 &&
-              <>
-                <Text style={{ fontSize: 25 }}>Olá!</Text>
-                <Text style={{ fontSize: 17, padding: "6%", textAlign: 'center' }}>Falta pouco para dar um Up em seu estabelecimento e torna-lo ainda mais inteligente.</Text>
-                <Text style={{ fontSize: 20, marginBottom: "10%" }}>Vamos completar o seu cadastro!</Text>
-                <Button style={{ width: "90%", marginTop: "4%" }}
-                  icon="hexagon-multiple"
-                  mode="contained"
-                  onPress={() => setRegStage(1)}
-                >
-                  Vamos lá!
-                </Button>
-              </>}
+    <View style={{ flex: 1, flexGrow: 1 }}>
+      <View style={styles.footer}>
+        <Image
+          source={require('../assets/images/banner.png')}
+          style={styles.footerImage}
+        />
+      </View>
+      <>
+        {isOpenDialogMultiple ? null : isLoading ? <Loading /> : regStage === 0 &&
+          // <>
+          //   <Text style={{ fontSize: 25 }}>Olá!</Text>
+          //   <Text style={{ fontSize: 17, padding: "6%", textAlign: 'center' }}>Falta pouco para dar um Up em seu estabelecimento e torna-lo ainda mais inteligente.</Text>
+          //   <Text style={{ fontSize: 20, marginBottom: "10%" }}>Vamos completar o seu cadastro!</Text>
+          //   <Button style={{ width: "90%", marginTop: "4%" }}
+          //     icon="hexagon-multiple"
+          //     mode="contained"
+          //     onPress={() => setRegStage(1)}
+          //   >
+          //     Vamos lá!
+          //   </Button>
+          // </>
+          <ScrollView style={styles.container}>
+            {/* Banner */}
 
-            {regStage === 1 &&
-              <>
-                <Text style={{ fontSize: 20, width: "90%", marginBottom: "10%" }}>
-                  Entre com os dados de seu estabelecimento ;)
+
+            <ImageBackground
+              source={require('../assets/images/menupedia.png')}
+              style={styles.banner}
+              imageStyle={styles.bannerImage} // Estilos específicos para a imagem
+            >
+
+              {/* Texto branco por cima */}
+              {/* <Text style={styles.bannerTitle}>MenuPedia</Text> */}
+            </ImageBackground>
+
+            {/* Cards */}
+            <TouchableOpacity onPress={() => setRegStage(1)}>
+              <View style={styles.cardsContainer}>
+                <Text style={styles.sectionTitle}>Bem vindo(a) à MenuPédia!</Text>
+                <Text style={styles.sectionSubTitle}>
+                  Estamos aqui para simplificar a gestão do seu negócio e proporcionar uma experiência incrível para você e seus clientes.
+                  Escolha abaixo como deseja começar: automatizar seu estabelecimento ou cadastrar-se como colaborador
                 </Text>
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Nome do estabelecimento"
-                  value={dataEstab.name}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      name: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Razâo social"
-                  value={dataEstab.fullname}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      fullname: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "10%" }}
-                  mode="outlined"
-                  label="CNPJ"
-                  value={dataEstab.state_registration}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      state_registration: text
-                    }))
-                  }}
-                />
-                <Button style={{ width: "90%", marginTop: "4%" }}
+                <View style={styles.card}>
+                  <Image
+                    source={require('../assets/images/pos.jpeg')}
+                    style={styles.cardImage}
+                  />
+                  <Text style={styles.cardTitle}>Automatizar meu estabelecimento</Text>
+                  <Text style={styles.cardDescription}>
+                    Crie seu menu digital e automatize os processos do seu estabelecimento.
+                    Torne a experiência dos seus clientes mais ágil e moderna com nosso app!
+                  </Text>
+                </View>
+                <View style={styles.card}>
+                  <Image
+                    source={require('../assets/images/colaborador.jpeg')}
+                    style={styles.cardImage}
+                  />
+                  <Text style={styles.cardTitle}>Sou um colaborador</Text>
+                  <Text style={styles.cardDescription}>
+                    Cadastre-se como colaborador e ajude a transformar o atendimento do seu estabelecimento.
+                    Faça parte de uma equipe que está revolucionando a experiência dos clientes
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {/* Call-to-Action */}
+            {/* <TouchableOpacity style={styles.button}>
+              <Text style={styles.buttonText}>Comece agora</Text>
+            </TouchableOpacity> */}
+          </ScrollView>
+
+
+
+
+        }
+
+        {regStage === 1 &&
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, width: "90%", marginTop: 80, marginBottom: 20 }}>
+              Entre com os dados de seu estabelecimento ;)
+            </Text>
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Nome do estabelecimento"
+              value={dataEstab.name}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  name: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Razâo social"
+              value={dataEstab.fullname}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  fullname: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "10%" }}
+              mode="outlined"
+              label="CNPJ"
+              value={dataEstab.state_registration}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  state_registration: text
+                }))
+              }}
+            />
+            <View style={styles.buttomBar}>
+              {/* Botão "Voltar" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
+                  icon="skip-previous"
+                  mode="text"
+                  onPress={() => isEditing ? setRegStage(4) : setRegStage(0)}
+                >
+                  Voltar
+                </Button>
+              </View>
+              {/* Botão "Próximo" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
                   icon="hexagon-multiple"
-                  mode="contained"
+                  mode="text"
                   onPress={() => setRegStage(2)}
                 >
-                  Proximo
+                  Próximo
                 </Button>
-                {!isEditing &&
-                  <Button style={{ width: "90%", marginTop: "4%" }}
-                    icon="skip-previous"
-                    mode="text"
-                    onPress={() => setRegStage(0)}
-                  >
-                    Voltar
-                  </Button>
-                }
-              </>}
+              </View>
+            </View>
 
-            {regStage === 2 &&
-              <>
-                <Text style={{ fontSize: 20, width: "90%", marginBottom: "10%" }}>
-                  Agora informe os dados da localização do estabelecimento
-                </Text>
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  keyboardType="numeric"
-                  label="CEP"
-                  value={dataEstab.zip_code}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      zip_code: text
-                    }))
-                  }}
-                />
-                <Button style={{ width: "90%", marginTop: "4%" }}
+          </View>}
+
+        {regStage === 2 &&
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, width: "90%", marginTop: 80 }}>
+              Agora informe os dados da localização do estabelecimento
+            </Text>
+            <TextInput
+              style={{ width: "90%", marginTop: 10 }}
+              mode="outlined"
+              keyboardType="numeric"
+              label="CEP"
+              value={dataEstab.zip_code}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  zip_code: text
+                }))
+              }}
+            />
+            <View style={styles.buttomBar}>
+              {/* Botão "Voltar" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
+                  icon="skip-previous"
+                  mode="text"
+                  onPress={() => setRegStage(1)}
+                >
+                  Voltar
+                </Button>
+              </View>
+              {/* Botão "Próximo" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
                   icon="hexagon-multiple"
-                  mode="contained"
+                  mode="text"
                   onPress={() => [getCepApi(), setRegStage(3)]}
                 >
                   Próximo
                 </Button>
-                <Button style={{ width: "90%", marginTop: "4%" }}
-                  icon="skip-previous"
-                  mode="text"
-                  onPress={() => setRegStage(1)}
-                >
-                  Voltar
-                </Button>
-              </>
-            }
+              </View>
+            </View>
+          </View>
+        }
 
-            {regStage === 3 &&
-              <>
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Endereço"
-                  value={dataEstab.address}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      address: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Número"
-                  value={dataEstab.number}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      number: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Bairro"
-                  value={dataEstab.neighborhood}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      neighborhood: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Cidade"
-                  value={dataEstab.city}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      city: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Estado"
-                  value={dataEstab.state}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      state: text
-                    }))
-                  }}
-                />
-                <TextInput
-                  style={{ width: "90%", marginBottom: "2%" }}
-                  mode="outlined"
-                  label="Telefone comercial"
-                  keyboardType="numeric"
-                  value={dataEstab.phone}
-                  onChangeText={(text) => {
-                    setDataEstab((prevState) => ({
-                      ...prevState,
-                      phone: text
-                    }))
-                  }}
-                />
-                <Button style={{ width: "90%", marginTop: "4%" }}
-                  icon="hexagon-multiple"
-                  mode="contained"
-                  onPress={() => save()}
-                >
-                  {isEditing ? "Finalizar edição" : "Finalizar cadastro"}
-                </Button>
-                <Button style={{ width: "90%", marginTop: "4%" }}
+        {regStage === 3 &&
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <TextInput
+              style={{ width: "90%", marginTop: 80 }}
+              mode="outlined"
+              label="Endereço"
+              value={dataEstab.address}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  address: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Número"
+              value={dataEstab.number}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  number: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Bairro"
+              value={dataEstab.neighborhood}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  neighborhood: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Cidade"
+              value={dataEstab.city}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  city: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Estado"
+              value={dataEstab.state}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  state: text
+                }))
+              }}
+            />
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="Telefone comercial"
+              keyboardType="numeric"
+              value={dataEstab.phone}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  phone: text
+                }))
+              }}
+            />
+            {/* <Button style={{ width: "90%", marginTop: "4%" }}
+              icon="hexagon-multiple"
+              mode="contained"
+              onPress={() => save()}
+            >
+              {isEditing ? "Finalizar edição" : "Finalizar cadastro"}
+            </Button>
+            <Button style={{ width: "90%", marginTop: "4%" }}
+              icon="skip-previous"
+              mode="text"
+              onPress={() => setRegStage(2)}
+            >
+              Voltar
+            </Button> */}
+            <View style={styles.buttomBar}>
+              {/* Botão "Voltar" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
                   icon="skip-previous"
                   mode="text"
                   onPress={() => setRegStage(2)}
                 >
                   Voltar
                 </Button>
-              </>}
+              </View>
+              {/* Botão "Próximo" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
+                  icon="hexagon-multiple"
+                  mode="text"
+                  onPress={() => save()}
+                >
+                  {isEditing ? "Finalizar edição" : "Finalizar cadastro"}
+                </Button>
+              </View>
+            </View>
+          </View>}
 
 
-            {regStage === 4 &&
-              <>
-                <Text style={{ fontSize: 20, width: "90%" }}>
-                  {dataEstab.fullname}
-                </Text>
-                <Text style={{ fontSize: 15, width: "90%" }}>{auth().currentUser?.email}</Text>
-                <Text style={{ fontSize: 15, width: "90%", marginTop: "2%", marginBottom: "6%" }} onPress={() => signOut()}>
-                  <Icon
-                    source="logout"
-                    size={20}
-                  />{"Sair"}
-                </Text>
-                <Card >
-                  {/* <Card.Title title="Card Title" subtitle="Card Subtitle"/> */}
-                  <Card.Cover source={{ uri: 'https://picsum.photos/700' }} />
-                  <Card.Content style={{ marginTop: "2%" }}>
-                    <Text variant="titleLarge">{dataEstab.name}</Text>
-                    <Text variant="titleMedium">{dataEstab.address}</Text>
-                    <Text variant="titleMedium">{dataEstab.neighborhood}</Text>
-                    <Text variant="titleMedium">{dataEstab.city} - {dataEstab.state} </Text>
-                    <Text variant="titleMedium">{dataEstab.zip_code}</Text>
-                    <Text variant="titleMedium">{dataEstab.phone}</Text>
-                  </Card.Content>
-                  <Card.Actions>
-                    <Button onPress={() => [setRegStage(1), setIsEditing(true)]}>Editar informações</Button>
-                    <Button onPress={() => [printEstablishment()]}>Imprimir informações</Button>
-                  </Card.Actions>
-                  {/* <Button style={{ marginTop: "5%" }} onPress={() => console.log(dataEstab)}>stab</Button>
+        {regStage === 4 &&
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, marginTop: 80 }}>
+              {dataEstab.fullname}
+            </Text>
+            <Text style={{ fontSize: 15 }}>{auth().currentUser?.email}</Text>
+            <Text style={{ fontSize: 15, marginTop: "2%", marginBottom: "6%" }} onPress={() => signOut()}>
+              <Icon
+                source="logout"
+                size={20}
+              />{"Sair"}
+            </Text>
+            <Card style={{width: '95%'}}>
+              {/* <Card.Title title="Card Title" subtitle="Card Subtitle"/> */}
+              <Card.Cover source={require('../assets/images/banner3.jpeg')} />
+              <Card.Content style={{ marginTop: "2%" }}>
+                <Text variant="titleLarge">{dataEstab.name}</Text>
+                <Text variant="titleMedium">{dataEstab.address}</Text>
+                <Text variant="titleMedium">Bairro: {dataEstab.neighborhood}</Text>
+                <Text variant="titleMedium">{dataEstab.city} - {dataEstab.state} </Text>
+                <Text variant="titleMedium">{dataEstab.zip_code}</Text>
+                <Text variant="titleMedium">{dataEstab.phone}</Text>
+              </Card.Content>
+              {/* <Card.Actions>
+                <Button onPress={() => [setRegStage(1), setIsEditing(true)]}>Editar informações</Button>
+                <Button onPress={() => [printEstablishment()]}>Imprimir informações</Button>
+              </Card.Actions> */}
+              {/* <Button style={{ marginTop: "5%" }} onPress={() => console.log(dataEstab)}>stab</Button>
                 <Button style={{ marginTop: "5%" }} onPress={() => console.log(userContext?.user)}>userContext</Button>
                 <Button style={{ marginTop: "5%" }} onPress={() => console.log(userContext?.estabId)}>estabId</Button> */}
-                </Card>
-              </>
-            }
+            </Card>
 
-
-            {/* Mensagem sucesso ao gravar */}
-            <Portal>
-              <Dialog visible={isCreated} onDismiss={() => setIsCreated(false)}>
-                <Dialog.Icon icon="check-circle" />
-                <Dialog.Title>Sucesso!</Dialog.Title>
-                <Dialog.Content>
-                  <Text variant="bodyMedium">Deu tudo certo com a criação do cadastro.</Text>
-                </Dialog.Content>
-
-                <Dialog.Actions>
-                  <Button onPress={() => setIsCreated(false)}>OK</Button>
-                </Dialog.Actions>
-              </Dialog>
-            </Portal>
-          </>
-
-
-
-          <Portal>
-            <Dialog visible={isOpenDialogMultiple} onDismiss={() => []}>
-              <Dialog.Title style={{ textAlign: 'center' }}>{'Selecione o estabelecimento'}</Dialog.Title>
-              <View style={{ padding: 15 }}>
-                <RadioButton.Group
-                  value={selectedEstablishment}
-                  onValueChange={(e) => {
-                    setSelectedEstablishment(e)
-                  }}
+            <View style={styles.buttomBar}>
+              {/* Botão "Voltar" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
+                  icon="pencil"
+                  mode="text"
+                  onPress={() => [setRegStage(1), setIsEditing(true)]}
                 >
-                  {multipleEstablishment?.map((item: DocumentData, index) => (
-                    <RadioButton.Item key={`rb-${index}`} label={item?.name || ""} color='green' value={item?.id} />
-                  ))}
-                </RadioButton.Group>
+                  Editar Informações
+                </Button>
               </View>
-              <Dialog.Content style={{ marginTop: 40 }}>
-                <Dialog.Actions>
-                  <Button onPress={signOut}>Logout </Button>
-                  <Button
-                    onPress={() => setContextData(selectedEstablishment)}
-                  //  loading={isLoadingDialog}
-                  >
-                    Entrar
-                  </Button>
-                </Dialog.Actions>
-              </Dialog.Content>
-            </Dialog>
-          </Portal>
-        </ScrollView>}
+              {/* Botão "Próximo" */}
+              <View style={{ width: "45%" }}>
+                <Button
+                  style={{ width: "100%", marginTop: "4%" }}
+                  icon="printer"
+                  mode="text"
+                  onPress={() => printEstablishment()}
+                >
+                 Imprimir informações
+                </Button>
+              </View>
+            </View>
+       
+          </View>
+        }
+
+
+        {/* Mensagem sucesso ao gravar */}
+        <Portal>
+          <Dialog visible={isCreated} onDismiss={() => setIsCreated(false)}>
+            <Dialog.Icon icon="check-circle" />
+            <Dialog.Title>Sucesso!</Dialog.Title>
+            <Dialog.Content>
+              <Text variant="bodyMedium">Deu tudo certo com a criação do cadastro.</Text>
+            </Dialog.Content>
+
+            <Dialog.Actions>
+              <Button onPress={() => setIsCreated(false)}>OK</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+      </>
+
+
+
+      <Portal>
+        <Dialog visible={isOpenDialogMultiple} onDismiss={() => []}>
+          <Dialog.Title style={{ textAlign: 'center' }}>{'Selecione o estabelecimento'}</Dialog.Title>
+          <View style={{ padding: 15 }}>
+            <RadioButton.Group
+              value={selectedEstablishment}
+              onValueChange={(e) => {
+                setSelectedEstablishment(e)
+              }}
+            >
+              {multipleEstablishment?.map((item: DocumentData, index) => (
+                <RadioButton.Item key={`rb-${index}`} label={item?.name || ""} color='green' value={item?.id} />
+              ))}
+            </RadioButton.Group>
+          </View>
+          <Dialog.Content style={{ marginTop: 40 }}>
+            <Dialog.Actions>
+              <Button onPress={signOut}>Logout </Button>
+              <Button
+                onPress={() => setContextData(selectedEstablishment)}
+              //  loading={isLoadingDialog}
+              >
+                Entrar
+              </Button>
+            </Dialog.Actions>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
+
     </View >
 
   )

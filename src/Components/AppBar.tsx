@@ -28,7 +28,7 @@ export default function AppBar() {
   const userContext = useContext(UserContext);
 
   const signOut = () => {
-    userContext?.setEstabName("SmartMenu")
+    userContext?.setEstabName("MenuPédia")
     userContext?.setUser(null)
     userContext?.setEstabId("")
     userContext?.setShoppingCart([])
@@ -44,7 +44,7 @@ export default function AppBar() {
           overlayColor: 'transparent',
           headerTintColor: theme.colors.onBackground,
         }}
-       // initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
+        // initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
         initialRouteName={'Login'}
       >
         {userContext?.isAuthenticated ?
@@ -54,56 +54,60 @@ export default function AppBar() {
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
-                title: userContext?.estabName || "Smart Menu",
+                title: userContext?.estabName || "MenuPédia",
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="store" size={size} color={color} />
                 ),
               }}
             />
-            <Drawer.Screen name="ProductMenu"
-              component={ProductMenu}
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: "Cardápio",
-                drawerIcon: ({ color, size }) => (
-                  <Icon source="book-open-variant" size={size} color={color} />
-                ),
-              }}
-            />
-            <Drawer.Screen name="OrderItems"
-              component={OrderItems}
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: "Pedidos",
-                drawerIcon: ({ color, size }) => (
-                  <Icon source="circle-slice-8" size={size} color={color} />
-                ),
-              }}
-            />
-            <Drawer.Screen name="Orders"
-              component={Orders}
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: "Comandas",
-                drawerIcon: ({ color, size }) => (
-                  <Icon source="credit-card-multiple-outline" size={size} color={color} />
-                ),
-              }}
-            />
-            <Drawer.Screen name="UserConfig"
-              component={UserConfig}
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: "Usuários",
-                drawerIcon: ({ color, size }) => (
-                  <Icon source="account-supervisor" size={size} color={color} />
-                ),
-              }}
-            />
+            {userContext?.estabId !== "" && <>
+              <Drawer.Screen name="ProductMenu"
+                component={ProductMenu}
+                options={{
+                  headerStyle: { backgroundColor: theme.colors.primary },
+                  headerTitleStyle: { color: theme.colors.onBackground },
+                  title: "Cardápio",
+                  drawerIcon: ({ color, size }) => (
+                    <Icon source="book-open-variant" size={size} color={color} />
+                  ),
+                }}
+              />
+              <Drawer.Screen name="OrderItems"
+                component={OrderItems}
+                options={{
+                  headerStyle: { backgroundColor: theme.colors.primary },
+                  headerTitleStyle: { color: theme.colors.onBackground },
+                  title: "Pedidos",
+                  drawerIcon: ({ color, size }) => (
+                    <Icon source="circle-slice-8" size={size} color={color} />
+                  ),
+                }}
+              />
+              <Drawer.Screen name="Orders"
+                component={Orders}
+                options={{
+                  headerStyle: { backgroundColor: theme.colors.primary },
+                  headerTitleStyle: { color: theme.colors.onBackground },
+                  title: "Comandas",
+                  drawerIcon: ({ color, size }) => (
+                    <Icon source="credit-card-multiple-outline" size={size} color={color} />
+                  ),
+                }}
+              />
+              <Drawer.Screen name="UserConfig"
+                component={UserConfig}
+                options={{
+                  headerStyle: { backgroundColor: theme.colors.primary },
+                  headerTitleStyle: { color: theme.colors.onBackground },
+                  title: "Usuários",
+                  drawerIcon: ({ color, size }) => (
+                    <Icon source="account-supervisor" size={size} color={color} />
+                  ),
+                }}
+              />
+
+            </>}
+
             <Drawer.Screen
               name="Logoff"
               options={{

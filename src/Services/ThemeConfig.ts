@@ -20,7 +20,8 @@ export const theme = {
   roundness: 2,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#2E4053', // Cor principal
+    //primary: '#2E4053', // Cor principal
+    primary: '#2F0548', // Cor principal
     accent: '#8BC34A', // Cor de destaque
     background: '#FFFFFF', // Cor de fundo
     surface: '#F5F5F5', // Cor da superfície
