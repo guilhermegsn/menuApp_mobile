@@ -685,7 +685,7 @@ export default function Home() {
 
 
       <Portal>
-        <Dialog visible={isOpenDialogMultiple} onDismiss={() => []}>
+        <Dialog visible={isOpenDialogMultiple} dismissable={false} onDismiss={() => null}>
           <Dialog.Title style={{ textAlign: 'center' }}>{'Selecione o estabelecimento'}</Dialog.Title>
           <View style={{ padding: 15 }}>
             <RadioButton.Group

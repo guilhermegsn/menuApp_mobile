@@ -1,10 +1,10 @@
-import { Keyboard, StyleSheet, TouchableWithoutFeedback, View } from 'react-native'
-import React, { useContext, useState } from 'react'
+import { Alert, Keyboard, StyleSheet, TouchableWithoutFeedback, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Text, TextInput } from 'react-native-paper'
 import auth from '@react-native-firebase/auth';
-import { UserContext } from '../context/UserContext';
 import { Image, KeyboardAvoidingView } from 'react-native';
-
+import { GoogleSignin, GoogleSigninButton } from '@react-native-google-signin/google-signin';
+import { configureGoogleSignin } from '../Services/FirebaseConfig';
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
@@ -15,6 +15,10 @@ export default function Login() {
     confirmPassword: ""
   })
 
+  useEffect(() => {
+    // Configure o GoogleSignin no início
+    configureGoogleSignin();
+  }, []);
 
   const signIn = async () => {
     setIsLoading(true)
@@ -44,6 +48,37 @@ export default function Login() {
       });
   }
 
+
+  const signInWithGoogle = async () => {
+    setIsLoading(true)
+    try {
+      await GoogleSignin.signOut();
+      // Verifique se os serviços do Google estão disponíveis
+      const hasServices = await GoogleSignin.hasPlayServices();
+      console.log('Google Play Services estão disponíveis:', hasServices);
+      if (!hasServices) {
+        throw new Error('Google Play Services não estão disponíveis.');
+      }
+      // Solicitar o login com Google, o que deve exibir o prompt de conta se o usuário estiver logado em mais de uma conta
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Informações do Usuário:', userInfo); // Adicione um log para verificar a resposta
+      const idToken = userInfo?.data?.idToken;
+      if (!idToken) {
+        throw new Error('ID Token não encontrado');
+      }
+      // Criar credenciais para o Firebase
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      // Autenticar com Firebase
+      const userCredential = await auth().signInWithCredential(googleCredential);
+      console.log('Usuário autenticado:', userCredential.user);
+    } catch (error) {
+      console.error('Erro durante o login com Google:', error);
+      Alert.alert('Erro', 'Falha ao fazer login com Google.');
+    }finally{
+      setIsLoading(false)
+    }
+  };
+
   const styles = StyleSheet.create({
     cardImage: {
       marginTop: -40,
@@ -61,11 +96,11 @@ export default function Login() {
       left: 0,
       right: 0,
       alignItems: 'center',
-     // paddingBottom: 20, // Ajuste para que a imagem não fique colada na borda
+      // paddingBottom: 20, // Ajuste para que a imagem não fique colada na borda
     },
     footerImage: {
       width: '100%',   // Ajuste o tamanho da imagem conforme necessário
-      height:50,   // Ajuste o tamanho da imagem conforme necessário
+      height: 50,   // Ajuste o tamanho da imagem conforme necessário
       borderBottomRightRadius: 40,
       borderBottomLeftRadius: 40
     },
@@ -143,6 +178,13 @@ export default function Login() {
               style={styles.footerImage}
             />
           </View>
+          <GoogleSigninButton
+            style={{ width: 250, height: 48 }}  // Estilize conforme necessário
+            size={GoogleSigninButton.Size.Wide}  // Pode ser 'Standard' ou 'Wide'
+            color={GoogleSigninButton.Color.Dark}  // Pode ser 'Dark' ou 'Light'
+            onPress={signInWithGoogle}
+          />
+
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
