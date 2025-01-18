@@ -287,6 +287,7 @@ export default function ProductMenuItens() {
                 title={item.name}
                 subtitle={""}
                 right={() => (
+                  userContext?.userRole === 'ADM' &&
                   <View>
                     <Menu
                       visible={isOpenMenuCardProduct === index}
@@ -466,16 +467,17 @@ export default function ProductMenuItens() {
         </Dialog>
       </Portal>
 
-
-      <FAB
-        color={theme.colors.background}
-        style={styles.fab}
-        icon="plus"
-        onPress={() => [
-          setIsCreate(true),
-          setSelectedProduct(emptySelectedProduct),
-        ]}
-      />
+      {userContext?.userRole === 'ADM' &&
+        <FAB
+          color={theme.colors.background}
+          style={styles.fab}
+          icon="plus"
+          onPress={() => [
+            setIsCreate(true),
+            setSelectedProduct(emptySelectedProduct),
+          ]}
+        />
+      }
     </View>
   )
 }

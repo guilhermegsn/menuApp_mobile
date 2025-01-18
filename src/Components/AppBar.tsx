@@ -1,4 +1,4 @@
-import { StatusBar } from 'react-native'
+import { StatusBar, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -13,11 +13,10 @@ import { CardStyleInterpolators } from '@react-navigation/stack';
 import Orders from '../Views/Orders';
 import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
-import { Button, Icon } from 'react-native-paper';
+import { Button, Icon, Text } from 'react-native-paper';
 import ShoppingCart from '../Views/ShoppingCart';
 import QrCodeReader from '../Views/QrCodeReader';
 import ProductMenuItens from '../Views/ProductMenuItens';
-import MenuProducts from '../Views/MenuProducts';
 import UserConfig from '../Views/UserConfig';
 import auth from '@react-native-firebase/auth'
 
@@ -40,9 +39,13 @@ export default function AppBar() {
     return (
       <Drawer.Navigator
         screenOptions={{
-          drawerStyle: { marginTop: '14.5%' },
-          overlayColor: 'transparent',
+          // drawerStyle: { marginTop: '14.5%' },
+          drawerStyle: { backgroundColor: theme.colors.primary },
+          //     overlayColor: 'transparent',
           headerTintColor: theme.colors.onBackground,
+          drawerLabelStyle: {
+            color: theme.colors.background,
+          },
         }}
         // initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
         initialRouteName={'Login'}
@@ -56,7 +59,7 @@ export default function AppBar() {
                 headerTitleStyle: { color: theme.colors.onBackground },
                 title: userContext?.estabName || "MenuPédia",
                 drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="store" size={size} color={color} />
+                  <MaterialIcons name="store" size={size} color={theme.colors.background} />
                 ),
               }}
             />
@@ -68,7 +71,7 @@ export default function AppBar() {
                   headerTitleStyle: { color: theme.colors.onBackground },
                   title: "Cardápio",
                   drawerIcon: ({ color, size }) => (
-                    <Icon source="book-open-variant" size={size} color={color} />
+                    <Icon source="book-open-variant" size={size} color={theme.colors.background} />
                   ),
                 }}
               />
@@ -79,7 +82,7 @@ export default function AppBar() {
                   headerTitleStyle: { color: theme.colors.onBackground },
                   title: "Pedidos",
                   drawerIcon: ({ color, size }) => (
-                    <Icon source="circle-slice-8" size={size} color={color} />
+                    <Icon source="circle-slice-8" size={size} color={theme.colors.background} />
                   ),
                 }}
               />
@@ -90,22 +93,23 @@ export default function AppBar() {
                   headerTitleStyle: { color: theme.colors.onBackground },
                   title: "Comandas",
                   drawerIcon: ({ color, size }) => (
-                    <Icon source="credit-card-multiple-outline" size={size} color={color} />
+                    <Icon source="credit-card-multiple-outline" size={size} color={theme.colors.background} />
                   ),
                 }}
               />
-              <Drawer.Screen name="UserConfig"
-                component={UserConfig}
-                options={{
-                  headerStyle: { backgroundColor: theme.colors.primary },
-                  headerTitleStyle: { color: theme.colors.onBackground },
-                  title: "Usuários",
-                  drawerIcon: ({ color, size }) => (
-                    <Icon source="account-supervisor" size={size} color={color} />
-                  ),
-                }}
-              />
-
+              {userContext.userRole === 'ADM' &&
+                <Drawer.Screen name="UserConfig"
+                  component={UserConfig}
+                  options={{
+                    headerStyle: { backgroundColor: theme.colors.primary },
+                    headerTitleStyle: { color: theme.colors.onBackground },
+                    title: "Usuários",
+                    drawerIcon: ({ color, size }) => (
+                      <Icon source="account-supervisor" size={size} color={theme.colors.background} />
+                    ),
+                  }}
+                />
+              }
             </>}
 
             <Drawer.Screen
@@ -115,7 +119,7 @@ export default function AppBar() {
                 headerTitleStyle: { color: theme.colors.onBackground },
                 title: 'Logoff',
                 drawerIcon: ({ color, size }) => (
-                  <Icon source="logout" size={size} color={color} />
+                  <Icon source="logout" size={size} color={theme.colors.background} />
                 ),
               }}
             >
@@ -129,13 +133,15 @@ export default function AppBar() {
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
                 drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="account-circle" size={size} color={color} />
+                  <MaterialIcons name="account-circle" size={size} color={theme.colors.background} />
                 ),
               }}
             />
           </>
         }
       </Drawer.Navigator>
+
+     
     )
   }
 

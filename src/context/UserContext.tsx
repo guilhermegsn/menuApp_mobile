@@ -35,6 +35,9 @@ interface UserContextType {
 
   dataEstablishment: DocumentData;
   setDataEstablishment: (value: DocumentData) => void;
+
+  userRole: string;
+  setUserRole: (value: string) => void
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -51,6 +54,7 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [shoppingCart, setShoppingCart] = useState<ItemCartData[]>([])
   const [isUpdatedDataMenu, setIsUpdatedDataMenu] = useState<Boolean>(false)
   const [dataEstablishment, setDataEstablishment] = useState<DocumentData>({} as DocumentData);
+  const [userRole, setUserRole] = useState("")
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(_user => {
@@ -89,7 +93,8 @@ function UserProvider({ children }: { children: ReactNode }) {
       shoppingCart, setShoppingCart,
       isUpdatedDataMenu, setIsUpdatedDataMenu,
       estabTokenFCM, setEstabTokenFCM,
-      dataEstablishment, setDataEstablishment
+      dataEstablishment, setDataEstablishment,
+      userRole, setUserRole
     }}>
       {children}
     </UserContext.Provider>

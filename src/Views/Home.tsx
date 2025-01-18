@@ -117,11 +117,31 @@ export default function Home() {
             const doc = querySnapshot.docs[0]
             const data = doc.data()
             if (data.establishment.length > 1) {
-              console.log('Multiple')
-              setMultiEstablishment(data.establishment)
-              setIsOpenDialogMultiple(true)
+              let enabledEstablishments: DocumentData[] = []
+              data.establishment.forEach((item: DocumentData) => {
+                if (item.enabled) {
+                  enabledEstablishments.push(item)
+                }
+              })
+              if (enabledEstablishments.length > 1) {
+                console.log('Multiple')
+                setMultiEstablishment(data.establishment)
+                setIsOpenDialogMultiple(true)
+              } else {
+                console.log('enabled->', enabledEstablishments)
+                let enabledEstablishment = enabledEstablishments?.find((item: DocumentData) => item.enabled === true)
+                console.log(enabledEstablishment)
+                if (enabledEstablishment) {
+                  console.log('passei', enabledEstablishment)
+                  setContextData(enabledEstablishment?.id)
+                  userContext?.setUserRole(enabledEstablishment?.type)
+                }
+              }
             } else {
-              setContextData(data?.establishment[0]?.id)
+              if (data?.establishment[0]?.enabled) {
+                setContextData(data?.establishment[0]?.id)
+                userContext?.setUserRole(data?.establishment[0]?.type)
+              }
             }
           }
         } catch (error) {
@@ -167,20 +187,20 @@ export default function Home() {
 
 
   const setContextData = (idEstablishment: string) => {
-    console.log('establishment: ', idEstablishment)
     if (userContext) {
       if (multipleEstablishment.length > 0) {
         const document = multipleEstablishment.find((item: userEstablishmentInterface) => item.id === idEstablishment)
         if (document && document.enabled) {
-          userContext.setIsAuthenticated(true)
           userContext.setShoppingCart([])
           userContext.setEstabId(idEstablishment)
+          userContext.setUserRole(document.type)
           setIsOpenDialogMultiple(false)
         } else {
           Alert.alert("Sem acesso.", "Usuário sem acesso. Contate o administrador.")
         }
-      } else {
-        userContext.setIsAuthenticated(true)
+      }
+      else {
+        console.log('entrei aq', userContext?.userRole)
         userContext.setShoppingCart([])
         userContext.setEstabId(idEstablishment)
         setIsOpenDialogMultiple(false)
@@ -617,7 +637,7 @@ export default function Home() {
                 size={20}
               />{"Sair"}
             </Text>
-            <Card style={{width: '95%'}}>
+            <Card style={{ width: '95%' }}>
               {/* <Card.Title title="Card Title" subtitle="Card Subtitle"/> */}
               <Card.Cover source={require('../assets/images/banner3.jpeg')} />
               <Card.Content style={{ marginTop: "2%" }}>
@@ -657,11 +677,11 @@ export default function Home() {
                   mode="text"
                   onPress={() => printEstablishment()}
                 >
-                 Imprimir informações
+                  Imprimir informações
                 </Button>
               </View>
             </View>
-       
+
           </View>
         }
 
@@ -704,6 +724,7 @@ export default function Home() {
               <Button onPress={signOut}>Logout </Button>
               <Button
                 onPress={() => setContextData(selectedEstablishment)}
+              //  onPress={() => console.log(selectedEstablishment)}
               //  loading={isLoadingDialog}
               >
                 Entrar
@@ -712,7 +733,6 @@ export default function Home() {
           </Dialog.Content>
         </Dialog>
       </Portal>
-
     </View >
 
   )

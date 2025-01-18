@@ -296,7 +296,7 @@ export default function OrderItems() {
             <Text variant="bodyMedium">Selecione o status:</Text>
 
             <RadioButton.Group
-              value={selectedOrder?.status ? selectedOrder?.status.toString() : "1"}
+              value={selectedOrder?.status ? selectedOrder?.status.toString() : "0"}
               onValueChange={(e) => {
                 setSelectedOrder((items) => ({
                   ...items, status: e

@@ -133,7 +133,7 @@ export default function ProductMenu() {
       }
     } catch (e) {
       console.log(e)
-    }finally{
+    } finally {
       setIsLoading(false)
     }
   }
@@ -495,8 +495,6 @@ export default function ProductMenu() {
   }
 
 
-
-
   return (
     <View style={{ flex: 1 }}>
       <View style={{ position: 'absolute', right: 0, top: -60, zIndex: 100 }}>
@@ -539,267 +537,26 @@ export default function ProductMenu() {
                   </Card.Content>
                 </Card>
               ))}
-              <Card style={{ width: "45%", margin: "2%", height: 240 }}
-                // onPress={() => [setRegStage(1), setIsBatcAdd(true), clearMenuData()]}>
-                onPress={() => setIsNewMenu(true)}>
-                <Card.Content style={{ marginTop: "2%" }}>
-                  <Icon
-                    source="plus"
-                    size={75}
-                  />
-                  <Text
-                    style={{ bottom: 0 }}
-                    variant="titleLarge">{"Criar novo Menu"}
-                  </Text>
-                </Card.Content>
-              </Card>
+              {userContext?.userRole === 'ADM' &&
+                <Card style={{ width: "45%", margin: "2%", height: 240 }}
+                  // onPress={() => [setRegStage(1), setIsBatcAdd(true), clearMenuData()]}>
+                  onPress={() => setIsNewMenu(true)}>
+                  <Card.Content style={{ marginTop: "2%" }}>
+                    <Icon
+                      source="plus"
+                      size={75}
+                    />
+                    <Text
+                      style={{ bottom: 0 }}
+                      variant="titleLarge">{"Criar novo Menu"}
+                    </Text>
+                  </Card.Content>
+                </Card>
+              }
             </View>
           </>
         }
-
-        {/* REG STAGE 1 = CADASTRAR NOME DO MENU */}
-        {regStage === 1 &&
-          <View style={{ margin: 10 }}>
-            <Text style={{ fontSize: 20, marginBottom: "10%" }}>Vamos começar a criar o seu menu de produtos.</Text>
-            <Text style={{ fontSize: 15, textAlign: "left" }}>Você pode criar diversos menus, exemplo:</Text>
-            <Text style={{ fontSize: 15, marginBottom: "10%", textAlign: "left" }}>Pratos quentes, Sobremesas, Bebidas, etc.</Text>
-            <TextInput
-              style={{ width: "100%", marginBottom: "2%" }}
-              mode="outlined"
-              label="Nome do menu (Ex: Bebidas)"
-              value={menuData.name}
-              onChangeText={(text) => {
-                setMenuData((prevData) => ({
-                  ...prevData,
-                  name: text
-                }))
-              }}
-            />
-            <TextInput
-              style={{ width: "100%", marginBottom: "2%" }}
-              mode="outlined"
-              label="Imagem"
-              onChangeText={(text) => {
-                setMenuData((prevData) => ({
-                  ...prevData,
-                  urlImg: text
-                }))
-              }}
-            />
-            <Button style={{ width: "100%", marginTop: "4%" }}
-              mode="contained"
-              icon="hexagon-multiple"
-              onPress={() => setRegStage(2)}
-            >
-              {"Próximo"}
-            </Button>
-            <Button style={{ width: "100%", marginTop: "4%" }}
-              icon="skip-previous"
-              mode="text"
-              onPress={() => setRegStage(0)}
-            >
-              Voltar
-            </Button>
-          </View>}
-
-        {/* REG STAGE 2 - CADASTRO DE PRODUTOS */}
-        {regStage === 2 &&
-          <View style={{ margin: 10 }}>
-            <View style={{ flexDirection: 'row', marginBottom: 10 }}>
-              <IconButton
-                icon="arrow-left"
-                size={30}
-                mode='contained'
-                onPress={() => isBatchAdd ? setRegStage(1) : setRegStage(3)}
-              />
-              <Text style={{ fontSize: 20, marginTop: 15, marginLeft: 10 }}>Menu: {menuData?.name}</Text>
-            </View>
-            <TextInput
-              style={{ width: "100%", marginBottom: "2%" }}
-              mode="outlined"
-              label="Nome do produto"
-              value={productData.name}
-              onChangeText={(text) => {
-                setProductData((prevData) => ({
-                  ...prevData,
-                  name: text
-                }))
-              }}
-
-            />
-            <TextInput
-              style={{ width: "100%", marginBottom: "2%" }}
-              mode="outlined"
-              label="Descrição"
-              value={productData.description}
-              onChangeText={(text) => {
-                setProductData((prevData) => ({
-                  ...prevData,
-                  description: text
-                }))
-              }}
-
-            />
-            <TextInput
-              style={{ width: "100%", marginBottom: "3%" }}
-              mode="outlined"
-              label="Preço"
-              keyboardType="numeric"
-              //value={productData.price === 0 ? '' : productData.price.toString()}
-              value={productData.strPrice}
-              onChangeText={(text) => {
-                setProductData((prevData) => ({
-                  ...prevData,
-                  price: parseFloat(text),
-                  strPrice: formatCurrencyInput(text)
-                }))
-              }}
-            />
-            <Button style={{ width: "100%", marginTop: "4%" }}
-              mode="contained"
-              loading={isLoadingSave}
-              onPress={() => [add()]}
-            >
-              {"Salvar"}
-            </Button>
-          </View>}
-
-        {/* REG STAGE 3 = LISTA DE PRODUTOS DO MENU  */}
-        {regStage === 3 &&
-          <View>
-            <View style={{ marginBottom: 15 }}>
-              <TouchableOpacity
-                onLongPress={() => Alert.alert(
-                  'Alterar imagem', 'Deseja alterar a imagem do menu?',
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Sim',
-                      onPress: () => {
-                        updateMenuImage()
-                      },
-                    },
-                  ],
-                  { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
-                )}
-              >
-                {isLoading && <ActivityIndicator
-                  color='orange'
-                  style={styles.loadingImage} />}
-                <Image
-                  source={{ uri: menuData.urlImg !== null ? menuData.urlImg : '' }}
-                  style={styles.imagem}
-                />
-              </TouchableOpacity>
-
-              <View style={{ position: 'absolute', bottom: -5, alignSelf: 'center', }}>
-                <View style={styles.textWrapper}>
-                  <Text style={styles.text}
-                    onLongPress={() => Alert.alert(
-                      'Editar menu', 'Deseja alterar o nome do menu?',
-                      [
-                        { text: 'Cancelar', style: 'cancel' },
-                        {
-                          text: 'Sim',
-                          onPress: () => {
-                            editNameMenu()
-                          },
-                        },
-                      ],
-                      { cancelable: true }
-                    )}
-                  >{menuData?.name}</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.overlay}>
-              <IconButton
-                icon="arrow-left"
-                size={30}
-                mode='contained'
-                onPress={() => isBatchAdd ? setRegStage(2) : setRegStage(0)}
-              />
-            </View>
-            {menuData.items.map((item, index) => (
-              <Card
-                key={index}
-                style={{ marginLeft: 10, marginBottom: 10, marginRight: 10 }}
-                onPress={() => selectProduct(item)}
-              >
-                <Card.Title
-                  titleVariant='titleMedium'
-                  title={item.name}
-                  subtitle={item.description}
-                  right={() => (
-                    <View>
-                      <Menu
-                        visible={isOpenMenuCardProduct === index}
-                        onDismiss={() => setIsOpenMenuCardProduct(-1)}
-                        anchor={<IconButton icon="dots-vertical" onPress={() => setIsOpenMenuCardProduct(index)} />}
-                      >
-                        <Menu.Item
-                          onPress={() => editLine(item.id)}
-                          title="Editar"
-                          leadingIcon="pencil"
-                        />
-                        <Menu.Item
-                          onPress={() => deleteLine(item.id)}
-                          title="Excluir"
-                          leadingIcon="delete"
-                        />
-                      </Menu>
-                    </View>
-                  )}
-                />
-                <Card.Content>
-                  <Text variant="bodyMedium">
-                    R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Text>
-                </Card.Content>
-                {/* <Card.Actions>
-                  <Button onPress={() => deleteLine(item.id)}>Deletar</Button>
-                  <Button mode="outlined" onPress={() => editLine(item.id)}>Editar</Button>
-                </Card.Actions> */}
-              </Card>
-            ))}
-            {isBatchAdd &&
-              <>
-                {isLoadingSaveAll && <ActivityIndicator animating />}
-                <Button style={{ width: "100%", marginTop: "4%" }}
-                  mode="contained"
-                  icon="hexagon-multiple"
-                  onPress={() => [saveAll()]}
-                >
-                  {"Salvar todos"}
-                </Button>
-              </>
-            }
-            <View style={{ marginBottom: 90 }}>
-              {/* Espaço p/ botao de add nao cubrir o card */}
-            </View>
-          </View>
-
-        }
-        {/* <Button onPress={() => console.log(listMenu)}>menuData</Button>
-        <Button onPress={() => setRegStage(0)}>0</Button>
-        <Button onPress={() => fetchData()}>fetchData</Button> */}
       </ScrollView>
-
-      {regStage === 3 &&
-
-        <FAB
-          color={theme.colors.background}
-          style={styles.fab}
-          icon="plus"
-          onPress={() => [
-            setRegStage(2),
-            setProductData({ id: "", name: "", description: "", price: 0, strPrice: "" }),
-            setIsEditing(false),
-          ]}
-        />
-
-      }
-
 
       <Portal>
         <Dialog visible={isEditingNameMenu} onDismiss={() => [setIsEditingNameMenu(false)]}>
@@ -828,8 +585,6 @@ export default function ProductMenu() {
         </Dialog>
       </Portal>
 
-
-
       {/* Modal ADD ShoppingCart */}
       <Portal>
         <Dialog visible={isAddShoppingCart} onDismiss={() => [setIsAddShoppingCart(false)]}>
@@ -837,7 +592,6 @@ export default function ProductMenu() {
 
           <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center' }}>
             <IconButton
-
               icon="minus"
               size={25}
               onPress={() => setSelectedProduct((prevData) => ({
@@ -870,7 +624,6 @@ export default function ProductMenu() {
               <Button
                 onPress={() => addShoppingCart(selectedProduct)}
               // loading={isLoadingSave}
-
               >
                 Adicionar
               </Button>
@@ -888,6 +641,7 @@ export default function ProductMenu() {
           <View style={{ padding: 15 }}>
             <TextInput
               style={{ margin: 5, marginTop: 10 }}
+              mode='outlined'
               label="Nome"
               placeholder='Exemplo: Lanches'
               keyboardType='default'
@@ -908,10 +662,10 @@ export default function ProductMenu() {
                     style={styles.imagem}
                   />
                 </TouchableOpacity> :
-                <View style={{ width: '80%', alignSelf: 'center', marginTop: 20 }}>
+                <View style={{ alignSelf: 'center', marginTop: 50 }}>
                   <Button
                     icon="image"
-                    mode="contained"
+                    mode="outlined"
                     onPress={openImageNewMenu}
                   >Adicionar imagem
                   </Button>

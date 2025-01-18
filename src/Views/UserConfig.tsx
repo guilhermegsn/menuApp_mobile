@@ -1,7 +1,7 @@
 import { StyleSheet, View, ScrollView, Alert } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, DataTable, Dialog, FAB, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
-import { addDoc, arrayUnion, collection, doc, DocumentData, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { Button, DataTable, Dialog, FAB, Portal, RadioButton, Switch, Text, TextInput } from 'react-native-paper'
+import { addDoc, arrayUnion, collection, doc, DocumentData, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import auth from '@react-native-firebase/auth'
 import { db } from '../Services/FirebaseConfig';
@@ -9,6 +9,7 @@ import { theme } from '../Services/ThemeConfig';
 import Loading from '../Components/Loading';
 
 interface User {
+  id: "",
   name: string;
   email: string;
   establishment: DocumentData,
@@ -22,8 +23,10 @@ export default function UserConfig() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingDialog, setIsLoadingDialog] = useState(false)
   const [isNewRegister, setIsNewRegister] = useState(false)
+  const [isEdit, setIsEdit] = useState(false)
 
-  const [user, setUser] = useState<User>({
+  const [emptyUser] = useState<User>({
+    id: "",
     name: "",
     email: "",
     establishment: {
@@ -34,6 +37,9 @@ export default function UserConfig() {
     },
     establishmentId: userContext?.estabId || ""
   })
+  const [user, setUser] = useState(emptyUser)
+
+
 
   useEffect(() => {
     fetchData()
@@ -49,77 +55,126 @@ export default function UserConfig() {
       );
       const res = await getDocs(q);
       if (!res.empty) {
-        let data = res.docs.map(item => item.data())
-
+        //let data = res.docs.map(item => item.data())
+        const data = res.docs.map(item => ({
+          ...item.data() as User,
+          id: item.id, // Adiciona o ID do documento
+        }));
         let newData = data.map(item => ({
           ...item,
           establishment: item.establishment.find((estab: DocumentData) => estab.id === userContext?.estabId)
         }))
-
         setDataUsers(newData)
       }
     } catch (error) {
-      console.error('Erro ao buscar dados:', error);
+      console.error('Erro ao buscar dados', error);
     } finally {
       setIsLoading(false);
     }
   }
 
   const saveNewUser = async () => {
-    setIsLoadingDialog(true)
-    try {
-      // Verificar se o e-mail já existe
-      const userQuery = query(collection(db, "User"), where("email", "==", user.email))
-      const querySnapshot = await getDocs(userQuery)
+    console.log('user', user)
+    // setIsLoadingDialog(true)
 
-      if (!querySnapshot.empty) {
-        // Usuário já existe
-        const userDoc = querySnapshot.docs[0]
-        const userRef = userDoc.ref
-        const userData = userDoc.data()
+    if (isEdit) {
+      console.log('edit')
+      //busco o usuário a ser editado
+      const docRef = doc(db, "User", user?.id);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists) {
+        console.log('Usuário não encontrado');
+        return;
+      }
+      const userData = docSnap.data();
+      // Atualiza o array de estabelecimentos
+      const updatedEstablishments = userData?.establishment.map((est: DocumentData) => {
+        if (est.id === userContext?.estabId) {
+          return { ...est, ...user.establishment }; // Atualiza o estabelecimento específico
+        }
+        return est; // Mantém os outros estabelecimentos inalterados
+      });
+      setIsLoadingDialog(true)
+      try {
+        // Salva as mudanças no Firestore
+        await updateDoc(docRef, {
+          establishment: updatedEstablishments,
+          name: user.name || userData?.name, // Atualiza o nome do usuário, se incluído no `updatedData`
+        });
+        Alert.alert("Alterado com sucesso.")
+        closeModal()
+      } catch {
+        Alert.alert("Erro ao alterar.", "Ocorreu um erro ao alterar o registro")
+      } finally {
+        setIsLoadingDialog(false)
+      }
+    } else {
+      try {
+        // Verificar se o e-mail já existe
+        const userQuery = query(collection(db, "User"), where("email", "==", user.email))
+        const querySnapshot = await getDocs(userQuery)
 
-        // Verificar se o e-mail já está vinculado ao estabelecimento atual
-        const isEstablishmentLinked = userData.establishmentId?.includes(userContext?.estabId)
+        if (!querySnapshot.empty) {
+          // Usuário já existe
+          const userDoc = querySnapshot.docs[0]
+          const userRef = userDoc.ref
+          const userData = userDoc.data()
 
-        if (isEstablishmentLinked) {
-          Alert.alert("E-mail já cadastrado.", "Este e-mail já está vinculado ao estabelecimento. ")
-          return
+          // Verificar se o e-mail já está vinculado ao estabelecimento atual
+          const isEstablishmentLinked = userData.establishmentId?.includes(userContext?.estabId)
+
+          if (isEstablishmentLinked) {
+            Alert.alert("E-mail já cadastrado.", "Este e-mail já está vinculado ao estabelecimento.")
+            return
+          }
+
+          // Atualizar os arrays de estabelecimentos e IDs
+          const updatedEstablishment = [...(userData.establishment || []), user.establishment]
+          const updatedEstablishmentId = [...(userData.establishmentId || []), user.establishmentId]
+
+          // Atualizar documento no Firestore
+          await updateDoc(userRef, {
+            establishment: updatedEstablishment,
+            establishmentId: updatedEstablishmentId
+          })
+          setIsNewRegister(false)
+          fetchData()
+          console.log("Estabelecimento adicionado ao usuário existente.")
+          return userDoc.id
         }
 
-        // Atualizar os arrays de estabelecimentos e IDs
-        const updatedEstablishment = [...(userData.establishment || []), user.establishment]
-        const updatedEstablishmentId = [...(userData.establishmentId || []), user.establishmentId]
-
-        // Atualizar documento no Firestore
-        await updateDoc(userRef, {
-          establishment: updatedEstablishment,
-          establishmentId: updatedEstablishmentId
+        // Usuário não existe, criar novo documento
+        const newUserRef = await addDoc(collection(db, "User"), {
+          email: user.email,
+          name: user.name,
+          establishment: [user.establishment],
+          establishmentId: [user.establishmentId]
         })
+
         setIsNewRegister(false)
         fetchData()
-        console.log("Estabelecimento adicionado ao usuário existente.")
-        return userDoc.id
+        console.log("Novo usuário criado com sucesso! ID do documento", newUserRef.id)
+        return newUserRef.id
+
+      } catch (error) {
+        console.error("Erro ao incluir usuário:", error)
+        throw error; // Propaga o erro para tratamento posterior, se necessário
+      } finally {
+        setIsLoadingDialog(false)
       }
-
-      // Usuário não existe, criar novo documento
-      const newUserRef = await addDoc(collection(db, "User"), {
-        email: user.email,
-        name: user.name,
-        establishment: [user.establishment],
-        establishmentId: [user.establishmentId]
-      })
-
-      setIsNewRegister(false)
-      fetchData()
-      console.log("Novo usuário criado com sucesso! ID do documento", newUserRef.id)
-      return newUserRef.id
-
-    } catch (error) {
-      console.error("Erro ao incluir usuário:", error)
-      throw error; // Propaga o erro para tratamento posterior, se necessário
-    } finally {
-      setIsLoadingDialog(false)
     }
+  }
+
+  const edit = (item: User) => {
+    console.log(item)
+    setIsEdit(true)
+    setUser(item)
+  }
+
+  const closeModal = () => {
+    setIsEdit(false)
+    setIsNewRegister(false)
+    setUser(emptyUser)
   }
 
 
@@ -152,10 +207,10 @@ export default function UserConfig() {
               <DataTable.Title style={{ flex: 2 }}>Tipo</DataTable.Title>
             </DataTable.Header>
             {dataUsers?.map((item, index) => (
-              <DataTable.Row key={`row${index}`}>
-                <DataTable.Cell key={`cell1`} style={{ flex: 5 }}>{item?.email}</DataTable.Cell>
-                <DataTable.Cell key={`cell2`} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
-                <DataTable.Cell key={`cell3`} style={{ flex: 2 }}>
+              <DataTable.Row key={`row${index}`} onPress={() => edit(item as User)}>
+                <DataTable.Cell key={`cell1-row${index}`} style={{ flex: 5 }}>{item?.email}</DataTable.Cell>
+                <DataTable.Cell key={`cell2-row${index}`} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
+                <DataTable.Cell key={`cell3-row${index}`} style={{ flex: 2 }}>
                   <Button onPress={() => console.log('item', item)}>{item?.establishment?.type}</Button>
                 </DataTable.Cell>
               </DataTable.Row>
@@ -169,7 +224,7 @@ export default function UserConfig() {
 
       {/* Modal ADD Novo menu */}
       <Portal>
-        <Dialog visible={isNewRegister} onDismiss={() => [setIsNewRegister(false)]}>
+        <Dialog visible={isNewRegister || isEdit} onDismiss={closeModal}>
           <Dialog.Title style={{ textAlign: 'center' }}>{'Cadastrar usuário'}</Dialog.Title>
 
           <View style={{ padding: 15 }}>
@@ -188,6 +243,7 @@ export default function UserConfig() {
             <TextInput
               style={{ margin: 5, marginTop: 10 }}
               label="E-mail"
+              disabled={isEdit}
               keyboardType='email-address'
               value={user.email}
               onChangeText={(text) => {
@@ -218,12 +274,23 @@ export default function UserConfig() {
                   </View>
                 </View>
               </RadioButton.Group>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30 }}>
+                <Text>Habilitado</Text>
+                <Switch
+                  value={user?.establishment?.enabled}
+                  onValueChange={(e) => {
+                    let copyData = { ...user }
+                    copyData.establishment.enabled = e
+                    setUser(copyData)
+                  }}
+                />
+              </View>
             </View>
           </View>
 
           <Dialog.Content style={{ marginTop: 40 }}>
             <Dialog.Actions>
-              <Button onPress={() => setIsNewRegister(false)}>Cancelar </Button>
+              <Button onPress={closeModal}>Cancelar </Button>
               <Button
                 // onPress={() => saveNewUser()}
                 onPress={saveNewUser}
@@ -242,9 +309,6 @@ export default function UserConfig() {
         icon="plus"
         onPress={() => setIsNewRegister(true)}
       />
-
-      <Button onPress={() => console.log(dataUsers)}>doc</Button>
-      <Button onPress={() => console.log(userContext?.estabId)}>establishmentId</Button>
     </View>
   )
 }

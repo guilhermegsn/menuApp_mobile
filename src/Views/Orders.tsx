@@ -100,8 +100,8 @@ export default function Orders() {
       collection(db, 'Ticket'),
       where("establishment", "==", userContext?.estabId),
       where('status', '==', parseInt(statusTicket)),
-      orderBy('name'),
-      limit(20),
+      orderBy('openingDate', 'desc'),
+      limit(200),
     );
     setIsLoading(true)
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -248,10 +248,10 @@ export default function Orders() {
         collection(db, 'Ticket'),
         where("establishment", "==", userContext?.estabId),
         where('status', '==', parseInt(statusTicket)),
-        orderBy('name'),
+        orderBy('openingDate', 'desc'),
         //  orderBy('id'),
-        limit(20),
-        startAfter(orders[orders.length - 1].name),
+        limit(200),
+        startAfter(orders[orders.length - 1].openingDate),
       );
       try {
         setIsLoadingMoreData(true)
@@ -286,11 +286,16 @@ export default function Orders() {
       bottom: 10,
       backgroundColor: theme.colors.primary
     },
+    grid:{
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      padding: 12
+    },
     card: {
-      marginLeft: 8,
-      marginRight: 8,
-      marginBottom: 10,
-      paddingRight: 6,
+      marginBottom: 12,
+      width: "48%",
+      height: 230
     }
   })
 
@@ -344,74 +349,62 @@ export default function Orders() {
               />
             </View>
           </View>
-          {/* {orders.map((order, index) => (
-            <View key={index}>
-              <Card style={{ margin: "2%", marginTop: 0, paddingRight: 10 }}>
-                <Card.Title title={`${order?.local}`} subtitle={""}
-                  left={(props) => <Avatar.Icon {...props} icon="table-chair" />}
-                
-                />
-                <Card.Actions>
-                  <Button onPress={() => closeOrder(order.id, order.local, order.openingDate)} mode="outlined">Fechar</Button>
-                </Card.Actions>
-              </Card>
-            </View>
-          ))} */}
 
-
-
-          {orders.map((item, index) => (
-            <Card key={index}
-              style={[styles.card, { backgroundColor: item.status === 1 ? '#196F3D' : '#C0392B' }]}
-            >
-              <Card style={{ backgroundColor: '#EBEDEF' }}
-                onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name, item.status)]}
-                onLongPress={() => Alert.alert(
-                  'Reimprimir Ticket?',
-                  item.name,
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Sim',
-                      onPress: () => {
-                        printTicket({
-                          id: item.id,
-                          name: item.name,
-                          document: item.document,
-                          local: item.local
-                        })
-                      },
-                    },
-                  ],
-                  { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
-                )}
+          <View style={styles.grid}>
+            {orders.map((item, index) => (
+              <Card key={index}
+                style={[styles.card, { backgroundColor: item.status === 1 ? '#196F3D' : '#C0392B' }]}
               >
-                <Card.Title
-                  title={`${item?.name}`}
-                  subtitleStyle={{ fontSize: 10, marginTop: -10, color: 'gray' }}
-                  subtitle={ //QrCode || NFC
-                    item.status === 1 && item.openingDate !== '' && item.openingDate !== undefined ?
-                      `${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` :
-                      item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}` 
-                  }
-               //   subtitle={item?.status === 0}
-                  left={() =>
-                    <View >
+                <Card style={{ backgroundColor: '#EBEDEF', height: 225 }}
+                  onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name, item.status)]}
+                  onLongPress={() => Alert.alert(
+                    'Reimprimir Ticket?',
+                    item.name,
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Sim',
+                        onPress: () => {
+                          printTicket({
+                            id: item.id,
+                            name: item.name,
+                            document: item.document,
+                            local: item.local
+                          })
+                        },
+                      },
+                    ],
+                    { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
+                  )}
+                >
+                  <Card.Title
+                    title={`${item?.name}`}
+                    titleStyle={{ fontSize: 14, fontWeight: 'bold' }}
+                    subtitleStyle={{ fontSize: 10, marginTop: -10, color: 'gray' }}
+                    subtitle={ //QrCode || NFC
+                      item.status === 1 && item.openingDate !== '' && item.openingDate !== undefined ?
+                        `${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` :
+                        item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}`
+                    }
+                  //   subtitle={item?.status === 0}
+
+                  />
+                  <Card.Content>
+                    <View style={{ marginTop: 10 }}>
                       {item?.type === 1 || item?.type === 4 ? //QrCode || NFC
                         <View style={{ alignItems: 'center' }}>
-                          {/* <Icon
+                          <Icon
                             source="account"
                             color={theme.colors.primary}
-                            size={30}
-                          /> */}
-                          <Avatar.Text size={40} label={getInitialsName(item.name)} />
+                            size={40}
+                          />
                           <Text style={{ fontSize: 10, color: theme.colors.primary }}>{item.local}</Text>
                         </View> : item.type === 2 ?
                           <View style={{ alignItems: 'center' }}>
                             <Icon
                               source="account-group"
                               color={theme.colors.primary}
-                              size={30}
+                              size={40}
                             />
                             <Text style={{ fontSize: 10 }}>{item.local}</Text>
                           </View> : item.type === 3 && //Delivery
@@ -419,83 +412,26 @@ export default function Orders() {
                             <Icon
                               source="moped-outline"
                               color={theme.colors.primary}
-                              size={30}
+                              size={40}
                             />
                             <Text style={{ fontSize: 10 }}>Delivery</Text>
                           </View>
-
                       }
-
-                    </View>}
-                />
-                {/* <Card.Content>
-                  <Text style={{ marginRight: -5 }}>
-                    {item.local}
-                  </Text>
-                </Card.Content> */}
-
-
-
-
-
-
-
-
-
-
-
-
-
+                    </View>
+                  </Card.Content>
+                </Card>
+                <View style={{ position: 'absolute', bottom: 10, left: 10, right: 10 }}>
+                  <Text style={{ fontSize: 12, color: theme.colors.text }}>{item?.local}</Text>
+                </View>
               </Card>
-            </Card>
-          ))}
-
-          {/* <DataTable style={{ marginTop: 10 }}>
-            {orders.map((item, index) => (
-              <>
-                <DataTable.Row key={index} onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name)]}>
-                  <DataTable.Cell key={1} style={{ flex: 1 }}>{item?.type === 1 ?
-                    <Icon
-                      source="account"
-                      //color={'gray'}
-                      size={18}
-                    /> : item.type === 2 ?
-                      <Icon
-                        source="account-group"
-                        //  color={'gray'}
-                        size={18}
-                      /> :
-                      <Icon
-                        source="moped-outline"
-                        // color={'gray'}
-                        size={18}
-                      />
-
-                  }</DataTable.Cell>
-                  <DataTable.Cell key={2} style={{ flex: 7 }}>
-                    {item?.name}
-                  </DataTable.Cell>
-                  <DataTable.Cell key={3} numeric style={{ flex: 5 }}>
-                    <Text>{item.type === 1 && item?.local}</Text>
-                  </DataTable.Cell>
-                </DataTable.Row>
-              </>
             ))}
-          </DataTable> */}
+          </View>
 
-          {/* <Button onPress={() => console.log(orders)}>orders</Button>
-          <Button onPress={() => printTicket('tezste')}>print</Button> */}
+
 
           <View style={{ marginBottom: 20, marginTop: 20, alignItems: 'center' }}>
             {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> :
               orders.length >= 3 &&
-              // <Button
-              //   style={{ marginBottom: 20, width: 180 }}
-              //   mode='contained'
-              //   onPress={() => loadMoreData()}>
-              //   Carregar mais
-              // </Button>
-
               <IconButton
                 icon="dots-horizontal"
                 iconColor={ticketType === 3 ? theme.colors.primary : theme.colors.secondary}
@@ -506,17 +442,8 @@ export default function Orders() {
 
             }
           </View>
-
-          {/* <Button onPress={() => console.log(orders)}>data</Button> */}
-
-        </ScrollView>}
-
-      {/* <FAB
-        color={theme.colors.background}
-        style={styles.fab}
-        icon="plus"
-        onPress={() => setIsOpenNewTicket(true)}
-      /> */}
+        </ScrollView>
+      }
 
 
       <Portal>
@@ -614,7 +541,6 @@ export default function Orders() {
             cancelTechnologyRequest={handleCancelTechnologyRequest}
           />
         </Dialog>
-
       </Portal>
 
       <NfcReader
