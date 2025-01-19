@@ -1,33 +1,33 @@
 import { Alert, StyleSheet, View } from 'react-native'
-import React, { ChangeEvent, useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
-import { ActivityIndicator, Button, DataTable, Dialog, IconButton, Portal, Text, TextInput } from 'react-native-paper';
-import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { ActivityIndicator, Button, DataTable, Dialog, IconButton, Menu, Portal, Text, TextInput } from 'react-native-paper';
+import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig';
-import { formatCurrencyInput, formatToCurrencyBR, formatToDoubleBR, handleNumberInputChange } from '../Services/Functions'
+import { formatCurrencyInput, formatToCurrencyBR, formatToDoubleBR, printThermalPrinter } from '../Services/Functions'
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { ScrollView } from 'react-native';
 import moment from 'moment';
-import CurrencyInput from '../Components/CurrencyInput'
 import { UserContext } from '../context/UserContext';
 import { PaymentMethod } from '../Interfaces/PaymentMethod_interface';
+import QRCode from 'react-native-qrcode-svg';
 interface RouteParams {
   id: string
   local: string
   openingDate: Date
   name: string,
-  status: string
+  status: number,
+  type: number
 }
 
 export default function CloseOrder() {
 
   const userContext = useContext(UserContext);
-
   const navigation = useNavigation();
   const route = useRoute();
-  const { id, local, openingDate, name, status } = route.params as RouteParams || {};
+  const { id, local, openingDate, name, status, type } = route.params as RouteParams || {};
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<DocumentData[]>([]);
   const [isCloseOrder, setIsCloeOrder] = useState(false)
@@ -40,6 +40,8 @@ export default function CloseOrder() {
   const [resultTotal, setResultTotal] = useState<number>(0)
   const [amountReceived, setAmmountReceived] = useState<string>('0')
   const [changeValueOrder, setChangeValueOorder] = useState('0')
+  const [isOpenMenu, setIsOpenMenu] = useState(false)
+  const [isOpenQrCode, setIsOpenQrCode] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -254,6 +256,31 @@ export default function CloseOrder() {
     // setData(dt)
   }
 
+  const printTicket = async () => {
+    const text =
+      `[L]\n` +
+      `[L]\n` +
+      `[C]<u><font size='tall'>${userContext?.estabName}</font></u>\n` +
+      `[L]\n` +
+      `[C]COMANDA DIGITAL DE CONSUMO\n` +
+      `[L]\n` +
+      `[C]Acesse o QR Code para pedir:\n` +
+      `[L]\n` +
+      `[L]<qrcode>http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${id}</qrcode>\n` +
+      `[L]\n` +
+      `[L]\n` +
+      // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
+      `[L]\n` +
+      `[L]<b>Dados desta comanda:</b>\n` +
+      `[L]<font size='tall'>Nome: ${name}</font>\n` +
+      `[L]Local: ${local}\n` +
+      `[L]\n` +
+      `[C]<b><font size='tall'>ATENCAO</font></b>\n` +
+      `[L]Este ticket deve ser armazenado em local seguro.\n` +
+      `[L]A perda deste ticket pode acarretar prejuizo financeiro.\n`
+    await printThermalPrinter(text)
+  }
+
 
 
   return (
@@ -294,26 +321,11 @@ export default function CloseOrder() {
 
             {/* View da Direita */}
             <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', flexDirection: 'row' }}>
-              {/* <Button
-                style={styles.button}
-                mode="contained"
-                icon="printer"
-                onPress={() => setIsCloeOrder(true)}>
-                Imprimir
-              </Button> */}
-
-              {/* <Button
-                style={styles.button}
-                mode="contained"
-                icon="close-circle"
-                onPress={() => setIsCloeOrder(true)}>
-                Fechar
-              </Button> */}
               <IconButton
                 icon="cash-check"
                 iconColor={theme.colors.primary}
                 size={30}
-                disabled={parseInt(status) !== 1}
+                disabled={status !== 1}
                 onPress={() => setIsCloeOrder(true)}
               />
               <IconButton
@@ -322,6 +334,32 @@ export default function CloseOrder() {
                 size={30}
                 onPress={() => print()}
               />
+              {type === 1 && status !== 0 &&//Menu de Reimpressao de ticker e QrCode apenas para comandas individuais.
+                <View>
+                  <Menu
+                    visible={isOpenMenu}
+                    onDismiss={() => setIsOpenMenu(!isOpenMenu)}
+                    anchor={<IconButton icon="dots-vertical" onPress={() => setIsOpenMenu(true)} />}
+                  >
+                    <Menu.Item
+                      onPress={() => {
+                        setIsOpenQrCode(true)
+                        setIsOpenMenu(false)
+                      }}
+                      title="Exibir QrCode"
+                      leadingIcon="qrcode"
+                    />
+                    <Menu.Item
+                      onPress={() => {
+                        printTicket()
+                        setIsOpenMenu(false)
+                      }}
+                      title="Reimprimir Ticket"
+                      leadingIcon="printer"
+                    />
+                  </Menu>
+                </View>
+              }
             </View>
           </View>
 
@@ -369,7 +407,7 @@ export default function CloseOrder() {
 
             </DataTable.Row>
           </DataTable>
-          
+
           {/* Mensagem confirmação / fechar comanda */}
           <Portal>
             <Dialog visible={isCloseOrder} onDismiss={() => setIsCloeOrder(false)}>
@@ -474,6 +512,29 @@ export default function CloseOrder() {
             </Dialog>
           </Portal>
         </ScrollView>}
+
+
+      {/* Dialog QRCode  */}
+      <Portal>
+        <Dialog visible={isOpenQrCode} dismissable={false} onDismiss={() => setIsOpenQrCode(false)}>
+          <Dialog.Title>{name}</Dialog.Title>
+          <Dialog.Content style={{ margin: -10 }}>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ textAlignVertical: 'center' }}>{`Aponto a câmera do celular e acesse o cardápio digital\n`}</Text>
+              <QRCode
+                value={`http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${id}`}
+                size={120}
+              />
+            </View>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setIsOpenQrCode(false)}>Fechar</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+
+
     </View>
   )
 }

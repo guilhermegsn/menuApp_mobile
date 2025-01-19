@@ -12,6 +12,8 @@ import moment from 'moment';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import { NfcReader } from '../Components/NfcReader';
 import { getDataNfcTicket, readTagNfc, printThermalPrinter, getInitialsName } from '../Services/Functions';
+import QRCode from 'react-native-qrcode-svg';
+import 'text-encoding';
 
 
 interface RouteParams {
@@ -21,6 +23,7 @@ interface RouteParams {
 
 export default function Orders() {
 
+  let base64Logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAA..';
   const userContext = useContext(UserContext)
   const [ticketType, setTicketType] = useState(1) //1-QrCode 2-Mesa 3-Delivey 4-Nfc
 
@@ -31,6 +34,8 @@ export default function Orders() {
   const [isLoading, setIsLoading] = useState(false)
   const [isOpenNewTicket, setIsOpenNewTicket] = useState(false)
   const [isLoadingSave, setIsLoadingSave] = useState(false)
+  const [savedNewTicket, setSavedNewTicket] = useState("")
+  const [idNewTicket, setIdNewTicket] = useState("")
   const navigation = useNavigation()
   const [emptyParamsTicket] = useState<DocumentData>({
     name: "",
@@ -64,7 +69,7 @@ export default function Orders() {
       const ticketNumber = urlSplit[urlSplit.length - 1]
       const selectedTicket = orders.find((item) => item.id === ticketNumber)
       if (selectedTicket) {
-        closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name, selectedTicket?.status)
+        closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name, selectedTicket?.status, selectedTicket?.type)
         //limpo o qrCode
         navigation.setParams({ qrCodeData: '' });
       }
@@ -76,8 +81,8 @@ export default function Orders() {
     NfcManager.cancelTechnologyRequest()
   }
 
-  const closeOrder = (id: string, local: string, openingDate: Date, name: string, status: string) => {
-    navigation.navigate('CloseOrder', { id: id, local: local, openingDate: openingDate.toISOString(), name: name, status: status })
+  const closeOrder = (id: string, local: string, openingDate: Date, name: string, status: string, type: string) => {
+    navigation.navigate('CloseOrder', { id: id, local: local, openingDate: openingDate.toISOString(), name: name, status: status, type: type })
   }
 
   const closeOrderNFC = async () => {
@@ -87,7 +92,7 @@ export default function Orders() {
       if (data) {
         const selectedTicket = orders.find((item) => item.id === data.id)
         if (selectedTicket) {
-          closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name, selectedTicket?.status)
+          closeOrder(selectedTicket?.id, selectedTicket?.local, selectedTicket?.openingDate.toDate(), selectedTicket?.name, selectedTicket?.status, selectedTicket?.type)
         }
       } else {
         Alert.alert('Comanda inválida.')
@@ -165,23 +170,23 @@ export default function Orders() {
 
 
   const openNewTicket = async () => {
-    console.log('salvando...')
     setIsLoadingSave(true)
     try {
       const ticketRef = collection(db, "Ticket");
       paramsTicket.type = ticketType
       const saveTicket = await addDoc(ticketRef, paramsTicket)
       if (saveTicket) {
-        setIsOpenNewTicket(false)
+        setIdNewTicket(saveTicket?.id)
         if (ticketType === 1) {
+          setSavedNewTicket(`http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${saveTicket.id}`)
           console.log('imprimindo...')
-          printTicket({
-            id: saveTicket.id,
-            name: paramsTicket.name,
-            local: paramsTicket.local,
-            document: paramsTicket.document,
-            phone: paramsTicket.phone
-          })
+          // printTicket({
+          //   id: saveTicket.id,
+          //   name: paramsTicket.name,
+          //   local: paramsTicket.local,
+          //   document: paramsTicket.document,
+          //   phone: paramsTicket.phone
+          // })
         }
       }
     } catch (error) {
@@ -203,7 +208,7 @@ export default function Orders() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode>http://192.168.1.114:3000/menu/${userContext?.estabId}/1/${params.id}</qrcode>\n` +
+      `[L]<qrcode>http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${params.id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
@@ -275,6 +280,11 @@ export default function Orders() {
     navigation.navigate('QrCodeReader', { backPage: 'Orders' });
   }
 
+  const closeDialogNewTicket = () => {
+    setIsOpenNewTicket(false)
+    setParamsTicket(emptyParamsTicket)
+    setSavedNewTicket("")
+  }
   const styles = StyleSheet.create({
     scrollViewContent: {
       flexGrow: 1,
@@ -286,7 +296,7 @@ export default function Orders() {
       bottom: 10,
       backgroundColor: theme.colors.primary
     },
-    grid:{
+    grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
@@ -356,26 +366,26 @@ export default function Orders() {
                 style={[styles.card, { backgroundColor: item.status === 1 ? '#196F3D' : '#C0392B' }]}
               >
                 <Card style={{ backgroundColor: '#EBEDEF', height: 225 }}
-                  onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name, item.status)]}
-                  onLongPress={() => Alert.alert(
-                    'Reimprimir Ticket?',
-                    item.name,
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      {
-                        text: 'Sim',
-                        onPress: () => {
-                          printTicket({
-                            id: item.id,
-                            name: item.name,
-                            document: item.document,
-                            local: item.local
-                          })
-                        },
-                      },
-                    ],
-                    { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
-                  )}
+                  onPress={() => [closeOrder(item.id, item.local, item.openingDate.toDate(), item.name, item.status, item.type)]}
+                // onLongPress={() => Alert.alert(
+                //   'Reimprimir Ticket?',
+                //   item.name,
+                //   [
+                //     { text: 'Cancelar', style: 'cancel' },
+                //     {
+                //       text: 'Sim',
+                //       onPress: () => {
+                //         printTicket({
+                //           id: item.id,
+                //           name: item.name,
+                //           document: item.document,
+                //           local: item.local
+                //         })
+                //       },
+                //     },
+                //   ],
+                //   { cancelable: true } // Define se o Alert pode ser fechado ao tocar fora dele
+                // )}
                 >
                   <Card.Title
                     title={`${item?.name}`}
@@ -448,92 +458,117 @@ export default function Orders() {
 
       <Portal>
         <Dialog visible={isOpenNewTicket} onDismiss={() => setIsOpenNewTicket(false)}>
-          <Dialog.Title>{"Abertura de comanda"}</Dialog.Title>
-          <Dialog.Content style={{ margin: -10 }}>
-            <View style={{ flexDirection: 'row' }}>
-              <IconButton
-                iconColor={ticketType === 1 ? theme.colors.primary : theme.colors.secondary}
-                icon="qrcode"
-                size={25}
-                onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(1)]}
-              />
-              <IconButton
-                iconColor={ticketType === 4 ? theme.colors.primary : theme.colors.secondary}
-                icon="contactless-payment"
-                size={25}
-                onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(4), readNFC()]}
-              />
-              <IconButton
-                icon="account-group"
-                iconColor={ticketType === 2 ? theme.colors.primary : theme.colors.secondary}
-                size={25}
-                onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(2)]}
-              />
-              <IconButton
-                icon="moped-outline"
-                iconColor={ticketType === 3 ? theme.colors.primary : theme.colors.secondary}
-                size={25}
-                onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(3)]}
-              />
-            </View>
-            {ticketType !== 3 &&
-              <TextInput
-                style={{ margin: 5, marginTop: 10 }}
-                label="Nome"
-                value={paramsTicket.name}
-                onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, name: text }))}
-              />
-            }
-            {ticketType !== 2 && ticketType !== 3 &&
-              <>
+          <Dialog.Title>{savedNewTicket ? paramsTicket.name : "Abertura de comanda"}</Dialog.Title>
+          {savedNewTicket ?
+            <Dialog.Content>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ textAlignVertical: 'center' }}>{`Aponto a câmera do celular e acesse o cardápio digital\n`}</Text>
+                <QRCode
+                  value={savedNewTicket}
+                  size={120}
+                />
+              </View>
+            </Dialog.Content> :
+            <Dialog.Content style={{ margin: -10 }}>
+              <View style={{ flexDirection: 'row' }}>
+                <IconButton
+                  iconColor={ticketType === 1 ? theme.colors.primary : theme.colors.secondary}
+                  icon="qrcode"
+                  size={25}
+                  onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(1)]}
+                />
+                <IconButton
+                  iconColor={ticketType === 4 ? theme.colors.primary : theme.colors.secondary}
+                  icon="contactless-payment"
+                  size={25}
+                  onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(4), readNFC()]}
+                />
+                <IconButton
+                  icon="account-group"
+                  iconColor={ticketType === 2 ? theme.colors.primary : theme.colors.secondary}
+                  size={25}
+                  onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(2)]}
+                />
+                <IconButton
+                  icon="moped-outline"
+                  iconColor={ticketType === 3 ? theme.colors.primary : theme.colors.secondary}
+                  size={25}
+                  onPress={() => [setParamsTicket(emptyParamsTicket), setTicketType(3)]}
+                />
+              </View>
+              {ticketType !== 3 &&
                 <TextInput
                   style={{ margin: 5, marginTop: 10 }}
-                  label="Telefone"
-                  keyboardType='phone-pad'
-                  value={paramsTicket.phone}
-                  onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, phone: text }))}
+                  label="Nome"
+                  value={paramsTicket.name}
+                  onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, name: text }))}
                 />
-                <TextInput
-                  style={{ margin: 5, marginTop: 10 }}
-                  label="Documento"
-                  keyboardType='numeric'
-                  value={paramsTicket.document}
-                  onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, document: text }))}
-                />
-              </>
-            }
-            {ticketType !== 3 &&
-              <>
-                <TextInput
-                  style={{ margin: 5, marginTop: 10 }}
-                  label={ticketType === 2 ? "Referencia" : "Local"}
-                  keyboardType='default'
-                  value={paramsTicket.local}
-                  onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, local: text }))}
-                />
-                {ticketType === 4 && paramsTicket.idTag &&
-                  <View style={{ flexDirection: 'row', marginLeft: 5 }}>
-                    <Icon
-                      source="contactless-payment"
-                      size={15}
-                    />
-                    <Text variant='labelSmall'> {paramsTicket?.idTag}</Text>
-                  </View>
-                }
-              </>
-            }
-            {ticketType === 3 &&
-              <Button style={{ margin: 15 }} mode='contained' onPress={() => printDelivery()}>Imprimir Ticket Delivery</Button>
-            }
-          </Dialog.Content>
+              }
+              {ticketType !== 2 && ticketType !== 3 &&
+                <>
+                  <TextInput
+                    style={{ margin: 5, marginTop: 10 }}
+                    label="Telefone"
+                    keyboardType='phone-pad'
+                    value={paramsTicket.phone}
+                    onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, phone: text }))}
+                  />
+                  <TextInput
+                    style={{ margin: 5, marginTop: 10 }}
+                    label="Documento"
+                    keyboardType='numeric'
+                    value={paramsTicket.document}
+                    onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, document: text }))}
+                  />
+                </>
+              }
+              {ticketType !== 3 &&
+                <>
+                  <TextInput
+                    style={{ margin: 5, marginTop: 10 }}
+                    label={ticketType === 2 ? "Referencia" : "Local"}
+                    keyboardType='default'
+                    value={paramsTicket.local}
+                    onChangeText={(text) => setParamsTicket((prevData) => ({ ...prevData, local: text }))}
+                  />
+                  {ticketType === 4 && paramsTicket.idTag &&
+                    <View style={{ flexDirection: 'row', marginLeft: 5 }}>
+                      <Icon
+                        source="contactless-payment"
+                        size={15}
+                      />
+                      <Text variant='labelSmall'> {paramsTicket?.idTag}</Text>
+                    </View>
+                  }
+                </>
+              }
+              {ticketType === 3 &&
+                <Button style={{ margin: 15 }} mode='contained' onPress={() => printDelivery()}>Imprimir Ticket Delivery</Button>
+              }
+            </Dialog.Content>}
           <Dialog.Actions>
-            <Button onPress={() => [setIsOpenNewTicket(false), setParamsTicket(emptyParamsTicket)]}>Cancelar</Button>
-            <Button
-              // disabled={isLoadingSave}
-              loading={isLoadingSave}
-              onPress={() => ticketType === 2 ? printLocalTicket() : openNewTicket()}>
-              Salvar
-            </Button>
+            <Button onPress={closeDialogNewTicket}>Fechar</Button>
+            {!savedNewTicket ?
+              <Button
+                // disabled={isLoadingSave}
+                loading={isLoadingSave}
+                onPress={() => ticketType === 2 ? printLocalTicket() : openNewTicket()}>
+                Salvar
+              </Button> :
+              <Button
+                icon="printer"
+                onPress={() => {
+                  printTicket({
+                    id: idNewTicket,
+                    name: paramsTicket.name,
+                    local: paramsTicket.local,
+                    document: paramsTicket.document,
+                    phone: paramsTicket.phone
+                  })
+                }}>
+                Imprimir Ticket
+              </Button>
+            }
           </Dialog.Actions>
           <NfcReader
             isOpenNFC={isOpenNFC}

@@ -156,7 +156,7 @@ export default function AppBar() {
           name="CloseOrder"
           component={CloseOrder}
           options={{
-            title: "Fechar comanda",
+            title: "Itens da comanda",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,
