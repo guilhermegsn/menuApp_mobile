@@ -246,6 +246,33 @@ export const vibrate = () => {
   Vibration.vibrate(time);
 };
 
+export const requestNotificationPermission = async () => {
+  if (Platform.OS === "android" && Platform.Version >= 33) {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        {
+          title: "Permissão para Notificações",
+          message: "Este aplicativo precisa de permissão para enviar notificações.",
+          buttonNeutral: "Perguntar Depois",
+          buttonNegative: "Cancelar",
+          buttonPositive: "Permitir",
+        }
+      );
+
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log("Permissão concedida para notificações.");
+      } else {
+        console.log("Permissão negada para notificações.");
+      }
+    } catch (err) {
+      console.warn(err);
+    }
+  } else {
+    console.log("Permissão de notificações não é necessária nesta versão do Android.");
+  }
+};
+
 export const fetchOrders = async () => {
   console.log('oi, entrei aq')
   setTimeout(() => {

@@ -5,15 +5,34 @@ import auth from '@react-native-firebase/auth';
 import { Image, KeyboardAvoidingView } from 'react-native';
 import { GoogleSignin, GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import { configureGoogleSignin } from '../Services/FirebaseConfig';
+import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { db } from '../Services/FirebaseConfig'
+import messaging from '@react-native-firebase/messaging';
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
+  const [tokenFcm, setTokenFcm] = useState("")
   const [isSignUp, setIsSignUp] = useState(false)
   const [dataUser, setDataUser] = useState({
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    name: '',
   })
+
+  useEffect(() => {
+    const registerNotifications = async () => {
+      const fcmToken = await messaging().getToken();
+      if (fcmToken) {
+        console.log('token:', fcmToken)
+        setTokenFcm(fcmToken)
+      } else {
+        console.log('Nâo foi possível obter o token.')
+      }
+    }
+    registerNotifications()
+  }, [])
+
 
   useEffect(() => {
     // Configure o GoogleSignin no início
@@ -31,22 +50,37 @@ export default function Login() {
     }
   }
 
-  const signUp = () => {
-    auth()
-      .createUserWithEmailAndPassword(dataUser.email, dataUser.password)
-      .then(() => {
-        console.log('User account created & signed in!');
-      })
-      .catch(error => {
-        if (error.code === 'auth/email-already-in-use') {
-          console.log('That email address is already in use!');
-        }
-        if (error.code === 'auth/invalid-email') {
-          console.log('That email address is invalid!');
-        }
-        console.error(error);
+
+  const signUp = async () => {
+    try {
+      // Cria o usuário com email e senha
+      const userCredential = await auth().createUserWithEmailAndPassword(dataUser.email, dataUser.password);
+
+      // Pega o UID do usuário recém-criado
+      const userId = userCredential.user.uid;
+
+      // Adiciona o documento na coleção "User" com o UID no corpo do documento
+      await addDoc(collection(db, 'User'), {
+        uid: userId,
+        email: dataUser.email,
+        name: dataUser.name,
+        token: tokenFcm,
+        createdAt: serverTimestamp()
       });
+
+      console.log('Conta de usuário criada e UID salvo com sucesso!');
+    } catch (error: string | any) {
+      if (error.code === 'auth/email-already-in-use') {
+        console.log('Esse endereço de email já está em uso!');
+      } else if (error.code === 'auth/invalid-email') {
+        console.log('Esse endereço de email é inválido!');
+      } else {
+        console.error('Erro durante o cadastro:', error);
+      }
+    }
   }
+
+  
 
 
   const signInWithGoogle = async () => {
@@ -54,11 +88,11 @@ export default function Login() {
     try {
       await GoogleSignin.signOut();
       // Verifique se os serviços do Google estão disponíveis
-      const hasServices = await GoogleSignin.hasPlayServices();
-      console.log('Google Play Services estão disponíveis:', hasServices);
-      if (!hasServices) {
-        throw new Error('Google Play Services não estão disponíveis.');
-      }
+      // const hasServices = await GoogleSignin.hasPlayServices();
+      // console.log('Google Play Services estão disponíveis:', hasServices);
+      // if (!hasServices) {
+      //   throw new Error('Google Play Services não estão disponíveis.');
+      // }
       // Solicitar o login com Google, o que deve exibir o prompt de conta se o usuário estiver logado em mais de uma conta
       const userInfo = await GoogleSignin.signIn();
       console.log('Informações do Usuário:', userInfo); // Adicione um log para verificar a resposta
@@ -70,11 +104,25 @@ export default function Login() {
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       // Autenticar com Firebase
       const userCredential = await auth().signInWithCredential(googleCredential);
+      const userId = userCredential.user.uid;
+      //\Verifico se Usuário já está cadastrado
+      const userQuery = query(collection(db, "User"), where("email", "==", userCredential.user.email))
+      const querySnapshot = await getDocs(userQuery)
+      if (querySnapshot.empty) {
+        // Adiciona o usuário  a collection User
+        await addDoc(collection(db, 'User'), {
+          uid: userId,
+          email: userCredential.user.email,
+          name: userCredential.user.displayName,
+          token: tokenFcm,
+          createdAt: serverTimestamp()
+        });
+      }
       console.log('Usuário autenticado:', userCredential.user);
     } catch (error) {
       console.error('Erro durante o login com Google:', error);
       Alert.alert('Erro', 'Falha ao fazer login com Google.');
-    }finally{
+    } finally {
       setIsLoading(false)
     }
   };
@@ -118,14 +166,29 @@ export default function Login() {
             source={require('../assets/images/menupedia_logo.png')}
             style={styles.cardImage}
           />
+          {isSignUp && (
+            <TextInput
+              style={styles.input}
+              mode="outlined"
+              label="Nome"
+              value={dataUser.name}
+              onChangeText={(text) => {
+                setDataUser((prevState) => ({
+                  ...prevState,
+                  name: text
+                }));
+              }}
+            />
+          )}
           <TextInput
             style={styles.input}
             mode="outlined"
             label="E-mail"
+            keyboardType="email-address"
             onChangeText={(text) => {
               setDataUser((prevState) => ({
                 ...prevState,
-                email: text
+                email: text.toLowerCase()
               }));
             }}
           />

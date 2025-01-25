@@ -1,6 +1,6 @@
 import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
+import {Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
 import auth from '@react-native-firebase/auth'
 import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
@@ -8,7 +8,6 @@ import { db } from '../Services/FirebaseConfig';
 import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
 import { printThermalPrinter } from '../Services/Functions'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
 
@@ -116,6 +115,7 @@ export default function Home() {
           if (!querySnapshot.empty) {
             const doc = querySnapshot.docs[0]
             const data = doc.data()
+            console.log('data==>',data)
             if (data.establishment.length > 1) {
               let enabledEstablishments: DocumentData[] = []
               data.establishment.forEach((item: DocumentData) => {
@@ -138,6 +138,7 @@ export default function Home() {
                 }
               }
             } else {
+              console.log( 'aaaa')
               if (data?.establishment[0]?.enabled) {
                 setContextData(data?.establishment[0]?.id)
                 userContext?.setUserRole(data?.establishment[0]?.type)
@@ -145,7 +146,7 @@ export default function Home() {
             }
           }
         } catch (error) {
-          console.error('erro ao ober documentos', error)
+          console.error('erro ao ober documentosss', error)
         } finally {
           setIsLoading(false)
         }
@@ -734,6 +735,5 @@ export default function Home() {
         </Dialog>
       </Portal>
     </View >
-
   )
 }

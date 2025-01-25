@@ -76,7 +76,6 @@ export default function UserConfig() {
   const saveNewUser = async () => {
     console.log('user', user)
     // setIsLoadingDialog(true)
-
     if (isEdit) {
       console.log('edit')
       //busco o usuário a ser editado
@@ -141,21 +140,9 @@ export default function UserConfig() {
           fetchData()
           console.log("Estabelecimento adicionado ao usuário existente.")
           return userDoc.id
+        } else {
+          Alert.alert("Usuário nâo cadastrado.", `O usuário deve criar uma conta no MenuPedia para depois associa-lo ao estabelecimento.`)
         }
-
-        // Usuário não existe, criar novo documento
-        const newUserRef = await addDoc(collection(db, "User"), {
-          email: user.email,
-          name: user.name,
-          establishment: [user.establishment],
-          establishmentId: [user.establishmentId]
-        })
-
-        setIsNewRegister(false)
-        fetchData()
-        console.log("Novo usuário criado com sucesso! ID do documento", newUserRef.id)
-        return newUserRef.id
-
       } catch (error) {
         console.error("Erro ao incluir usuário:", error)
         throw error; // Propaga o erro para tratamento posterior, se necessário
@@ -225,21 +212,11 @@ export default function UserConfig() {
       {/* Modal ADD Novo menu */}
       <Portal>
         <Dialog visible={isNewRegister || isEdit} onDismiss={closeModal}>
-          <Dialog.Title style={{ textAlign: 'center' }}>{'Cadastrar usuário'}</Dialog.Title>
-
+          <Dialog.Title style={{ textAlign: 'center' }}>{'Associar usuário'}</Dialog.Title>
+          <View style={{ margin: 20 }}>
+            <Text>Para associar um usuário, este deve ter uma conta na ativa na MenuPedia.</Text>
+          </View>
           <View style={{ padding: 15 }}>
-            <TextInput
-              style={{ margin: 5, marginTop: 10 }}
-              label="Nome"
-              keyboardType='default'
-              value={user.name}
-              onChangeText={(text) => {
-                setUser((prevData) => ({
-                  ...prevData,
-                  name: text
-                }))
-              }}
-            />
             <TextInput
               style={{ margin: 5, marginTop: 10 }}
               label="E-mail"
