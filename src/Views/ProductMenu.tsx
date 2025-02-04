@@ -327,7 +327,7 @@ export default function ProductMenu() {
           const menuIndex = estab?.menu.findIndex((item: MenuData) => item.id === menuData.id);
           //  const urlImageSave = await uploadImage(uri)
           if (estab) {
-            const urlImageSave = await uploadImage(uri)
+            const urlImageSave = await uploadImage(uri, userContext.estabId)
             estab.menu[menuIndex].urlImg = urlImageSave
             await updateDoc(docRef, {
               menu: estab.menu
@@ -469,7 +469,7 @@ export default function ProductMenu() {
         const estab = docSnapshot.data();
 
         if (estab) {
-          const urlImageSave = await uploadImage(imageMenu)
+          const urlImageSave = await uploadImage(imageMenu, userContext?.estabId)
           const newMenuItem = {
             id: generateUUID(),
             urlImg: urlImageSave,

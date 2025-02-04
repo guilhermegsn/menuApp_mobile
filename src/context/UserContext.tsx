@@ -89,6 +89,11 @@ function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(_user => {
+      if (user) {
+        console.log("Usuário autenticado:", user.uid);
+      } else {
+        console.log("Nenhum usuário autenticado");
+      }
       if (initializing) {
         setInitializing(false);
       }

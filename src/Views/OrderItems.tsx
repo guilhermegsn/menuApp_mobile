@@ -1,9 +1,9 @@
-import { Alert, ScrollView, StyleSheet, View, Vibration } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View, Vibration, SafeAreaView } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { DocumentData, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
-import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, Text } from 'react-native-paper';
+import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import { OrderData } from '../Interfaces/Order_interface';
 import { formatToDoubleBR, getInitialsName, playSound, printThermalPrinter, removeAccents, vibrate } from '../Services/Functions'
@@ -24,6 +24,8 @@ export default function OrderItems() {
   const [selectedOrder, setSelectedOrder] = useState<DocumentData | undefined>({})
   const [isLoadingSaveStatus, setIsLoadingSaveStatus] = useState(false)
 
+  const [filteredBy, setFilteredBy] = useState("open")
+
   //Deixando a tela sempre ativa.
   useEffect(() => {
     KeepAwake.activate();
@@ -34,8 +36,7 @@ export default function OrderItems() {
     const q = query(
       collection(db, 'OrderItems'),
       where("establishment", "==", userContext?.estabId),
-      // orderBy('status'),
-      //   where("status", "!=", "3"), //nao pego os cancelamentos de pedidos
+      where("status", "in", filteredBy === 'closed' ? [0] : [1, 2]),
       orderBy('date', 'desc'),
       limit(15)
     );
@@ -45,8 +46,7 @@ export default function OrderItems() {
       try {
         for (const change of querySnapshot.docChanges()) {
           if (change.type === "added") {
-            vibrate()
-            playSound('deskbell.wav')
+
             const newItemData = change.doc.data();
             //imprimo apenas pedidos com status 1 (aberto)
             if (newItemData.status === 1) {
@@ -54,6 +54,8 @@ export default function OrderItems() {
               //Evitando impressao indevido em um reload no app
               if (isNewOrder(newItemData.date.toDate())) {
                 printOrder(newItemData)
+                vibrate()
+                playSound('deskbell.wav')
               }
             }
             break;
@@ -78,7 +80,59 @@ export default function OrderItems() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [filteredBy]);
+
+
+  // useEffect(() => {
+  //   const q = query(
+  //     collection(db, 'OrderItems'),
+  //     where("establishment", "==", userContext?.estabId),
+  //     // orderBy('status'),
+  //     //   where("status", "!=", "3"), //nao pego os cancelamentos de pedidos
+  //     orderBy('date', 'desc'),
+  //     limit(15)
+  //   );
+  //   setIsLoading(true);
+  //   const unsubscribe = onSnapshot(q, (querySnapshot) => {
+  //     const ordersData: DocumentData[] = [];
+  //     try {
+  //       for (const change of querySnapshot.docChanges()) {
+  //         if (change.type === "added") {
+  //           vibrate()
+  //           playSound('deskbell.wav')
+  //           const newItemData = change.doc.data();
+  //           //imprimo apenas pedidos com status 1 (aberto)
+  //           if (newItemData.status === 1) {
+  //             //isNewOrder -> comparo se o pedido tem menos de 5min. Só imprime se tiver menos de 5min
+  //             //Evitando impressao indevido em um reload no app
+  //             if (isNewOrder(newItemData.date.toDate())) {
+  //               printOrder(newItemData)
+  //             }
+  //           }
+  //           break;
+  //         }
+  //       }
+  //       querySnapshot.forEach((doc) => {
+  //         //Não exibindo itens cancelados.
+  //         if (doc.data().status !== 3)
+  //           ordersData.push({ id: doc.id, ...doc.data() });
+  //       });
+  //       setOrders(ordersData.map((item) => ({
+  //         ...item,
+  //         elapsedTime: moment(item.date.toDate()).fromNow()
+  //       })));
+  //     } catch (e) {
+  //       console.log('error: ', e);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }, (error) => {
+  //     console.log('Error in onSnapshot:', error);
+  //     setIsLoading(false);
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
+
 
   const isNewOrder = (date: Date): boolean => {
     const now = new Date()
@@ -223,8 +277,30 @@ export default function OrderItems() {
     setIsChangeStatus(true)
   }
 
+
   return (
     <View style={{ flex: 1 }}>
+      <SafeAreaView style={{ alignItems: 'center', margin: 10 }}>
+        <SegmentedButtons
+          value={filteredBy}
+          onValueChange={(value) => setFilteredBy(value)}
+          buttons={[
+            {
+              value: 'open',
+              label: 'Abertos',
+               icon: 'lock-open-variant-outline'
+              
+            },
+            {
+              value: 'closed',
+              label: 'Finalizados',
+               icon: 'lock-open-variant-outline'
+            },
+          ]}
+        />
+      </SafeAreaView>
+
+
       {isLoading ? <Loading /> :
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
           {orders?.map((order, index) => (

@@ -19,6 +19,8 @@ import QrCodeReader from '../Views/QrCodeReader';
 import ProductMenuItens from '../Views/ProductMenuItens';
 import UserConfig from '../Views/UserConfig';
 import auth from '@react-native-firebase/auth'
+import EstablishmentMenu from '../Views/EstablishmentMenu';
+import ItemsMenu from '../Views/ItemsMenu';
 
 export default function AppBar() {
 
@@ -27,7 +29,7 @@ export default function AppBar() {
   const userContext = useContext(UserContext);
 
   const signOut = () => {
-    userContext?.setEstabName("MenuPédia")
+    userContext?.setEstabName("wise menu")
     userContext?.setUser(null)
     userContext?.setEstabId("")
     userContext?.setShoppingCart([])
@@ -57,15 +59,26 @@ export default function AppBar() {
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
-                title: userContext?.estabName || "MenuPédia",
+                title: userContext?.estabName || "wise menu",
                 drawerIcon: ({ color, size }) => (
                   <MaterialIcons name="store" size={size} color={theme.colors.background} />
                 ),
               }}
             />
             {userContext?.estabId !== "" && <>
-              <Drawer.Screen name="ProductMenu"
+              {/* <Drawer.Screen name="ProductMenu"
                 component={ProductMenu}
+                options={{
+                  headerStyle: { backgroundColor: theme.colors.primary },
+                  headerTitleStyle: { color: theme.colors.onBackground },
+                  title: "Cardápio",
+                  drawerIcon: ({ color, size }) => (
+                    <Icon source="book-open-variant" size={size} color={theme.colors.background} />
+                  ),
+                }}
+              /> */}
+              <Drawer.Screen name="EstablishmentMenu"
+                component={EstablishmentMenu}
                 options={{
                   headerStyle: { backgroundColor: theme.colors.primary },
                   headerTitleStyle: { color: theme.colors.onBackground },
@@ -130,6 +143,7 @@ export default function AppBar() {
             <Drawer.Screen name="Login"
               component={Login}
               options={{
+                title: "wise menu",
                 headerStyle: { backgroundColor: theme.colors.primary },
                 headerTitleStyle: { color: theme.colors.onBackground },
                 drawerIcon: ({ color, size }) => (
@@ -156,7 +170,7 @@ export default function AppBar() {
           name="CloseOrder"
           component={CloseOrder}
           options={{
-            title: "Itens da comanda",
+            title: "Conferência de consumo",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,
@@ -166,6 +180,17 @@ export default function AppBar() {
         <Stack.Screen
           name="ProductMenuItens"
           component={ProductMenuItens}
+          options={{
+            title: "Produtos",
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            headerTintColor: theme.colors.onBackground,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+          }}
+        />
+         <Stack.Screen
+          name="ItemsMenu"
+          component={ItemsMenu}
           options={{
             title: "Produtos",
             headerStyle: { backgroundColor: theme.colors.primary },

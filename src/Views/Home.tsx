@@ -1,6 +1,6 @@
-import { Alert, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, Dimensions, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import {Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
+import { Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
 import auth from '@react-native-firebase/auth'
 import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
@@ -10,6 +10,7 @@ import { UserContext } from '../context/UserContext'
 import { printThermalPrinter } from '../Services/Functions'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
+import { useNavigation } from '@react-navigation/native'
 
 interface userEstablishmentInterface {
   name: string
@@ -19,6 +20,8 @@ interface userEstablishmentInterface {
 }
 
 export default function Home() {
+  const { width } = Dimensions.get('window');
+  const navigation = useNavigation()
   const userContext = useContext(UserContext)
   const [multipleEstablishment, setMultiEstablishment] = useState<userEstablishmentInterface[]>([])
   const [isOpenDialogMultiple, setIsOpenDialogMultiple] = useState(false)
@@ -77,106 +80,186 @@ export default function Home() {
     printThermalPrinter(text)
   }
 
+  // const save = async () => {
+  //   setIsLoading(true)
+  //   if (isEditing) {
+  //     const documentRef = doc(db, 'Establishment', dataEstab.id);
+  //     updateDoc(documentRef, dataEstab)
+  //       .then(() => {
+  //         console.log('Documento atualizado com sucesso');
+  //         setRegStage(4)
+  //       })
+  //       .catch((error) => {
+  //         console.error('Erro ao atualizar documento:', error);
+  //       }).finally(() => setIsLoading(false))
+  //   } else {
+  //     await addDoc(collection(db, "Establishment"), dataEstab).then((res) => {
+  //       setDataEstab((prevData) => ({
+  //         ...prevData,
+  //         id: res.id
+  //       }))
+  //       setIsCreated(true)
+  //       setRegStage(4)
+  //     }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
+  //   }
+  // }
+
   const save = async () => {
-    setIsLoading(true)
-    if (isEditing) {
-      const documentRef = doc(db, 'Establishment', dataEstab.id);
-      updateDoc(documentRef, dataEstab)
-        .then(() => {
-          console.log('Documento atualizado com sucesso');
-          setRegStage(4)
-        })
-        .catch((error) => {
-          console.error('Erro ao atualizar documento:', error);
-        }).finally(() => setIsLoading(false))
-    } else {
-      await addDoc(collection(db, "Establishment"), dataEstab).then((res) => {
+    try {
+      setIsLoading(true);
+
+      if (isEditing) {
+        const documentRef = doc(db, "Establishment", dataEstab.id);
+        await updateDoc(documentRef, dataEstab);
+        console.log("Documento atualizado com sucesso");
+        setRegStage(4);
+      } else {
+        // Criando um novo estabelecimento
+        const newEstablishmentRef = await addDoc(collection(db, "Establishment"), dataEstab);
+        const newEstablishmentId = newEstablishmentRef.id;
+
+        // Atualiza o estado local com o novo ID
         setDataEstab((prevData) => ({
           ...prevData,
-          id: res.id
-        }))
-        setIsCreated(true)
-        setRegStage(4)
-      }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
+          id: newEstablishmentId,
+        }));
+
+        // Consulta o usuário pelo e-mail
+        const userQuery = query(
+          collection(db, "User"),
+          where("email", "==", userContext?.user?.email)
+        );
+        const querySnapshot = await getDocs(userQuery);
+
+        if (!querySnapshot.empty) {
+          // Usuário encontrado, atualiza os dados
+          const userDoc = querySnapshot.docs[0];
+          const userRef = userDoc.ref;
+          const userData = userDoc.data();
+
+          const newEstablishment = {
+            enabled: true,
+            type: 'ADM',
+            name: dataEstab.name,
+            id: newEstablishmentId
+          }
+
+          // Atualiza os arrays de estabelecimentos do usuário
+          const updatedEstablishment = [...(userData.establishment || []), newEstablishment];
+          const updatedEstablishmentId = [...(userData.establishmentId || []), newEstablishmentId];
+
+          // Atualiza no Firestore
+          await updateDoc(userRef, {
+            establishment: updatedEstablishment,
+            establishmentId: updatedEstablishmentId,
+          })
+          //   setContextData(newEstablishmentId)
+          console.log("Estabelecimento adicionado ao usuário existente.");
+        }
+
+        //setContextData(newEstablishmentId)
+        userContext?.setShoppingCart([])
+        userContext?.setEstabId(newEstablishmentId)
+        userContext?.setEstabName(dataEstab.name)
+        userContext?.setUserRole('ADM')
+
+        setIsCreated(true);
+        setRegStage(4);
+      }
+    } catch (error) {
+      console.error("Erro ao salvar documento:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const fetchData = async () => {
+    console.log('usercontext:::', userContext?.estabId)
+    if (!userContext?.estabId) {
+      console.log("Nenhum estabelecimento associado. Buscando..");
+      const q = query(
+        collection(db, "User"),
+        where("email", "==", auth().currentUser?.email)
+      )
+      setIsLoading(true)
+      try {
+        const querySnapshot = await getDocs(q)
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0]
+          const data = doc.data()
+          console.log('data==>', data)
+          if (data.establishment.length > 1) {
+            let enabledEstablishments: DocumentData[] = []
+            data.establishment.forEach((item: DocumentData) => {
+              if (item.enabled) {
+                enabledEstablishments.push(item)
+              }
+            })
+            if (enabledEstablishments.length > 1) {
+              console.log('Multiple')
+              setMultiEstablishment(data.establishment)
+              setIsOpenDialogMultiple(true)
+            } else {
+              console.log('enabled->', enabledEstablishments)
+              let enabledEstablishment = enabledEstablishments?.find((item: DocumentData) => item.enabled === true)
+              console.log(enabledEstablishment)
+              if (enabledEstablishment) {
+                console.log('passei', enabledEstablishment)
+                setContextData(enabledEstablishment?.id)
+                userContext?.setUserRole(enabledEstablishment?.type)
+              }
+            }
+          } else {
+            console.log('aaaa')
+            if (data?.establishment[0]?.enabled) {
+              setContextData(data?.establishment[0]?.id)
+              userContext?.setUserRole(data?.establishment[0]?.type)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('erro ao ober documentosss', error)
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      console.log('configurando estabelecimento...')
+      const docRef = doc(db, "Establishment", userContext?.estabId);
+      try {
+        setIsLoading(true);
+        // Consulta o documento pelo ID
+        const docSnapshot = await getDoc(docRef);
+        if (docSnapshot.exists()) {
+          let data = docSnapshot.data() as EstablishmentData;
+          data = { ...data, id: docSnapshot.id }
+          setRegStage(4);
+          if (userContext) {
+            console.log('id do estabelecimento configurado: ', data.id)
+            userContext.setEstabName(data.name);
+            userContext.setEstabId(data.id);
+          }
+        } else {
+          console.log("Documento não encontrado.");
+        }
+      } catch (e) {
+        console.error("Erro ao buscar o documento:", e);
+      } finally {
+        setIsLoading(false);
+      }
     }
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!userContext?.estabId) {
-        console.log("Nenhum estabelecimento associado. Buscando..");
-        const q = query(
-          collection(db, "User"),
-          where("email", "==", auth().currentUser?.email)
-        )
-        setIsLoading(true)
-        try {
-          const querySnapshot = await getDocs(q)
-          if (!querySnapshot.empty) {
-            const doc = querySnapshot.docs[0]
-            const data = doc.data()
-            console.log('data==>',data)
-            if (data.establishment.length > 1) {
-              let enabledEstablishments: DocumentData[] = []
-              data.establishment.forEach((item: DocumentData) => {
-                if (item.enabled) {
-                  enabledEstablishments.push(item)
-                }
-              })
-              if (enabledEstablishments.length > 1) {
-                console.log('Multiple')
-                setMultiEstablishment(data.establishment)
-                setIsOpenDialogMultiple(true)
-              } else {
-                console.log('enabled->', enabledEstablishments)
-                let enabledEstablishment = enabledEstablishments?.find((item: DocumentData) => item.enabled === true)
-                console.log(enabledEstablishment)
-                if (enabledEstablishment) {
-                  console.log('passei', enabledEstablishment)
-                  setContextData(enabledEstablishment?.id)
-                  userContext?.setUserRole(enabledEstablishment?.type)
-                }
-              }
-            } else {
-              console.log( 'aaaa')
-              if (data?.establishment[0]?.enabled) {
-                setContextData(data?.establishment[0]?.id)
-                userContext?.setUserRole(data?.establishment[0]?.type)
-              }
-            }
-          }
-        } catch (error) {
-          console.error('erro ao ober documentosss', error)
-        } finally {
-          setIsLoading(false)
-        }
-      } else {
-        const docRef = doc(db, "Establishment", userContext?.estabId);
-        try {
-          setIsLoading(true);
-          // Consulta o documento pelo ID
-          const docSnapshot = await getDoc(docRef);
-          if (docSnapshot.exists()) {
-            const data = docSnapshot.data() as EstablishmentData;
-            setDataEstab(data);
-            setRegStage(4);
-            if (userContext) {
-              userContext.setEstabName(data.name);
-              userContext.setEstabId(data.id);
-            }
-          } else {
-            console.log("Documento não encontrado.");
-          }
-        } catch (e) {
-          console.error("Erro ao buscar o documento:", e);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    }
+  // useEffect(() => {
+  //   fetchData()
+  // }, [])
 
-    fetchData();
-  }, []);
+  useEffect(() => {
+    fetchData()
+  }, [userContext?.estabId])
+
+
+
 
   const signOut = () => {
     userContext?.setEstabName("")
@@ -188,6 +271,7 @@ export default function Home() {
 
 
   const setContextData = (idEstablishment: string) => {
+    console.log('adicionando id contextData ', idEstablishment)
     if (userContext) {
       if (multipleEstablishment.length > 0) {
         const document = multipleEstablishment.find((item: userEstablishmentInterface) => item.id === idEstablishment)
@@ -206,8 +290,41 @@ export default function Home() {
         userContext.setEstabId(idEstablishment)
         setIsOpenDialogMultiple(false)
       }
+    } else {
+      console.log('sem context')
     }
   }
+
+  const getCnpjData = async (cnpj: string) => {
+    const res = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+    if (res.data) {
+      setDataEstab(prevData => ({
+        ...prevData,
+        name: res.data?.nome_fantasia,
+        fullname: res.data?.razao_social,
+        zip_code: res.data?.cep,
+        address: res.data?.logradouro,
+        number: res.data?.numero,
+        neighborhood: res.data?.bairro,
+        city: res.data?.municipio,
+        state: res.data?.uf,
+        phone: res.data?.ddd_telefone_1
+      }))
+    }
+  }
+
+  const formatCNPJ = (value: string) => {
+    // Remove tudo que não for número
+    const cleanValue = value.replace(/\D/g, "").slice(0, 14);
+
+    // Aplica a máscara no CNPJ conforme o usuário digita
+    return cleanValue
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4")
+      .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
+  };
+
 
   const styles = StyleSheet.create({
     scrollViewContent: {
@@ -227,6 +344,7 @@ export default function Home() {
       overflow: 'hidden', // Necessário para os cantos arredondados
       height: 400, // Ajuste conforme necessário
     },
+
     bannerImage: {
       borderBottomLeftRadius: 40,
       borderBottomRightRadius: 40,
@@ -302,10 +420,9 @@ export default function Home() {
       // paddingBottom: 20, // Ajuste para que a imagem não fique colada na borda
     },
     footerImage: {
-      width: '100%',   // Ajuste o tamanho da imagem conforme necessário
-      height: 50,   // Ajuste o tamanho da imagem conforme necessário
-      borderBottomRightRadius: 40,
-      borderBottomLeftRadius: 40
+      // marginTop: 15,
+      width: '40%',   // Ajuste o tamanho da imagem conforme necessário
+      height: 30,   // Ajuste o tamanho da imagem conforme necessário
     },
     buttomBar: {
       position: 'absolute',
@@ -319,12 +436,6 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, flexGrow: 1 }}>
-      <View style={styles.footer}>
-        <Image
-          source={require('../assets/images/banner.png')}
-          style={styles.footerImage}
-        />
-      </View>
       <>
         {isOpenDialogMultiple ? null : isLoading ? <Loading /> : regStage === 0 &&
           // <>
@@ -344,7 +455,7 @@ export default function Home() {
 
 
             <ImageBackground
-              source={require('../assets/images/menupedia.png')}
+              source={require('../assets/images/banner_wise.png')}
               style={styles.banner}
               imageStyle={styles.bannerImage} // Estilos específicos para a imagem
             >
@@ -356,31 +467,21 @@ export default function Home() {
             {/* Cards */}
             <TouchableOpacity onPress={() => setRegStage(1)}>
               <View style={styles.cardsContainer}>
-                <Text style={styles.sectionTitle}>Bem vindo(a) à MenuPédia!</Text>
+                <Text style={styles.sectionTitle}>
+                  {`Olá, ${userContext?.user?.displayName?.split(" ")[0] || ""}\nSeja Bem Vindo(a) à Wise Menu.`}
+                </Text>
                 <Text style={styles.sectionSubTitle}>
-                  Estamos aqui para simplificar a gestão do seu negócio e proporcionar uma experiência incrível para você e seus clientes.
-                  Escolha abaixo como deseja começar: automatizar seu estabelecimento ou cadastrar-se como colaborador
+                  {`Estamos aqui para simplificar a gestão do seu negócio e proporcionar uma experiência incrível para você e seus clientes.\nVamos dar início ao cadastro de seu Estabelecimento.`}
                 </Text>
                 <View style={styles.card}>
                   <Image
                     source={require('../assets/images/pos.jpeg')}
                     style={styles.cardImage}
                   />
-                  <Text style={styles.cardTitle}>Automatizar meu estabelecimento</Text>
+                  <Text style={styles.cardTitle}>Quero Automatizar meu estabelecimento</Text>
                   <Text style={styles.cardDescription}>
                     Crie seu menu digital e automatize os processos do seu estabelecimento.
                     Torne a experiência dos seus clientes mais ágil e moderna com nosso app!
-                  </Text>
-                </View>
-                <View style={styles.card}>
-                  <Image
-                    source={require('../assets/images/colaborador.jpeg')}
-                    style={styles.cardImage}
-                  />
-                  <Text style={styles.cardTitle}>Sou um colaborador</Text>
-                  <Text style={styles.cardDescription}>
-                    Cadastre-se como colaborador e ajude a transformar o atendimento do seu estabelecimento.
-                    Faça parte de uma equipe que está revolucionando a experiência dos clientes
                   </Text>
                 </View>
               </View>
@@ -399,9 +500,34 @@ export default function Home() {
 
         {regStage === 1 &&
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, width: "90%", marginTop: 80, marginBottom: 20 }}>
+            <Image
+              source={require('../assets/images/wise_logo1.png')}
+              style={{
+                width: '15%',
+                aspectRatio: 1,
+                height: width * 0.2,
+                marginTop: 15,
+                marginBottom: 10
+              }}
+            />
+            <Text style={{ fontSize: 20, width: "90%", marginTop: 10, marginBottom: 20 }}>
               Entre com os dados de seu estabelecimento ;)
             </Text>
+            <TextInput
+              style={{ width: "90%", marginBottom: "2%" }}
+              mode="outlined"
+              label="CNPJ"
+              value={dataEstab.state_registration}
+              onChangeText={(text) => {
+                setDataEstab((prevState) => ({
+                  ...prevState,
+                  state_registration: formatCNPJ(text)
+                }))
+                if (text.length === 18) {
+                  getCnpjData(text.replace("/", "").replaceAll(".", ""))
+                }
+              }}
+            />
             <TextInput
               style={{ width: "90%", marginBottom: "2%" }}
               mode="outlined"
@@ -423,18 +549,6 @@ export default function Home() {
                 setDataEstab((prevState) => ({
                   ...prevState,
                   fullname: text
-                }))
-              }}
-            />
-            <TextInput
-              style={{ width: "90%", marginBottom: "10%" }}
-              mode="outlined"
-              label="CNPJ"
-              value={dataEstab.state_registration}
-              onChangeText={(text) => {
-                setDataEstab((prevState) => ({
-                  ...prevState,
-                  state_registration: text
                 }))
               }}
             />
@@ -628,38 +742,56 @@ export default function Home() {
 
         {regStage === 4 &&
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, marginTop: 80 }}>
-              {dataEstab.fullname}
+
+
+
+            <Text style={{ fontSize: 20, marginTop: 20 }}>
+              {userContext?.estabName}
             </Text>
             <Text style={{ fontSize: 15 }}>{auth().currentUser?.email}</Text>
-            <Text style={{ fontSize: 15, marginTop: "2%", marginBottom: "6%" }} onPress={() => signOut()}>
+            <Text style={{ fontSize: 15, marginTop: "2%", marginBottom: 10 }} onPress={() => signOut()}>
               <Icon
                 source="logout"
                 size={20}
               />{"Sair"}
             </Text>
-            <Card style={{ width: '95%' }}>
-              {/* <Card.Title title="Card Title" subtitle="Card Subtitle"/> */}
-              <Card.Cover source={require('../assets/images/banner3.jpeg')} />
-              <Card.Content style={{ marginTop: "2%" }}>
-                <Text variant="titleLarge">{dataEstab.name}</Text>
-                <Text variant="titleMedium">{dataEstab.address}</Text>
-                <Text variant="titleMedium">Bairro: {dataEstab.neighborhood}</Text>
-                <Text variant="titleMedium">{dataEstab.city} - {dataEstab.state} </Text>
-                <Text variant="titleMedium">{dataEstab.zip_code}</Text>
-                <Text variant="titleMedium">{dataEstab.phone}</Text>
-              </Card.Content>
-              {/* <Card.Actions>
-                <Button onPress={() => [setRegStage(1), setIsEditing(true)]}>Editar informações</Button>
-                <Button onPress={() => [printEstablishment()]}>Imprimir informações</Button>
-              </Card.Actions> */}
-              {/* <Button style={{ marginTop: "5%" }} onPress={() => console.log(dataEstab)}>stab</Button>
-                <Button style={{ marginTop: "5%" }} onPress={() => console.log(userContext?.user)}>userContext</Button>
-                <Button style={{ marginTop: "5%" }} onPress={() => console.log(userContext?.estabId)}>estabId</Button> */}
-            </Card>
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginLeft: 3 }}>
 
-            <View style={styles.buttomBar}>
-              {/* Botão "Voltar" */}
+              <Card
+                style={{ width: "46%", margin: "2%", height: 240 }}
+                onPress={() => navigation.navigate('EstablishmentMenu')}
+              >
+                <Card.Cover source={require('../assets/images/menuImage.jpeg')} />
+                <Card.Content style={{ marginTop: "4%" }}>
+                  <Text variant="titleMedium">{"Cardápio"}</Text>
+                </Card.Content>
+              </Card>
+
+              <Card
+                style={{ width: "46%", margin: "2%", height: 240 }}
+                onPress={() => navigation.navigate('Orders')}
+              >
+                <Card.Cover source={require('../assets/images/pos.jpeg')} />
+                <Card.Content style={{ marginTop: "4%" }}>
+                  <Text variant="titleMedium">{"Comandas"}</Text>
+                </Card.Content>
+              </Card>
+              
+              <Card
+                style={{ width: "46%", margin: "2%", height: 240 }}
+                onPress={() => navigation.navigate('OrderItems')}
+              >
+                <Card.Cover source={require('../assets/images/banner3.jpeg')} />
+                <Card.Content style={{ marginTop: "4%" }}>
+                  <Text variant="titleMedium">{"Pedidos"}</Text>
+                </Card.Content>
+              </Card>
+
+
+
+            </View>
+            {/* <View style={styles.buttomBar}>
+           
               <View style={{ width: "45%" }}>
                 <Button
                   style={{ width: "100%", marginTop: "4%" }}
@@ -670,7 +802,7 @@ export default function Home() {
                   Editar Informações
                 </Button>
               </View>
-              {/* Botão "Próximo" */}
+             
               <View style={{ width: "45%" }}>
                 <Button
                   style={{ width: "100%", marginTop: "4%" }}
@@ -681,7 +813,7 @@ export default function Home() {
                   Imprimir informações
                 </Button>
               </View>
-            </View>
+            </View> */}
 
           </View>
         }
@@ -715,7 +847,7 @@ export default function Home() {
                 setSelectedEstablishment(e)
               }}
             >
-              {multipleEstablishment?.map((item: DocumentData, index) => (
+              {multipleEstablishment?.map((item: DocumentData, index) => item.enabled && (
                 <RadioButton.Item key={`rb-${index}`} label={item?.name || ""} color='green' value={item?.id} />
               ))}
             </RadioButton.Group>

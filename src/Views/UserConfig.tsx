@@ -141,7 +141,7 @@ export default function UserConfig() {
           console.log("Estabelecimento adicionado ao usuário existente.")
           return userDoc.id
         } else {
-          Alert.alert("Usuário nâo cadastrado.", `O usuário deve criar uma conta no MenuPedia para depois associa-lo ao estabelecimento.`)
+          Alert.alert("Usuário nâo cadastrado.", `O usuário deve criar uma conta na Wise Menu para depois associa-lo ao estabelecimento.`)
         }
       } catch (error) {
         console.error("Erro ao incluir usuário:", error)
@@ -209,12 +209,12 @@ export default function UserConfig() {
 
 
 
-      {/* Modal ADD Novo menu */}
+      {/* Modal Usuário */}
       <Portal>
         <Dialog visible={isNewRegister || isEdit} onDismiss={closeModal}>
           <Dialog.Title style={{ textAlign: 'center' }}>{'Associar usuário'}</Dialog.Title>
           <View style={{ margin: 20 }}>
-            <Text>Para associar um usuário, este deve ter uma conta na ativa na MenuPedia.</Text>
+            <Text>Para associar um usuário, este deve ter uma conta na ativa na Wise Menu.</Text>
           </View>
           <View style={{ padding: 15 }}>
             <TextInput

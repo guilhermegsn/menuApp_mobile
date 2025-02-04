@@ -192,12 +192,17 @@ export default function ProductMenuItens() {
   }
 
   const addShoppingCart = (item) => {
+
+    console.log('item:',item)
+
     const copyProducts = userContext?.shoppingCart
     if (copyProducts) {
       copyProducts.push(item)
       userContext.setShoppingCart(copyProducts)
       setIsAddShoppingCart(false)
     }
+
+    console.log('copy->', copyProducts)
   }
 
 

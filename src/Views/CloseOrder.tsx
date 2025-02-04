@@ -81,8 +81,14 @@ export default function CloseOrder() {
         ordersData.push(doc.data())
       });
       let orderItems: Array<DocumentData> = [];
+
       ordersData.forEach((order) => {
-        orderItems.push(order?.items)
+        const items = order.items.map((item: DocumentData) => ({
+          ...item,
+          date: order.date
+        }))
+        console.log('----<', order)
+        orderItems.push(items)
       })
       // Extrair os itens e criar um array plano
       const flattenedArray = orderItems.flatMap(array => array);
@@ -375,7 +381,9 @@ export default function CloseOrder() {
 
             {data.map((item, index) => (
               // <Text>{item?.qty} x {item?.name} R$ {item?.price}</Text>
-              <DataTable.Row key={index} onLongPress={() => confirmItemCancel(index)}>
+              <DataTable.Row key={index} onLongPress={() => confirmItemCancel(index)}
+                onPress={() => Alert.alert("Detalhes do pedido",
+                  `${item?.qty} x ${item?.name}\n${moment(item?.date.toDate()).utcOffset(-3).format('DD/MM/YYYY HH:mm')}`)}>
                 <DataTable.Cell key={1} style={{ flex: 2 }}>{index + 1}</DataTable.Cell>
                 <DataTable.Cell key={2} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
                 <DataTable.Cell key={3} numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>

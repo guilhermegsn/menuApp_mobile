@@ -2,7 +2,7 @@ import { Alert, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 
 import React, { useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Card, DataTable, Dialog, Icon, IconButton, Portal, Text, TextInput } from 'react-native-paper'
 import { UserContext } from '../context/UserContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
 import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import Loading from '../Components/Loading';
@@ -183,7 +183,7 @@ export default function ShoppingCart() {
       )
       const querySnapshot = await getDocs(q)
       if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs.map(item => (item.data()))
+        const doc = querySnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
         setDataOpenTickets(doc)
       }
     } catch (e) {
@@ -199,6 +199,7 @@ export default function ShoppingCart() {
 
   const selectConsumer = (item: DocumentData) => {
     setDataTicket(item)
+    setTicket(item.id)
     setIsOpenSearchConsumer(false)
   }
 
@@ -207,6 +208,17 @@ export default function ShoppingCart() {
     if (dataOpenTickets.length <= 0)
       getOpenTickets()
   }
+
+  const goToBackgroundStack = () => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0, // Índice da rota inicial (0 significa o primeiro item da nova stack)
+        routes: [
+          { name: 'EstablishmentMenu' }, // Substitua pelo nome da stack que você quer abrir
+        ],
+      })
+    );
+  };
 
 
   return (

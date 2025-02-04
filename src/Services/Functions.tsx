@@ -116,10 +116,10 @@ export const openImagePicker = async (
   });
 }
 
-export const uploadImage = async (image: string | null) => {
+export const uploadImage = async (image: string | null, idEstablishment: string) => {
   if (image) {
     const storage = getStorage();
-    const storageRef = ref(storage, 'images/' + new Date().getTime() + '.jpg');
+    const storageRef = ref(storage, `images/${idEstablishment}/` + new Date().getTime() + '.jpg');
     const response = await fetch(image);
     const blob = await response.blob();
 
