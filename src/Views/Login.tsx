@@ -1,14 +1,14 @@
 import { Alert, BackHandler, Dimensions, Keyboard, ScrollView, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
-import auth from '@react-native-firebase/auth';
 import { Image, KeyboardAvoidingView } from 'react-native';
 import { GoogleSignin, GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import { configureGoogleSignin } from '../Services/FirebaseConfig';
 import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
-import { db } from '../Services/FirebaseConfig'
+import { db, auth } from '../Services/FirebaseConfig'
 import messaging from '@react-native-firebase/messaging';
 import { theme } from '../Services/ThemeConfig';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 export default function Login() {
   const { width } = Dimensions.get('window');
@@ -76,7 +76,8 @@ export default function Login() {
   const signIn = async () => {
     setIsLoading(true)
     try {
-      await auth().signInWithEmailAndPassword(dataUser.email, dataUser.password)
+      const userCredential = await signInWithEmailAndPassword(auth, dataUser.email, dataUser.password);
+      console.log("Usuário autenticado com sucesso!", userCredential.user);
     } catch (error) {
       Alert.alert('Erro durante login:', error?.toString() || "")
     } finally {
@@ -88,8 +89,10 @@ export default function Login() {
   const signUp = async () => {
     try {
       // Cria o usuário com email e senha
-      const userCredential = await auth().createUserWithEmailAndPassword(dataUser.email, dataUser.password)
-      await userCredential.user.updateProfile({
+      const userCredential = await createUserWithEmailAndPassword(auth, dataUser.email, dataUser.password);
+
+      // Atualizando o perfil do usuário
+      await updateProfile(userCredential.user, {
         displayName: dataUser.name, // Substitua pelo nome do usuário
       });
 
@@ -124,13 +127,6 @@ export default function Login() {
     setIsLoading(true)
     try {
       await GoogleSignin.signOut();
-      // Verifique se os serviços do Google estão disponíveis
-      // const hasServices = await GoogleSignin.hasPlayServices();
-      // console.log('Google Play Services estão disponíveis:', hasServices);
-      // if (!hasServices) {
-      //   throw new Error('Google Play Services não estão disponíveis.');
-      // }
-      // Solicitar o login com Google, o que deve exibir o prompt de conta se o usuário estiver logado em mais de uma conta
       const userInfo = await GoogleSignin.signIn();
       console.log('Informações do Usuário:', userInfo); // Adicione um log para verificar a resposta
       const idToken = userInfo?.data?.idToken;
@@ -138,9 +134,9 @@ export default function Login() {
         throw new Error('ID Token não encontrado');
       }
       // Criar credenciais para o Firebase
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      const googleCredential = GoogleAuthProvider.credential(idToken);
       // Autenticar com Firebase
-      const userCredential = await auth().signInWithCredential(googleCredential);
+      const userCredential = await signInWithCredential(auth, googleCredential);
       const userId = userCredential.user.uid;
       //\Verifico se Usuário já está cadastrado
       const userQuery = query(collection(db, "User"), where("email", "==", userCredential.user.email))

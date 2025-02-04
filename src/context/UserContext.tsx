@@ -1,13 +1,12 @@
 import { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { ReactNode, createContext, useEffect, useState } from "react";
-import auth from '@react-native-firebase/auth';
 import { View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { ItemCartData } from "../Interfaces/ProductMenu_Interface";
 import { DocumentData } from "@google-cloud/firestore";
 import messaging from '@react-native-firebase/messaging';
 import { collection, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { db } from '../Services/FirebaseConfig';
+import { db, auth } from '../Services/FirebaseConfig';
 
 interface UserContextType {
   globalState: string;
@@ -88,9 +87,10 @@ function UserProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(_user => {
-      if (user) {
-        console.log("Usuário autenticado:", user.uid);
+
+    const unsubscribe = auth.onAuthStateChanged(_user => {
+      if (_user) {
+        console.log("Usuário autenticado:", _user.uid);
       } else {
         console.log("Nenhum usuário autenticado");
       }
@@ -99,7 +99,7 @@ function UserProvider({ children }: { children: ReactNode }) {
       }
       if (_user) {
         registerToken(_user.uid)
-        setUser(_user);
+       // setUser(_user);
         setIsAuthenticated(true)
       } else {
         setIsAuthenticated(false)
