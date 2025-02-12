@@ -218,7 +218,7 @@ export default function EstablishmentMenu() {
               <Card style={{
                 width: width * 0.45,
                 margin: width * 0.02,
-                height: width * 0.5
+               // height: width * 0.5
               }}
                 onPress={() => [setIsNewMenu(true), setMenu(emptyMenu)]}
               >

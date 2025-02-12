@@ -380,42 +380,51 @@ export default function CloseOrder() {
             </DataTable.Header>
 
             {data.map((item, index) => (
-              // <Text>{item?.qty} x {item?.name} R$ {item?.price}</Text>
-              <DataTable.Row key={index} onLongPress={() => confirmItemCancel(index)}
-                onPress={() => Alert.alert("Detalhes do pedido",
-                  `${item?.qty} x ${item?.name}\n${moment(item?.date.toDate()).utcOffset(-3).format('DD/MM/YYYY HH:mm')}`)}>
-                <DataTable.Cell key={1} style={{ flex: 2 }}>{index + 1}</DataTable.Cell>
-                <DataTable.Cell key={2} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
-                <DataTable.Cell key={3} numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>
-                <DataTable.Cell key={4} numeric style={{ flex: 1 }}>x</DataTable.Cell>
-                <DataTable.Cell key={5} numeric style={{ flex: 3 }}>{formatToDoubleBR(item?.price)}</DataTable.Cell>
-                <DataTable.Cell key={6} numeric style={{ flex: 4 }}>{formatToDoubleBR(item?.qty * item?.price)}</DataTable.Cell>
+              <DataTable.Row
+                key={`row-${index}`}
+                onLongPress={() => confirmItemCancel(index)}
+                onPress={() => Alert.alert(
+                  "Detalhes do pedido",
+                  `${item?.qty} x ${item?.name}\n${moment(item?.date.toDate()).utcOffset(-3).format('DD/MM/YYYY HH:mm')}`
+                )}
+              >
+                <DataTable.Cell style={{ flex: 2 }}>{index + 1}</DataTable.Cell>
+                <DataTable.Cell style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
+                <DataTable.Cell numeric style={{ flex: 1 }}>{item?.qty}</DataTable.Cell>
+                <DataTable.Cell numeric style={{ flex: 1 }}>x</DataTable.Cell>
+                <DataTable.Cell numeric style={{ flex: 3 }}>{formatToDoubleBR(item?.price)}</DataTable.Cell>
+                <DataTable.Cell numeric style={{ flex: 4 }}>{formatToDoubleBR(item?.qty * item?.price)}</DataTable.Cell>
               </DataTable.Row>
             ))}
-            <DataTable.Row key={'subt'} >
-              <DataTable.Cell key={7} style={{ flex: 4 }}>Subtotal</DataTable.Cell>
-              <DataTable.Cell key={8} numeric style={{ flex: 4 }}>{formatToCurrencyBR(totalOrder)}</DataTable.Cell>
+
+            <DataTable.Row key="subtotal">
+              <DataTable.Cell style={{ flex: 4 }}>Subtotal</DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 4 }}>{formatToCurrencyBR(totalOrder)}</DataTable.Cell>
             </DataTable.Row>
-            <DataTable.Row key={'tasx'} onPress={() => setIsTax(true)}>
-              <DataTable.Cell key={11} style={{ flex: 4 }}>
+
+            <DataTable.Row key="tax" onPress={() => setIsTax(true)}>
+              <DataTable.Cell style={{ flex: 4 }}>
                 <Text>Taxa</Text>
               </DataTable.Cell>
-              <DataTable.Cell key={12} numeric style={{ flex: 4 }}>{formatToCurrencyBR(parseFloat(taxValue))}</DataTable.Cell>
-            </DataTable.Row>
-            <DataTable.Row key={'desc'} onPress={() => setIsDiscount(true)}>
-              <DataTable.Cell key={9} style={{ flex: 4 }}>Desconto</DataTable.Cell>
-              <DataTable.Cell key={10} numeric style={{ flex: 4 }}>-{!isNaN(parseFloat(discountValue)) ? formatToCurrencyBR(parseFloat(discountValue)) : formatToCurrencyBR(0)}</DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 4 }}>{formatToCurrencyBR(parseFloat(taxValue))}</DataTable.Cell>
             </DataTable.Row>
 
-            <DataTable.Row key={'total'}>
-              <DataTable.Cell key={13} style={{ flex: 4 }}>TOTAL</DataTable.Cell>
-              <DataTable.Cell key={14} numeric style={{ flex: 4 }}>
-                <Text style={{ fontWeight: 'bold' }}>{resultTotal !== null ? formatToCurrencyBR(resultTotal) : formatToCurrencyBR(0)}  </Text>
+            <DataTable.Row key="discount" onPress={() => setIsDiscount(true)}>
+              <DataTable.Cell style={{ flex: 4 }}>Desconto</DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 4 }}>
+                -{!isNaN(parseFloat(discountValue)) ? formatToCurrencyBR(parseFloat(discountValue)) : formatToCurrencyBR(0)}
               </DataTable.Cell>
+            </DataTable.Row>
 
+            <DataTable.Row key="total">
+              <DataTable.Cell style={{ flex: 4 }}>TOTAL</DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 4 }}>
+                <Text style={{ fontWeight: 'bold' }}>
+                  {resultTotal !== null ? formatToCurrencyBR(resultTotal) : formatToCurrencyBR(0)}
+                </Text>
+              </DataTable.Cell>
             </DataTable.Row>
           </DataTable>
-
           {/* Mensagem confirmação / fechar comanda */}
           <Portal>
             <Dialog visible={isCloseOrder} onDismiss={() => setIsCloeOrder(false)}>
@@ -425,7 +434,7 @@ export default function CloseOrder() {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
 
                   {paymentMethods.map(pay => (
-                    <Button style={{ margin: 2 }}
+                    <Button key={`button${pay}`} style={{ margin: 2 }}
                       mode={paymentMethod === pay.id ? 'contained' : 'outlined'}
                       onPress={() => {
                         if (pay.id === 'CASH') {

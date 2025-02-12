@@ -92,8 +92,9 @@ export default function ItemsMenu() {
               ...product,
               price: parsedPrice,
               updatedAt: serverTimestamp(),
-              updatedBy: userContext.user?.email,
+              updatedBy: userContext?.user?.email,
             };
+            console.log(prodData)
             await setDoc(itemRef, prodData, { merge: true })
             console.log('Item atualizado com sucesso:', prodData)
             break;
@@ -417,7 +418,7 @@ export default function ItemsMenu() {
       }
 
       {/* <Button onPress={() => console.log(menuList)}>data</Button>
-      <Button onPress={() => console.log(userContext?.user?.email)}>user</Button> */}
+      <Button onPress={() => console.log(userContext?.user)}>user</Button> */}
     </View>
   )
 }

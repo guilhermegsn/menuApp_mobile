@@ -4,9 +4,10 @@ import { PermissionsAndroid, Platform, Vibration } from "react-native";
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import NfcManager, { NfcTech } from 'react-native-nfc-manager';
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from '../Services/FirebaseConfig';
+import { db, auth } from '../Services/FirebaseConfig';
 import { Alert } from "react-native";
 import Sound from "react-native-sound";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -311,4 +312,42 @@ export const fetchOrders = async () => {
   //   console.error('Error fetching orders: ', e);
   // }
 };
+
+export const updateUserClaims = async (uid: string, newRole: string, newEstablishment: string) => {
+  try {
+    console.log('atualizando claims', uid, newRole, newEstablishment)
+    const functions = getFunctions();
+    const updateClaims = httpsCallable(functions, "updateUserClaims");
+
+    await updateClaims({uid,newRole,newEstablishment});
+
+  } catch (error) {
+    console.error("Erro ao atualizar claims:", error);
+  }
+}
+
+export const refreshUserToken = async () => {
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const tokenResult = await user.getIdTokenResult(true)
+      console.log("Token atualizado do usuário:", tokenResult.claims);
+
+      // Aqui você pode acessar as claims atualizadas diretamente
+      const { role, establishmentId } = tokenResult.claims;
+      console.log("Role:", role, "Establishment ID:", establishmentId);
+    } catch (error) {
+      console.error("Erro ao atualizar o token:", error);
+    }
+  }
+};
+
+// export const refreshUserToken = async () => {
+//   const user = auth.currentUser;
+//   if (user) {
+//     const token = await user.getIdTokenResult(true); // `true` força a atualização
+//     console.log("Atualizando Token do usuário:", token.claims);
+//     await user.getIdToken(true); // Força a atualização do token
+//   }
+// };
 

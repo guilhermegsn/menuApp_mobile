@@ -12,8 +12,8 @@ interface UserContextType {
   globalState: string;
   setGlobalState: (value: string) => void
 
-  user: FirebaseAuthTypes.User | null
-  setUser: (value: FirebaseAuthTypes.User | null) => void
+  user: DocumentData
+  setUser: (value: DocumentData) => void;
 
   isAuthenticated: Boolean
   setIsAuthenticated: (value: Boolean) => void
@@ -40,12 +40,12 @@ interface UserContextType {
   setUserRole: (value: string) => void
 }
 
-export const UserContext = createContext<UserContextType | undefined>(undefined);
+export const UserContext = createContext<DocumentData>({});
 
 function UserProvider({ children }: { children: ReactNode }) {
   const [globalState, setGlobalState] = useState("Teste - Funcionou!");
 
-  const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [user, setUser] = useState<DocumentData>({} as DocumentData);
   const [initializing, setInitializing] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<Boolean>(false)
   const [estabName, setEstabName] = useState("")
@@ -87,27 +87,39 @@ function UserProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-
-    const unsubscribe = auth.onAuthStateChanged(_user => {
+    const unsubscribe = auth.onAuthStateChanged(async _user => {
+      if (initializing) {
+        setInitializing(false)
+      }
       if (_user) {
-        console.log("Usuário autenticado:", _user.uid);
+        try {
+          // 🔥 Atualiza o token para validar se ainda está ativo
+          await _user.getIdToken(true);
+          console.log("Usuário autenticado:", _user.uid);
+          setUser(_user);
+          setIsAuthenticated(true);
+        } catch (error: unknown) {
+          if (error instanceof Error && "code" in error) {
+            const firebaseError = error as { code: string }; // 🔥 Faz cast seguro
+
+            if (
+              firebaseError.code === "auth/id-token-expired" ||
+              firebaseError.code === "auth/user-token-expired"
+            ) {
+              console.log("Token expirado, deslogando usuário...");
+              await auth.signOut()
+            }
+          }
+        }
       } else {
         console.log("Nenhum usuário autenticado");
-      }
-      if (initializing) {
-        setInitializing(false);
-      }
-      if (_user) {
-        registerToken(_user.uid)
-       // setUser(_user);
-        setIsAuthenticated(true)
-      } else {
-        setIsAuthenticated(false)
-        setUser(null)
-        setUserRole("")
+        setIsAuthenticated(false);
+        setUser({});
+        setUserRole("");
       }
     });
-    return unsubscribe;
+
+    return () => unsubscribe();
   }, [initializing]);
 
   if (initializing) {

@@ -18,9 +18,9 @@ import ShoppingCart from '../Views/ShoppingCart';
 import QrCodeReader from '../Views/QrCodeReader';
 import ProductMenuItens from '../Views/ProductMenuItens';
 import UserConfig from '../Views/UserConfig';
-import auth from '@react-native-firebase/auth'
 import EstablishmentMenu from '../Views/EstablishmentMenu';
 import ItemsMenu from '../Views/ItemsMenu';
+import { auth } from '../Services/FirebaseConfig'
 
 export default function AppBar() {
 
@@ -34,7 +34,7 @@ export default function AppBar() {
     userContext?.setEstabId("")
     userContext?.setShoppingCart([])
     userContext?.setDataEstablishment([])
-    auth().signOut();
+    auth.signOut();
   }
 
   const DrawerNavigator = () => {

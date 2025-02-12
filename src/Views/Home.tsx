@@ -1,16 +1,17 @@
 import { Alert, Dimensions, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
-import auth from '@react-native-firebase/auth'
 import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
-import { db } from '../Services/FirebaseConfig';
+import { db, auth } from '../Services/FirebaseConfig';
 import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
-import { printThermalPrinter } from '../Services/Functions'
+import { printThermalPrinter, refreshUserToken } from '../Services/Functions'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
+import { updateUserClaims } from '../../functions'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 
 interface userEstablishmentInterface {
   name: string
@@ -20,12 +21,12 @@ interface userEstablishmentInterface {
 }
 
 export default function Home() {
+
+  const functions = getFunctions();
   const { width } = Dimensions.get('window');
   const navigation = useNavigation()
   const userContext = useContext(UserContext)
-  const [multipleEstablishment, setMultiEstablishment] = useState<userEstablishmentInterface[]>([])
   const [isOpenDialogMultiple, setIsOpenDialogMultiple] = useState(false)
-  const [selectedEstablishment, setSelectedEstablishment] = useState("")
   const [regStage, setRegStage] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -43,7 +44,7 @@ export default function Home() {
     complement: "",
     phone: "",
     number: "",
-    owner: auth().currentUser?.uid,
+    owner: auth.currentUser?.uid,
     id: ""
   })
 
@@ -80,30 +81,6 @@ export default function Home() {
     printThermalPrinter(text)
   }
 
-  // const save = async () => {
-  //   setIsLoading(true)
-  //   if (isEditing) {
-  //     const documentRef = doc(db, 'Establishment', dataEstab.id);
-  //     updateDoc(documentRef, dataEstab)
-  //       .then(() => {
-  //         console.log('Documento atualizado com sucesso');
-  //         setRegStage(4)
-  //       })
-  //       .catch((error) => {
-  //         console.error('Erro ao atualizar documento:', error);
-  //       }).finally(() => setIsLoading(false))
-  //   } else {
-  //     await addDoc(collection(db, "Establishment"), dataEstab).then((res) => {
-  //       setDataEstab((prevData) => ({
-  //         ...prevData,
-  //         id: res.id
-  //       }))
-  //       setIsCreated(true)
-  //       setRegStage(4)
-  //     }).catch((e) => console.log(e)).finally(() => setIsLoading(false))
-  //   }
-  // }
-
   const save = async () => {
     try {
       setIsLoading(true);
@@ -124,44 +101,23 @@ export default function Home() {
           id: newEstablishmentId,
         }));
 
-        // Consulta o usuário pelo e-mail
-        const userQuery = query(
-          collection(db, "User"),
-          where("email", "==", userContext?.user?.email)
-        );
-        const querySnapshot = await getDocs(userQuery);
+        const uid_user = auth.currentUser?.uid || ""
+        const userRef = doc(db, "User", uid_user)
 
-        if (!querySnapshot.empty) {
-          // Usuário encontrado, atualiza os dados
-          const userDoc = querySnapshot.docs[0];
-          const userRef = userDoc.ref;
-          const userData = userDoc.data();
-
-          const newEstablishment = {
+        await updateDoc(userRef, {
+          association: {
             enabled: true,
-            type: 'ADM',
-            name: dataEstab.name,
-            id: newEstablishmentId
+            establishmentId: newEstablishmentId,
+            establishmentName: dataEstab?.name,
+            role: "ADM"
           }
-
-          // Atualiza os arrays de estabelecimentos do usuário
-          const updatedEstablishment = [...(userData.establishment || []), newEstablishment];
-          const updatedEstablishmentId = [...(userData.establishmentId || []), newEstablishmentId];
-
-          // Atualiza no Firestore
-          await updateDoc(userRef, {
-            establishment: updatedEstablishment,
-            establishmentId: updatedEstablishmentId,
-          })
-          //   setContextData(newEstablishmentId)
-          console.log("Estabelecimento adicionado ao usuário existente.");
-        }
-
-        //setContextData(newEstablishmentId)
+        });
         userContext?.setShoppingCart([])
         userContext?.setEstabId(newEstablishmentId)
         userContext?.setEstabName(dataEstab.name)
         userContext?.setUserRole('ADM')
+
+        await refreshUserToken()
 
         setIsCreated(true);
         setRegStage(4);
@@ -174,90 +130,53 @@ export default function Home() {
   };
 
 
-  const fetchData = async () => {
-    console.log('usercontext:::', userContext?.estabId)
-    if (!userContext?.estabId) {
-      console.log("Nenhum estabelecimento associado. Buscando..");
-      const q = query(
-        collection(db, "User"),
-        where("email", "==", auth().currentUser?.email)
-      )
-      setIsLoading(true)
-      try {
-        const querySnapshot = await getDocs(q)
-        if (!querySnapshot.empty) {
-          const doc = querySnapshot.docs[0]
-          const data = doc.data()
-          console.log('data==>', data)
-          if (data.establishment.length > 1) {
-            let enabledEstablishments: DocumentData[] = []
-            data.establishment.forEach((item: DocumentData) => {
-              if (item.enabled) {
-                enabledEstablishments.push(item)
-              }
-            })
-            if (enabledEstablishments.length > 1) {
-              console.log('Multiple')
-              setMultiEstablishment(data.establishment)
-              setIsOpenDialogMultiple(true)
-            } else {
-              console.log('enabled->', enabledEstablishments)
-              let enabledEstablishment = enabledEstablishments?.find((item: DocumentData) => item.enabled === true)
-              console.log(enabledEstablishment)
-              if (enabledEstablishment) {
-                console.log('passei', enabledEstablishment)
-                setContextData(enabledEstablishment?.id)
-                userContext?.setUserRole(enabledEstablishment?.type)
-              }
-            }
-          } else {
-            console.log('aaaa')
-            if (data?.establishment[0]?.enabled) {
-              setContextData(data?.establishment[0]?.id)
-              userContext?.setUserRole(data?.establishment[0]?.type)
-            }
-          }
-        }
-      } catch (error) {
-        console.error('erro ao ober documentosss', error)
-      } finally {
-        setIsLoading(false)
+  const fetchEstablishmentData = useCallback(async () => {
+    if (!userContext?.estabId) return;
+    try {
+      setIsLoading(true);
+      const estabDoc = await getDoc(doc(db, "Establishment", userContext.estabId));
+      if (estabDoc.exists()) {
+        userContext.setEstabName(estabDoc.data().name);
+        setRegStage(4);
+      } else {
+        console.warn("Estabelecimento não encontrado.");
       }
-    } else {
-      console.log('configurando estabelecimento...')
-      const docRef = doc(db, "Establishment", userContext?.estabId);
-      try {
-        setIsLoading(true);
-        // Consulta o documento pelo ID
-        const docSnapshot = await getDoc(docRef);
-        if (docSnapshot.exists()) {
-          let data = docSnapshot.data() as EstablishmentData;
-          data = { ...data, id: docSnapshot.id }
-          setRegStage(4);
-          if (userContext) {
-            console.log('id do estabelecimento configurado: ', data.id)
-            userContext.setEstabName(data.name);
-            userContext.setEstabId(data.id);
-          }
-        } else {
-          console.log("Documento não encontrado.");
-        }
-      } catch (e) {
-        console.error("Erro ao buscar o documento:", e);
-      } finally {
-        setIsLoading(false);
-      }
+    } catch (error) {
+      console.error("Erro ao buscar estabelecimento:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, [userContext]);
 
-  // useEffect(() => {
-  //   fetchData()
-  // }, [])
+  const fetchUserEstablishment = useCallback(async () => {
+    if (userContext?.estabId) return; // Evita buscas desnecessárias
+    try {
+      setIsLoading(true);
+      const uid = auth.currentUser?.uid;
+      if (!uid) return console.error("Usuário não autenticado.");
+
+      const userDoc = await getDoc(doc(db, "User", uid));
+      if (!userDoc.exists()) return console.warn("Usuário não encontrado no Firestore.");
+
+      const userData = userDoc.data();
+      if (userData?.association?.enabled) {
+        userContext.setEstabId(userData.association.establishmentId);
+        userContext.setUserRole(userData.association.role);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar usuário:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userContext, auth]);
 
   useEffect(() => {
-    fetchData()
-  }, [userContext?.estabId])
-
+    if (!userContext?.estabId) {
+      fetchUserEstablishment();
+    } else {
+      fetchEstablishmentData();
+    }
+  }, [userContext.estabId, fetchUserEstablishment, fetchEstablishmentData]);
 
 
 
@@ -266,30 +185,17 @@ export default function Home() {
     userContext?.setUser(null)
     userContext?.setEstabId("")
     userContext?.setShoppingCart([])
-    auth().signOut();
+    auth.signOut();
   }
 
 
   const setContextData = (idEstablishment: string) => {
     console.log('adicionando id contextData ', idEstablishment)
     if (userContext) {
-      if (multipleEstablishment.length > 0) {
-        const document = multipleEstablishment.find((item: userEstablishmentInterface) => item.id === idEstablishment)
-        if (document && document.enabled) {
-          userContext.setShoppingCart([])
-          userContext.setEstabId(idEstablishment)
-          userContext.setUserRole(document.type)
-          setIsOpenDialogMultiple(false)
-        } else {
-          Alert.alert("Sem acesso.", "Usuário sem acesso. Contate o administrador.")
-        }
-      }
-      else {
-        console.log('entrei aq', userContext?.userRole)
-        userContext.setShoppingCart([])
-        userContext.setEstabId(idEstablishment)
-        setIsOpenDialogMultiple(false)
-      }
+      console.log('entrei aq', userContext?.userRole)
+      userContext.setShoppingCart([])
+      userContext.setEstabId(idEstablishment)
+      setIsOpenDialogMultiple(false)
     } else {
       console.log('sem context')
     }
@@ -748,7 +654,7 @@ export default function Home() {
             <Text style={{ fontSize: 20, marginTop: 20 }}>
               {userContext?.estabName}
             </Text>
-            <Text style={{ fontSize: 15 }}>{auth().currentUser?.email}</Text>
+            <Text style={{ fontSize: 15 }}>{auth.currentUser?.email}</Text>
             <Text style={{ fontSize: 15, marginTop: "2%", marginBottom: 10 }} onPress={() => signOut()}>
               <Icon
                 source="logout"
@@ -776,7 +682,7 @@ export default function Home() {
                   <Text variant="titleMedium">{"Comandas"}</Text>
                 </Card.Content>
               </Card>
-              
+
               <Card
                 style={{ width: "46%", margin: "2%", height: 240 }}
                 onPress={() => navigation.navigate('OrderItems')}
@@ -834,38 +740,6 @@ export default function Home() {
           </Dialog>
         </Portal>
       </>
-
-
-
-      <Portal>
-        <Dialog visible={isOpenDialogMultiple} dismissable={false} onDismiss={() => null}>
-          <Dialog.Title style={{ textAlign: 'center' }}>{'Selecione o estabelecimento'}</Dialog.Title>
-          <View style={{ padding: 15 }}>
-            <RadioButton.Group
-              value={selectedEstablishment}
-              onValueChange={(e) => {
-                setSelectedEstablishment(e)
-              }}
-            >
-              {multipleEstablishment?.map((item: DocumentData, index) => item.enabled && (
-                <RadioButton.Item key={`rb-${index}`} label={item?.name || ""} color='green' value={item?.id} />
-              ))}
-            </RadioButton.Group>
-          </View>
-          <Dialog.Content style={{ marginTop: 40 }}>
-            <Dialog.Actions>
-              <Button onPress={signOut}>Logout </Button>
-              <Button
-                onPress={() => setContextData(selectedEstablishment)}
-              //  onPress={() => console.log(selectedEstablishment)}
-              //  loading={isLoadingDialog}
-              >
-                Entrar
-              </Button>
-            </Dialog.Actions>
-          </Dialog.Content>
-        </Dialog>
-      </Portal>
     </View >
   )
 }

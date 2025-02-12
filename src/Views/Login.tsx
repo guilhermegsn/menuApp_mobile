@@ -4,16 +4,18 @@ import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, Text, TextInput 
 import { Image, KeyboardAvoidingView } from 'react-native';
 import { GoogleSignin, GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import { configureGoogleSignin } from '../Services/FirebaseConfig';
-import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db, auth } from '../Services/FirebaseConfig'
 import messaging from '@react-native-firebase/messaging';
 import { theme } from '../Services/ThemeConfig';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { refreshUserToken, updateUserClaims } from '../Services/Functions';
+import Loading from '../Components/Loading';
 
 export default function Login() {
   const { width } = Dimensions.get('window');
   const [isWelcome, setIsWelcome] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [tokenFcm, setTokenFcm] = useState("")
   const [isSignUp, setIsSignUp] = useState(false)
   const [dataUser, setDataUser] = useState({
@@ -77,6 +79,7 @@ export default function Login() {
     setIsLoading(true)
     try {
       const userCredential = await signInWithEmailAndPassword(auth, dataUser.email, dataUser.password);
+      await refreshUserToken();
       console.log("Usuário autenticado com sucesso!", userCredential.user);
     } catch (error) {
       Alert.alert('Erro durante login:', error?.toString() || "")
@@ -87,6 +90,7 @@ export default function Login() {
 
 
   const signUp = async () => {
+    console.log('criando user...')
     try {
       // Cria o usuário com email e senha
       const userCredential = await createUserWithEmailAndPassword(auth, dataUser.email, dataUser.password);
@@ -99,9 +103,10 @@ export default function Login() {
       // Pega o UID do usuário recém-criado
       const userId = userCredential.user.uid;
 
+      console.log('uid-->', userId)
+
       // Adiciona o documento na coleção "User" com o UID no corpo do documento
-      await addDoc(collection(db, 'User'), {
-        uid: userId,
+      await setDoc(doc(db, 'User', userId), {
         email: dataUser.email,
         name: dataUser.name,
         token: tokenFcm,
@@ -124,41 +129,46 @@ export default function Login() {
 
 
   const signInWithGoogle = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       await GoogleSignin.signOut();
       const userInfo = await GoogleSignin.signIn();
-      console.log('Informações do Usuário:', userInfo); // Adicione um log para verificar a resposta
-      const idToken = userInfo?.data?.idToken;
-      if (!idToken) {
-        throw new Error('ID Token não encontrado');
-      }
+      console.log("Informações do Usuário:", userInfo);
+
+      const idToken = userInfo.data?.idToken
+      if (!idToken) throw new Error("ID Token não encontrado");
+
       // Criar credenciais para o Firebase
       const googleCredential = GoogleAuthProvider.credential(idToken);
+
       // Autenticar com Firebase
       const userCredential = await signInWithCredential(auth, googleCredential);
       const userId = userCredential.user.uid;
-      //\Verifico se Usuário já está cadastrado
-      const userQuery = query(collection(db, "User"), where("email", "==", userCredential.user.email))
-      const querySnapshot = await getDocs(userQuery)
-      if (querySnapshot.empty) {
-        // Adiciona o usuário  a collection User
-        await addDoc(collection(db, 'User'), {
-          uid: userId,
+
+      // Referência para o usuário no Firestore
+      const userRef = doc(db, "User", userId);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // Se o usuário ainda não existe, criar no Firestore usando o UID como chave primária
+        await setDoc(userRef, {
           email: userCredential.user.email,
           name: userCredential.user.displayName,
           token: tokenFcm,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
       }
-      console.log('Usuário autenticado:', userCredential.user);
+
+      console.log("Usuário autenticado:", userCredential.user);
     } catch (error) {
-      console.error('Erro durante o login com Google:', error);
-      Alert.alert('Erro', 'Falha ao fazer login com Google.');
+      console.error("Erro durante o login com Google:", error);
+      Alert.alert("Erro", "Falha ao fazer login com Google.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
+
+
 
 
   const contentCards = [
@@ -323,7 +333,7 @@ export default function Login() {
 
   return (
     <View style={{ flex: 1 }}>
-      {isWelcome ?
+      {isLoading ? <Loading /> : isWelcome ?
         <View>
           <ScrollView>
             <View style={styles.header}>
