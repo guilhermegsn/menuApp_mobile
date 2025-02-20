@@ -49,8 +49,8 @@ export default function AppBar() {
             color: theme.colors.background,
           },
         }}
-        // initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
-        initialRouteName={'Login'}
+        initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
+        //initialRouteName={'Login'}
       >
         {userContext?.isAuthenticated ?
           <>

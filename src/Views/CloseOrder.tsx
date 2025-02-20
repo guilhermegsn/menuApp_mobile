@@ -13,6 +13,7 @@ import moment from 'moment';
 import { UserContext } from '../context/UserContext';
 import { PaymentMethod } from '../Interfaces/PaymentMethod_interface';
 import QRCode from 'react-native-qrcode-svg';
+import { base_url } from '../Services/config';
 interface RouteParams {
   id: string
   local: string
@@ -272,7 +273,7 @@ export default function CloseOrder() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode>http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${id}</qrcode>\n` +
+      `[L]<qrcode>${base_url}/menu/${userContext?.estabId}/1/${id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
@@ -539,7 +540,7 @@ export default function CloseOrder() {
             <View style={{ alignItems: 'center' }}>
               <Text style={{ textAlignVertical: 'center' }}>{`Aponto a câmera do celular e acesse o cardápio digital\n`}</Text>
               <QRCode
-                value={`http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${id}`}
+                value={`${base_url}/menu/${userContext?.estabId}/1/${id}`}
                 size={120}
               />
             </View>

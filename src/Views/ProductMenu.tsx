@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Button, TextInput, Text, Card, Icon, ActivityIndicator, FAB, IconButton, Portal, Dialog, Menu, Badge } from 'react-native-paper'
 import { MenuData, ProductData, ItemCartData } from '../Interfaces/ProductMenu_Interface'
 import { generateUUID, openImagePicker, uploadImage } from '../Services/Functions'
-import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext'
 import auth from '@react-native-firebase/auth'
@@ -421,7 +421,7 @@ export default function ProductMenu() {
   }
 
   const sendOrder = async (order_id: string) => {
-    const items = userContext?.shoppingCart.map((item) => ({
+    const items = userContext?.shoppingCart.map((item: DocumentData) => ({
       idItem: item.product.id,
       name: item.product.name,
       price: item.product.price,

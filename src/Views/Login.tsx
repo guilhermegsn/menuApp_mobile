@@ -54,6 +54,7 @@ export default function Login() {
 
   useEffect(() => {
     const registerNotifications = async () => {
+      setIsLoading(true)
       try {
         const fcmToken = await messaging().getToken();
         if (fcmToken) {
@@ -64,6 +65,8 @@ export default function Login() {
         }
       } catch {
         return null
+      }finally{
+        setIsLoading(false)
       }
     }
     registerNotifications()

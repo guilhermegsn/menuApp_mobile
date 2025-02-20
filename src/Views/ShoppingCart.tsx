@@ -90,7 +90,7 @@ export default function ShoppingCart() {
           copyData[index].qty = copyData[index].qty - 1
           userContext?.setShoppingCart(copyData)
         } else {
-          userContext?.setShoppingCart(prevItems => prevItems.filter((_, i) => i !== index));
+          userContext?.setShoppingCart((prevItems: any[]) => prevItems.filter((_, i) => i !== index));
         }
       }
     }
@@ -133,10 +133,13 @@ export default function ShoppingCart() {
 
 
   const sendOrder = async () => {
+    console.log(dataTicket)
+    console.log(userContext)
     setIsLoading(true)
     try {
-      const items = userContext?.shoppingCart.map((item) => ({
+      const items = userContext?.shoppingCart.map((item: DocumentData) => ({
         idItem: item.product.id,
+        idMenu: item.menuId,
         name: item?.product?.name,
         price: item?.product?.price,
         qty: item.qty
@@ -150,7 +153,6 @@ export default function ShoppingCart() {
         order_id: ticket,
         status: 1,
         name: dataTicket?.name,
-        token: userContext?.estabTokenFCM,
         type: dataTicket?.type
       }
 
@@ -273,7 +275,7 @@ export default function ShoppingCart() {
                 />
               </View>
             </View>}
-          {userContext?.shoppingCart.map((item, index) => (
+          {userContext?.shoppingCart.map((item: DocumentData, index: number) => (
             <Card
               key={index}
               style={{ marginLeft: 10, marginTop: 10, marginRight: 10 }}

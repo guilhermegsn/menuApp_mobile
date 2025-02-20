@@ -1,5 +1,5 @@
-import { StyleSheet, View, ScrollView, Alert } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import { StyleSheet, View, ScrollView, Alert, RefreshControl } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Button, DataTable, Dialog, FAB, Portal, RadioButton, Switch, Text, TextInput } from 'react-native-paper'
 import { collection, DocumentData, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
@@ -23,6 +23,7 @@ export default function UserConfig() {
   const [isLoadingDialog, setIsLoadingDialog] = useState(false)
   const [isNewRegister, setIsNewRegister] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
+  const [refreshing, setRefreshing] = useState(false);
 
   const [emptyUser] = useState<User>({
     id: "",
@@ -154,6 +155,12 @@ export default function UserConfig() {
     setUser(emptyUser)
   }
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, []);
+
   const styles = StyleSheet.create({
     scrollView: {
       marginTop: "3%",
@@ -174,7 +181,9 @@ export default function UserConfig() {
   })
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView 
+       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         {isLoading ? <Loading /> :
           <DataTable style={{ marginTop: 10 }}>
             <DataTable.Header>

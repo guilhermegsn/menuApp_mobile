@@ -118,11 +118,11 @@ export default function ItemsMenu() {
   }
 
   const selectProduct = (product: DocumentData) => {
-    console.log(product)
     setIsAddShoppingCart(true)
     setSelectedProduct({
       qty: 1,
-      product: product
+      product: product,
+      menuId: menu.id
     })
   }
 

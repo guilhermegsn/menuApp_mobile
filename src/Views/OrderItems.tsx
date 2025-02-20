@@ -1,5 +1,5 @@
-import { Alert, ScrollView, StyleSheet, View, Vibration, SafeAreaView } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import { Alert, ScrollView, StyleSheet, View, Vibration, SafeAreaView, RefreshControl } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { DocumentData, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
@@ -23,8 +23,13 @@ export default function OrderItems() {
   const [isChangeStatus, setIsChangeStatus] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DocumentData | undefined>({})
   const [isLoadingSaveStatus, setIsLoadingSaveStatus] = useState(false)
+  const [refreshing, setRefreshing] = useState(false);
 
   const [filteredBy, setFilteredBy] = useState("open")
+
+  const numOpeningTicket = orders.filter((item) => item.status === 1)?.length || 0
+  const numProgressTicket = orders.filter((item) => item.status === 2)?.length || 0
+
 
   //Deixando a tela sempre ativa.
   useEffect(() => {
@@ -33,6 +38,10 @@ export default function OrderItems() {
   }, []);
 
   useEffect(() => {
+    fetchData()
+  }, [filteredBy]);
+
+  const fetchData = () => {
     const q = query(
       collection(db, 'OrderItems'),
       where("establishment", "==", userContext?.estabId),
@@ -80,7 +89,7 @@ export default function OrderItems() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [filteredBy]);
+  }
 
 
   // useEffect(() => {
@@ -277,6 +286,13 @@ export default function OrderItems() {
     setIsChangeStatus(true)
   }
 
+  // Atualizar dados ao puxar para baixo
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, []);
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -288,21 +304,33 @@ export default function OrderItems() {
             {
               value: 'open',
               label: 'Abertos',
-               icon: 'lock-open-variant-outline'
-              
+              icon: 'lock-open-variant-outline'
+
             },
             {
               value: 'closed',
               label: 'Finalizados',
-               icon: 'lock-open-variant-outline'
+              icon: 'lock-open-variant-outline'
             },
           ]}
         />
       </SafeAreaView>
+      <View style={{ flexDirection: 'row', alignItems: 'center', margin: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 30 }}>
+          <Icon source="circle" color={'green'} size={18} />
+          <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em aberto: (${numOpeningTicket})`}</Text>
+        </View>
 
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon source="circle" color={'orange'} size={18} />
+          <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em preparo: (${numProgressTicket})`}</Text>
+        </View>
+      </View>
 
       {isLoading ? <Loading /> :
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={styles.scrollViewContent}>
           {orders?.map((order, index) => (
             <View key={index}>
               <Card key={index}

@@ -1,0 +1,1 @@
+export const base_url = "https://appdesc-e1bf2.web.app"

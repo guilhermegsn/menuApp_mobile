@@ -1,12 +1,13 @@
 import { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { ReactNode, createContext, useEffect, useState } from "react";
 import { View } from "react-native";
-import { ActivityIndicator } from "react-native-paper";
+import { ActivityIndicator, Text } from "react-native-paper";
 import { ItemCartData } from "../Interfaces/ProductMenu_Interface";
 import { DocumentData } from "@google-cloud/firestore";
 import messaging from '@react-native-firebase/messaging';
 import { collection, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { db, auth } from '../Services/FirebaseConfig';
+import SplashScreen from "../Views/SplashScreen";
 
 interface UserContextType {
   globalState: string;
@@ -124,8 +125,8 @@ function UserProvider({ children }: { children: ReactNode }) {
 
   if (initializing) {
     return (
-      <View>
-        <ActivityIndicator />
+      <View style={{flex: 1}}>
+        <SplashScreen />
       </View>
     );
   }

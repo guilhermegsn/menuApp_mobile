@@ -1,5 +1,5 @@
-import { Alert, ScrollView, StyleSheet, View } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import { Alert, FlatList, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
 import { collection, query, where, DocumentData, onSnapshot, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
@@ -14,6 +14,7 @@ import { NfcReader } from '../Components/NfcReader';
 import { getDataNfcTicket, readTagNfc, printThermalPrinter, getInitialsName } from '../Services/Functions';
 import QRCode from 'react-native-qrcode-svg';
 import 'text-encoding';
+import { base_url } from '../Services/config';
 
 
 interface RouteParams {
@@ -23,7 +24,6 @@ interface RouteParams {
 
 export default function Orders() {
 
-  let base64Logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAA..';
   const userContext = useContext(UserContext)
   const [ticketType, setTicketType] = useState(1) //1-QrCode 2-Mesa 3-Delivey 4-Nfc
 
@@ -53,6 +53,13 @@ export default function Orders() {
   const [statusTicket, setStatusTicket] = useState('1')
   const [isLoadingMoreData, setIsLoadingMoreData] = useState(false)
   const [isOpenNFC, setIsOpenNFC] = useState(false)
+
+  const [isOpenSearchConsumer, setIsOpenSearchConsumer] = useState(false)
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [refreshing, setRefreshing] = useState(false);
+
+  const numberTickets = orders.length || 0
 
   useEffect(() => {
     return () => {
@@ -101,6 +108,10 @@ export default function Orders() {
   }
 
   useEffect(() => {
+    fetchData()
+  }, [statusTicket]);
+
+  const fetchData = () => {
     const q = query(
       collection(db, 'Ticket'),
       where("establishment", "==", userContext?.estabId),
@@ -124,7 +135,7 @@ export default function Orders() {
     });
     // O retorno de useEffect é utilizado para realizar a limpeza do ouvinte quando o componente é desmontado
     return () => unsubscribe();
-  }, [statusTicket]);
+  }
 
   const isValidTicket = async (idTag: string) => {
     try {
@@ -142,6 +153,12 @@ export default function Orders() {
     }
     return false
   }
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, []);
 
   const readNFC = async () => {
     setIsOpenNFC(true)
@@ -178,8 +195,7 @@ export default function Orders() {
       if (saveTicket) {
         setIdNewTicket(saveTicket?.id)
         if (ticketType === 1) {
-          setSavedNewTicket(`http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${saveTicket.id}`)
-          console.log('imprimindo...')
+          setSavedNewTicket(`${base_url}/menu/${userContext?.estabId}/1/${saveTicket.id}`)
           // printTicket({
           //   id: saveTicket.id,
           //   name: paramsTicket.name,
@@ -197,6 +213,20 @@ export default function Orders() {
     }
   }
 
+  const filteredData = orders.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
+  const searchConsumer = () => {
+    setIsOpenSearchConsumer(true)
+  }
+
+  const selectConsumer = (item: DocumentData) => {
+    setIsOpenSearchConsumer(false)
+    closeOrder(item.id, item.local, item.openingDate.toDate(), item.name, item.status, item.type)
+  }
+
 
   const printTicket = async (params: DocumentData) => {
     const text =
@@ -208,7 +238,7 @@ export default function Orders() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode>http://192.168.0.42:3000/menu/${userContext?.estabId}/1/${params.id}</qrcode>\n` +
+      `[L]<qrcode>${base_url}${userContext?.estabId}/1/${params.id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
@@ -231,7 +261,7 @@ export default function Orders() {
       `[C]Peca de onde estiver.\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>http://192.168.1.114:3000/menu/${userContext?.estabId}/3/Delivery</qrcode>\n\n` +
+      `[L]<qrcode size='20'>${base_url}/menu/${userContext?.estabId}/3/Delivery</qrcode>\n\n` +
       `[C]Agradecemos a preferencia!\n`
     printThermalPrinter(text3)
   }
@@ -242,7 +272,7 @@ export default function Orders() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>http://192.168.1.114:3000/menu/${userContext?.estabId}/2/${encodeURIComponent(paramsTicket.name.trim())}</qrcode>\n` +
+      `[L]<qrcode size='20'>${base_url}/${userContext?.estabId}/2/${encodeURIComponent(paramsTicket.name.trim())}</qrcode>\n` +
       `[L]${paramsTicket.name}\n`
     printThermalPrinter(text)
   }
@@ -285,6 +315,7 @@ export default function Orders() {
     setParamsTicket(emptyParamsTicket)
     setSavedNewTicket("")
   }
+
   const styles = StyleSheet.create({
     scrollViewContent: {
       flexGrow: 1,
@@ -299,21 +330,37 @@ export default function Orders() {
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      justifyContent: 'space-between',
-      padding: 12
+      justifyContent: 'space-between', // Distribui os cards igualmente
+    paddingHorizontal: 20, // Espaçamento nas laterais
+    
+    paddingVertical: 20, // Espaçamento vertical (opcional)
+      //padding: 12,
     },
     card: {
-      marginBottom: 12,
+      marginBottom: 15,
       width: "48%",
-      height: 230
-    }
+      height: 230,
+      padding: 0.3
+    },
+    container: {
+      maxHeight: 350,
+      borderStyle: 'solid',
+      borderWidth: 0.3,
+      marginBottom: 10
+    },
+    item: {
+      padding: 4,
+      marginLeft: 10,
+    },
   })
 
   return (
     <View style={{ flex: 1 }}>
       {isLoading ? <Loading /> :
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
-          <View style={{ flexDirection: 'row', marginBottom: 10, margin: 5 }}>
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={styles.scrollViewContent}>
+          <View style={{ flexDirection: 'row', marginBottom: 5, margin: 5 }}>
             <View style={{ width: '40%', padding: 10 }}>
               <SegmentedButtons
                 value={statusTicket}
@@ -337,7 +384,7 @@ export default function Orders() {
                 icon={'magnify'}
                 size={22}
                 mode='outlined'
-                onPress={() => console.log(qrCodeData)}
+                onPress={searchConsumer}
               />
               <IconButton
                 icon={'contactless-payment'}
@@ -359,6 +406,19 @@ export default function Orders() {
               />
             </View>
           </View>
+          {statusTicket !== "0" ?
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+              <Icon source="circle" color={'green'} size={17} />
+              <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em aberto: (${numberTickets})`}</Text>
+            </View>
+            :
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+              <Icon source="circle" color={'red'} size={17} />
+              <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Fechadas: (${numberTickets})`}</Text>
+            </View>
+          }
+
+
 
           <View style={styles.grid}>
             {orders.map((item, index) => (
@@ -396,8 +456,6 @@ export default function Orders() {
                         `${moment(item?.openingDate?.toDate()).format('DD/MM/YY HH:mm')}` :
                         item.status === 0 && `Fechada em: ${moment(item?.closingDate.toDate()).format('DD/MM/YY HH:mm')}`
                     }
-                  //   subtitle={item?.status === 0}
-
                   />
                   <Card.Content>
                     <View style={{ marginTop: 10 }}>
@@ -575,6 +633,46 @@ export default function Orders() {
             setIsOpenNFC={setIsOpenNFC}
             cancelTechnologyRequest={handleCancelTechnologyRequest}
           />
+        </Dialog>
+      </Portal>
+
+
+      <Portal>
+        <Dialog visible={isOpenSearchConsumer} onDismiss={() => [setIsOpenSearchConsumer(false)]}>
+          <Dialog.Title >Buscar cliente</Dialog.Title>
+          <Dialog.Content style={{ marginTop: 10 }}>
+            <View style={styles.container}>
+              <TextInput
+                label="Pesquisar por nome"
+                keyboardType='default'
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {isLoadingSearch ?
+                <View style={{ padding: 20 }}>
+                  <ActivityIndicator />
+                </View> :
+                <FlatList
+                  data={filteredData}
+                  keyExtractor={item => item?.id?.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => selectConsumer(item)}>
+                      <Text variant="titleLarge" style={styles.item}>{item.name}</Text>
+                    </TouchableOpacity>
+                  )}
+
+                // renderItem={({ item }) => <Text style={styles.item}>{item.name}</Text>}
+                />}
+            </View>
+
+
+
+            <Dialog.Actions>
+              <Button onPress={() => setIsOpenSearchConsumer(false)}>
+                Cancelar
+              </Button>
+            </Dialog.Actions>
+          </Dialog.Content>
         </Dialog>
       </Portal>
 

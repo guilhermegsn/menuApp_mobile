@@ -12,6 +12,7 @@ import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
 import { updateUserClaims } from '../../functions'
 import { getFunctions, httpsCallable } from 'firebase/functions'
+import { base_url } from '../Services/config'
 
 interface userEstablishmentInterface {
   name: string
@@ -71,7 +72,7 @@ export default function Home() {
       `[L]\n` +
       `[L]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>http://192.168.1.113:3000/menu/${dataEstab.id}</qrcode>\n` +
+      `[L]<qrcode size='20'${base_url}/menu/${dataEstab.id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       `[L]${dataEstab.address}\n` +

@@ -1,5 +1,5 @@
-import { Image, StyleSheet, View, TouchableOpacity, Alert, ScrollView } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import { Image, StyleSheet, View, TouchableOpacity, Alert, ScrollView, RefreshControl } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
 import { UserContext } from '../context/UserContext'
 import { addDoc, collection, doc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
@@ -37,6 +37,7 @@ export default function EstablishmentMenu() {
   const [isLoadingSave, setIsLoadingSave] = useState(false)
   const [listMenu, setListMenu] = useState<DocumentData[]>([])
   const [uri, setUri] = useState("")
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchData()
@@ -75,6 +76,12 @@ export default function EstablishmentMenu() {
       setIsLoading(false)
     }
   }
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, []);
 
   // const saveNewMenu = async (menuName: string) => {
   //   setIsLoadingSave(true);
@@ -168,15 +175,17 @@ export default function EstablishmentMenu() {
       zIndex: 1
     },
   })
-  
+
 
 
 
   return (
     <View style={{ flex: 1 }}>
       {isLoading ? <Loading /> :
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-         
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{ flexGrow: 1 }}>
+
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', flexWrap: "wrap" }}>
             {listMenu?.map((menu, index) => (
               <Card key={index} style={{
@@ -199,10 +208,10 @@ export default function EstablishmentMenu() {
                     bottom: 0, // Fixa no rodapé
                     left: 0,
                     right: 0,
-                   // backgroundColor: 'rgba(255, 255, 255, 0.6)', // Fundo semi-transparente (opcional)
-                   backgroundColor: 'rgba(0, 0, 0, 0.6)', // Preto com 60% de opacidade
-                   borderBottomEndRadius: 9,
-                   borderBottomLeftRadius: 8
+                    // backgroundColor: 'rgba(255, 255, 255, 0.6)', // Fundo semi-transparente (opcional)
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Preto com 60% de opacidade
+                    borderBottomEndRadius: 9,
+                    borderBottomLeftRadius: 8
                   }}
                 >
                   <Text
@@ -218,7 +227,7 @@ export default function EstablishmentMenu() {
               <Card style={{
                 width: width * 0.45,
                 margin: width * 0.02,
-               // height: width * 0.5
+                // height: width * 0.5
               }}
                 onPress={() => [setIsNewMenu(true), setMenu(emptyMenu)]}
               >
