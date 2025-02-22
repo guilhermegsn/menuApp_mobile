@@ -8,6 +8,7 @@ import { db, auth } from '../Services/FirebaseConfig';
 import { Alert } from "react-native";
 import Sound from "react-native-sound";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import axios from "axios";
 
 export const getCurrentDate = () => {
   const today = new Date();
@@ -319,7 +320,7 @@ export const updateUserClaims = async (uid: string, newRole: string, newEstablis
     const functions = getFunctions();
     const updateClaims = httpsCallable(functions, "updateUserClaims");
 
-    await updateClaims({uid,newRole,newEstablishment});
+    await updateClaims({ uid, newRole, newEstablishment });
 
   } catch (error) {
     console.error("Erro ao atualizar claims:", error);
@@ -342,12 +343,31 @@ export const refreshUserToken = async () => {
   }
 };
 
-// export const refreshUserToken = async () => {
-//   const user = auth.currentUser;
-//   if (user) {
-//     const token = await user.getIdTokenResult(true); // `true` força a atualização
-//     console.log("Atualizando Token do usuário:", token.claims);
-//     await user.getIdToken(true); // Força a atualização do token
-//   }
-// };
+export const createSubscription = async (userId: string, email: string, planId: string) => {
+  const API_URL = 'https://us-central1-appdesc-e1bf2.cloudfunctions.net/createSubscription'
+  const currentUser = auth.currentUser
+  if (currentUser) {
+    const token = await currentUser.getIdToken(); // Token de autenticação
+    try {
+      const response = await axios.post(
+        API_URL,
+        {
+          userId,
+          email,
+          planId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Passa o token no cabeçalho
+          },
+        }
+      )
+      // O URL de pagamento que o usuário irá acessar
+      return response.data//response.data.subscriptionUrl;
+    } catch (error) {
+      console.error("Erro ao criar assinatura:", error);
+      throw error;
+    }
+  }
 
+};

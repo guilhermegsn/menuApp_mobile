@@ -1,4 +1,4 @@
-import { Alert, Dimensions, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, Dimensions, Image, ImageBackground, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
@@ -6,11 +6,10 @@ import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDo
 import { db, auth } from '../Services/FirebaseConfig';
 import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
-import { printThermalPrinter, refreshUserToken } from '../Services/Functions'
+import { createSubscription, printThermalPrinter, refreshUserToken } from '../Services/Functions'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
-import { updateUserClaims } from '../../functions'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { base_url } from '../Services/config'
 
@@ -341,6 +340,32 @@ export default function Home() {
     }
   })
 
+  // const assinar = async () => {
+  //   const response = await createSubscription('2dLvr1My2egE0QlhdvScVzqyuu33', 'vivi@ane.com', 'Bbi0YEQTrMInhzpw7wZ6')
+  //   if(response.data){
+  //     const subscriptionUrl = response.data.subscriptionUrl; 
+  //     Linking.openURL(subscriptionUrl);  //
+  //   }
+  // }
+
+  const assinar = async () => {
+    try {
+      // Chama a função para criar a assinatura e obter a URL do Mercado Pago
+      const response = await createSubscription('2dLvr1My2egE0QlhdvScVzqyuu33', 'test_user_942569659@testuser.com', 'Bbi0YEQTrMInhzpw7wZ6')
+      
+      // Verifica se a resposta tem o campo subscriptionUrl
+      if (response && response.subscriptionUrl) {
+        const subscriptionUrl = response.subscriptionUrl; // URL de redirecionamento para o Mercado Pago
+        Linking.openURL(subscriptionUrl);  // Redireciona o usuário para a página do Mercado Pago
+      } else {
+        console.error('Erro: URL de assinatura não encontrada.');
+      }
+    } catch (error) {
+      console.error('Erro ao tentar assinar:', error);
+    }
+  };
+  
+
   return (
     <View style={{ flex: 1, flexGrow: 1 }}>
       <>
@@ -650,7 +675,7 @@ export default function Home() {
         {regStage === 4 &&
           <View style={{ flex: 1, alignItems: 'center' }}>
 
-
+<Button onPress={assinar}>Assinar</Button>
 
             <Text style={{ fontSize: 20, marginTop: 20 }}>
               {userContext?.estabName}
@@ -721,6 +746,8 @@ export default function Home() {
                 </Button>
               </View>
             </View> */}
+
+
 
           </View>
         }
