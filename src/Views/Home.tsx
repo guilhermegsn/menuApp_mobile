@@ -1,29 +1,20 @@
-import { Alert, Dimensions, Image, ImageBackground, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Dimensions, Image, ImageBackground, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
-import { Button, Card, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
+import { Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
-import { addDoc, collection, doc, DocumentData, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, updateDoc } from 'firebase/firestore'
 import { db, auth } from '../Services/FirebaseConfig';
-import { EstablishmentData } from '../Interfaces/Establishment_interface'
 import { UserContext } from '../context/UserContext'
 import { createSubscription, printThermalPrinter, refreshUserToken } from '../Services/Functions'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { getFunctions } from 'firebase/functions'
 import { base_url } from '../Services/config'
-import { handleSubscribe } from '../Services/MercadoPago'
 
-interface userEstablishmentInterface {
-  name: string
-  enabled: boolean
-  id: string
-  type: string
-}
 
 export default function Home() {
 
-  const functions = getFunctions();
   const { width } = Dimensions.get('window');
   const navigation = useNavigation()
   const userContext = useContext(UserContext)
@@ -341,16 +332,8 @@ export default function Home() {
     }
   })
 
-  // const assinar = async () => {
-  //   const response = await createSubscription('2dLvr1My2egE0QlhdvScVzqyuu33', 'vivi@ane.com', 'Bbi0YEQTrMInhzpw7wZ6')
-  //   if(response.data){
-  //     const subscriptionUrl = response.data.subscriptionUrl; 
-  //     Linking.openURL(subscriptionUrl);  //
-  //   }
-  // }
 
   const assinar = async () => {
-    //handleSubscribe()
     try {
       // Chama a função para criar a assinatura e obter a URL do Mercado Pago
       const response = await createSubscription('CwUjI2uOhAh5hOHBU5Kl', 'test_user_942569659@testuser.com', 'Bbi0YEQTrMInhzpw7wZ6')
@@ -365,6 +348,7 @@ export default function Home() {
     } catch (error) {
       console.error('Erro ao tentar assinar:', error);
     }
+    // handleSubscribe()
   };
   
 

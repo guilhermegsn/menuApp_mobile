@@ -66,3 +66,5 @@ yarn-error.log
 /coverage
 
 google-services.json
+firebaseConfig.js
+.env

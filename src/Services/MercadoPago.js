@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { PUBLIC_KEY_MERCADO_PAGO } from '@env';
 
 const generateCardToken = async () => {
 
-  const PUBLIC_KEY = 'TEST-fe5ae26c-d0a6-442e-bf1f-0acc2c18306c'
+  const PUBLIC_KEY = PUBLIC_KEY_MERCADO_PAGO
   const cardData = {
     number: '5031433215406351',
     expiry: '11/2025',

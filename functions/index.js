@@ -5,10 +5,7 @@ const fetch = require("node-fetch");
 admin.initializeApp();
 const db = admin.firestore();
 
-//mercado pago
-//const ACCESS_TOKEN = "APP_USR-5315530852638570-022214-84db690c2581bb36df87c2c934452d04-2282945678";
-
-const ACCESS_TOKEN = "APP_USR-8171980931922901-022122-a3faba08355305eb507fef7855b43564-2282446460";
+const ACCESS_TOKEN = functions.config().mercadopago.access_token;
 
 exports.sendNewOrderNotification = functions.firestore
   .document('OrderItems/{orderId}')
