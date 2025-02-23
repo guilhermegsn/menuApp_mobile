@@ -353,7 +353,7 @@ export default function Home() {
     //handleSubscribe()
     try {
       // Chama a função para criar a assinatura e obter a URL do Mercado Pago
-      const response = await createSubscription('2dLvr1My2egE0QlhdvScVzqyuu33', 'test_user_942569659@testuser.com', 'Bbi0YEQTrMInhzpw7wZ6')
+      const response = await createSubscription('CwUjI2uOhAh5hOHBU5Kl', 'test_user_942569659@testuser.com', 'Bbi0YEQTrMInhzpw7wZ6')
       
       // Verifica se a resposta tem o campo subscriptionUrl
       if (response && response.subscriptionUrl) {

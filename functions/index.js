@@ -174,24 +174,24 @@ exports.updateUserClaims = functions.https.onCall(async (data, context) => {
 
 exports.createSubscription = functions.https.onRequest(async (req, res) => {
   try {
-    const { userId, email, planId } = req.body;
-    console.log('Recebendo dados:', { userId, email, planId });
+    const { establishmentId, email, planId } = req.body;
+    console.log('Recebendo dados:', { establishmentId, email, planId });
     // Verifica se os parâmetros necessários estão presentes
-    if (!userId || !email || !planId) {
+    if (!establishmentId || !email || !planId) {
       console.log('Parâmetros inválidos!');
       return res.status(400).send({ error: "Parâmetros inválidos." });
     }
 
-    // Verificar se o userId existe no Firestore
-    const userRef = db.collection('User').doc(userId); // Ou onde os dados dos usuários estão armazenados
+    // Verificar se o establishmentId existe no Firestore
+    const userRef = db.collection('Establishment').doc(establishmentId); // Ou onde os dados dos usuários estão armazenados
     const userSnap = await userRef.get();
 
     if (!userSnap.exists) {
-      console.log(`Usuário com ID ${userId} não encontrado!`);
+      console.log(`Usuário com ID ${establishmentId} não encontrado!`);
       return res.status(404).send({ error: "Usuário não encontrado." });
     }
 
-    console.log(`Usuário ${userId} encontrado.`);
+    console.log(`Estabelecimento ${establishmentId} encontrado.`);
 
     // Busca o plano no Firestore
     const planRef = db.collection('Plans').doc(planId);
@@ -246,9 +246,9 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
 
     // Salvar a assinatura no Firestore
     console.log('Salvando assinatura no Firestore...');
-    const subscriptionRef = db.collection('Subscriptions').doc(userId);
+    const subscriptionRef = db.collection('Subscriptions').doc(establishmentId);
     await subscriptionRef.set({
-      userId,
+      establishmentId,
       planId, // O ID do plano do seu sistema
       mercadoPagoSubscriptionId: mercadoPagoPlanId, // ID do plano do Mercado Pago
       status: 'pending',
@@ -306,7 +306,7 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
 
     const subscriptionRef = userQuery.docs[0].ref;
 
-    console.log('---------------_>>>>>>>>>>>>>>>>>>> Status', payment.status)
+    console.log('payment---------->>>>>>>>>>>>>>>>>>', payment)
 
     // Atualizar status da assinatura no Firestore
     const status = payment.status === "approved" ? "active" : "pending";
@@ -323,14 +323,16 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
 
     // Agora, criamos um registro de pagamento na coleção Payments
     await db.collection("Payments").add({
-      userId: userQuery.docs[0].data().userId, // A partir da assinatura
+      establishmentId: userQuery.docs[0].data().establishmentId, // A partir da assinatura
       paymentId: payment.id,
       transactionAmount: payment.transaction_amount,
+      receivedAmount: payment.transaction_details?.net_received_amount,
       status: payment.status,
       date: payment.date_approved || new Date().toISOString(),
       paymentMethod: payment.payment_method_id,
       payerEmail: payment.payer.email,
       preapprovalId: payment.metadata.preapproval_id, // Associe o pagamento à assinatura
+      ipAddress: payment?.additional_info?.ip_address
     });
 
     console.log("Pagamento registrado na coleção 'Payments'");
@@ -341,76 +343,3 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
     return res.status(500).send(error.message);
   }
 });
-
-
-
-
-// exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
-//   try {
-//     console.log('Recebido webhook:', req.body); // Imprime a solicitação recebida
-//     console.log("Webhook recebido:", JSON.stringify(req.body, null, 2));
-
-//     const { action, data } = req.body;
-
-//     // Verifica se o evento é "payment.created" ou "payment.updated"
-//     if (action !== "payment.created" && action !== "payment.updated") {
-//       console.log("Evento ignorado:", action);
-//       return res.status(200).send("Evento ignorado");
-//     }
-
-//     const paymentId = data.id;
-
-//     // Buscar detalhes do pagamento no Mercado Pago
-//     const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-//       method: "GET",
-//       headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
-//     });
-
-//     const payment = await response.json();
-
-//     if (!payment || !payment.preapproval_id) {
-//       console.log("Pagamento ou preapproval_id não encontrados:", payment);
-//       return res.status(400).send("Pagamento não encontrado.");
-//     }
-
-//     // Encontrar a assinatura no Firestore usando preapproval_id ou outro identificador
-//     const userQuery = await db.collection("Subscriptions").where("mercadoPagoSubscriptionId", "==", payment.preapproval_id).get();
-
-//     if (userQuery.empty) {
-//       console.log("Assinatura não encontrada para o pagamento:", payment.preapproval_id);
-//       return res.status(400).send("Assinatura não encontrada.");
-//     }
-
-//     const subscriptionRef = userQuery.docs[0].ref;
-
-//     // Atualizar status da assinatura no Firestore
-//     const status = payment.status === "approved" ? "active" : "pending";
-//     console.log("🎯 Status do pagamento:", payment.status);
-
-//     const nextBillingDate = payment.date_of_expiration || null;
-
-//     await subscriptionRef.update({
-//       status: status,
-//       lastPaymentStatus: payment.status,
-//       nextBillingDate: nextBillingDate,
-//     });
-
-//     await db.collection("Payments").add({
-//       userId: userQuery.docs[0].data().userId, // A partir da assinatura
-//       paymentId: payment.id,
-//       transactionAmount: payment.transaction_amount,
-//       status: payment.status,
-//       date: payment.date_approved || new Date().toISOString(),
-//       paymentMethod: payment.payment_method_id,
-//       payerEmail: payment.payer.email,
-//       preapprovalId: payment.preapproval_id, // Associe o pagamento à assinatura
-//     });
-
-//     console.log(`Pagamento atualizado para a assinatura: ${payment.preapproval_id}`);
-
-//     return res.status(200).send("Pagamento atualizado!");
-//   } catch (error) {
-//     console.error("Erro no webhook:", error);
-//     return res.status(500).send(error.message);
-//   }
-// });

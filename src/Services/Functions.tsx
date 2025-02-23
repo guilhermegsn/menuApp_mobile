@@ -343,7 +343,7 @@ export const refreshUserToken = async () => {
   }
 };
 
-export const createSubscription = async (userId: string, email: string, planId: string) => {
+export const createSubscription = async (establishmentId: string, email: string, planId: string) => {
   const API_URL = 'https://us-central1-appdesc-e1bf2.cloudfunctions.net/createSubscription'
   const currentUser = auth.currentUser
   if (currentUser) {
@@ -352,7 +352,7 @@ export const createSubscription = async (userId: string, email: string, planId: 
       const response = await axios.post(
         API_URL,
         {
-          userId,
+          establishmentId,
           email,
           planId,
         },
