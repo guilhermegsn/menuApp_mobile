@@ -12,6 +12,7 @@ import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { base_url } from '../Services/config'
+import { handleSubscribe } from '../Services/MercadoPago'
 
 interface userEstablishmentInterface {
   name: string
@@ -349,6 +350,7 @@ export default function Home() {
   // }
 
   const assinar = async () => {
+    //handleSubscribe()
     try {
       // Chama a função para criar a assinatura e obter a URL do Mercado Pago
       const response = await createSubscription('2dLvr1My2egE0QlhdvScVzqyuu33', 'test_user_942569659@testuser.com', 'Bbi0YEQTrMInhzpw7wZ6')

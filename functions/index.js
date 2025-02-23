@@ -6,7 +6,9 @@ admin.initializeApp();
 const db = admin.firestore();
 
 //mercado pago
-const ACCESS_TOKEN = "APP_USR-5315530852638570-022214-84db690c2581bb36df87c2c934452d04-2282945678";
+//const ACCESS_TOKEN = "APP_USR-5315530852638570-022214-84db690c2581bb36df87c2c934452d04-2282945678";
+
+const ACCESS_TOKEN = "APP_USR-8171980931922901-022122-a3faba08355305eb507fef7855b43564-2282446460";
 
 exports.sendNewOrderNotification = functions.firestore
   .document('OrderItems/{orderId}')
@@ -173,9 +175,7 @@ exports.updateUserClaims = functions.https.onCall(async (data, context) => {
 exports.createSubscription = functions.https.onRequest(async (req, res) => {
   try {
     const { userId, email, planId } = req.body;
-
     console.log('Recebendo dados:', { userId, email, planId });
-
     // Verifica se os parâmetros necessários estão presentes
     if (!userId || !email || !planId) {
       console.log('Parâmetros inválidos!');
@@ -207,10 +207,10 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
 
     // Criação do pagamento recorrente no Mercado Pago utilizando fetch
     // Criar uma data de início no futuro (próximo dia)
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() + 1); // Definir o próximo dia
-    const startDateISOString = startDate.toISOString();
-   
+    // const startDate = new Date();
+    // startDate.setDate(startDate.getDate() + 1); // Definir o próximo dia
+    // const startDateISOString = new Date().toISOString();//startDate.toISOString();
+
     console.log('Iniciando criação de pagamento no Mercado Pago...');
     const response = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
@@ -222,12 +222,13 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
         payer_email: email, // E-mail do usuário
         back_url: 'https://google.com', // URL de redirecionamento
         reason: `Assinatura do plano ${planData?.name}`,
+        // card_token_id: card_token,
         auto_recurring: {
           frequency: 1,
           frequency_type: 'months',
           transaction_amount: planData?.price,
           currency_id: 'BRL',
-          start_date: startDateISOString,
+          //   start_date: startDateISOString,
           end_date: null,
         },
       }),
@@ -251,7 +252,7 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
       planId, // O ID do plano do seu sistema
       mercadoPagoSubscriptionId: mercadoPagoPlanId, // ID do plano do Mercado Pago
       status: 'pending',
-      nextBillingDate: result.auto_recurring?.next_payment_date || null,
+      nextBillingDate: result?.next_payment_date || null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -268,8 +269,6 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
 });
 
 
-
-
 exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
   try {
     console.log('Recebido webhook:', req.body); // Imprime a solicitação recebida
@@ -277,7 +276,7 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
     const { action, data } = req.body;
 
     // Verifica se o evento é "payment.created" ou "payment.updated"
-    if (action !== "payment.created" && action !== "payment.updated") {
+    if (action !== "payment.created" && action !== "payment.updated" && action !== "subscription.updated") {
       console.log("Evento ignorado:", action);
       return res.status(200).send("Evento ignorado");
     }
@@ -292,32 +291,49 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
 
     const payment = await response.json();
 
-    if (!payment || !payment.preapproval_id) {
-      console.log("Pagamento ou preapproval_id não encontrados:", payment);
+    if (!payment && !payment.metadata.preapproval_id) {
+      console.log("Pagamento ou metadata.preapproval_id não encontrados:", payment);
       return res.status(400).send("Pagamento não encontrado.");
     }
 
-    // Encontrar a assinatura no Firestore usando preapproval_id ou outro identificador
-    const userQuery = await db.collection("Subscriptions").where("mercadoPagoSubscriptionId", "==", payment.preapproval_id).get();
+    // Encontrar a assinatura no Firestore usando metadata.preapproval_id ou outro identificador
+    const userQuery = await db.collection("Subscriptions").where("mercadoPagoSubscriptionId", "==", payment.metadata.preapproval_id).get();
 
     if (userQuery.empty) {
-      console.log("Assinatura não encontrada para o pagamento:", payment.preapproval_id);
+      console.log("Assinatura não encontrada para o pagamento:", payment.metadata.preapproval_id);
       return res.status(400).send("Assinatura não encontrada.");
     }
 
     const subscriptionRef = userQuery.docs[0].ref;
 
+    console.log('---------------_>>>>>>>>>>>>>>>>>>> Status', payment.status)
+
     // Atualizar status da assinatura no Firestore
     const status = payment.status === "approved" ? "active" : "pending";
     const nextBillingDate = payment.date_of_expiration || null;
 
+    // Atualiza o status da assinatura
     await subscriptionRef.update({
       status: status,
       lastPaymentStatus: payment.status,
       nextBillingDate: nextBillingDate,
     });
 
-    console.log(`Pagamento atualizado para a assinatura: ${payment.preapproval_id}`);
+    console.log(`Pagamento atualizado para a assinatura: ${payment.metadata.preapproval_id}`);
+
+    // Agora, criamos um registro de pagamento na coleção Payments
+    await db.collection("Payments").add({
+      userId: userQuery.docs[0].data().userId, // A partir da assinatura
+      paymentId: payment.id,
+      transactionAmount: payment.transaction_amount,
+      status: payment.status,
+      date: payment.date_approved || new Date().toISOString(),
+      paymentMethod: payment.payment_method_id,
+      payerEmail: payment.payer.email,
+      preapprovalId: payment.metadata.preapproval_id, // Associe o pagamento à assinatura
+    });
+
+    console.log("Pagamento registrado na coleção 'Payments'");
 
     return res.status(200).send("Pagamento atualizado!");
   } catch (error) {
@@ -325,3 +341,76 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
     return res.status(500).send(error.message);
   }
 });
+
+
+
+
+// exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
+//   try {
+//     console.log('Recebido webhook:', req.body); // Imprime a solicitação recebida
+//     console.log("Webhook recebido:", JSON.stringify(req.body, null, 2));
+
+//     const { action, data } = req.body;
+
+//     // Verifica se o evento é "payment.created" ou "payment.updated"
+//     if (action !== "payment.created" && action !== "payment.updated") {
+//       console.log("Evento ignorado:", action);
+//       return res.status(200).send("Evento ignorado");
+//     }
+
+//     const paymentId = data.id;
+
+//     // Buscar detalhes do pagamento no Mercado Pago
+//     const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+//       method: "GET",
+//       headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
+//     });
+
+//     const payment = await response.json();
+
+//     if (!payment || !payment.preapproval_id) {
+//       console.log("Pagamento ou preapproval_id não encontrados:", payment);
+//       return res.status(400).send("Pagamento não encontrado.");
+//     }
+
+//     // Encontrar a assinatura no Firestore usando preapproval_id ou outro identificador
+//     const userQuery = await db.collection("Subscriptions").where("mercadoPagoSubscriptionId", "==", payment.preapproval_id).get();
+
+//     if (userQuery.empty) {
+//       console.log("Assinatura não encontrada para o pagamento:", payment.preapproval_id);
+//       return res.status(400).send("Assinatura não encontrada.");
+//     }
+
+//     const subscriptionRef = userQuery.docs[0].ref;
+
+//     // Atualizar status da assinatura no Firestore
+//     const status = payment.status === "approved" ? "active" : "pending";
+//     console.log("🎯 Status do pagamento:", payment.status);
+
+//     const nextBillingDate = payment.date_of_expiration || null;
+
+//     await subscriptionRef.update({
+//       status: status,
+//       lastPaymentStatus: payment.status,
+//       nextBillingDate: nextBillingDate,
+//     });
+
+//     await db.collection("Payments").add({
+//       userId: userQuery.docs[0].data().userId, // A partir da assinatura
+//       paymentId: payment.id,
+//       transactionAmount: payment.transaction_amount,
+//       status: payment.status,
+//       date: payment.date_approved || new Date().toISOString(),
+//       paymentMethod: payment.payment_method_id,
+//       payerEmail: payment.payer.email,
+//       preapprovalId: payment.preapproval_id, // Associe o pagamento à assinatura
+//     });
+
+//     console.log(`Pagamento atualizado para a assinatura: ${payment.preapproval_id}`);
+
+//     return res.status(200).send("Pagamento atualizado!");
+//   } catch (error) {
+//     console.error("Erro no webhook:", error);
+//     return res.status(500).send(error.message);
+//   }
+// });
