@@ -1,4 +1,4 @@
-import { Alert, FlatList, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, FlatList, Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
 import { collection, query, where, DocumentData, onSnapshot, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
@@ -11,7 +11,7 @@ import { OrderItemsData } from '../Interfaces/OrderItems_Interface';
 import moment from 'moment';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import { NfcReader } from '../Components/NfcReader';
-import { getDataNfcTicket, readTagNfc, printThermalPrinter, getInitialsName } from '../Services/Functions';
+import { getDataNfcTicket, readTagNfc, printThermalPrinter } from '../Services/Functions';
 import QRCode from 'react-native-qrcode-svg';
 import 'text-encoding';
 import { base_url } from '../Services/config';
@@ -331,9 +331,9 @@ export default function Orders() {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between', // Distribui os cards igualmente
-    paddingHorizontal: 20, // Espaçamento nas laterais
-    
-    paddingVertical: 20, // Espaçamento vertical (opcional)
+      paddingHorizontal: 20, // Espaçamento nas laterais
+
+      paddingVertical: 20, // Espaçamento vertical (opcional)
       //padding: 12,
     },
     card: {
@@ -402,7 +402,13 @@ export default function Orders() {
                 icon={'plus'}
                 size={22}
                 mode='outlined'
-                onPress={() => setIsOpenNewTicket(true)}
+                onPress={() => {
+                  if (userContext?.expiredSubscription) {
+                    Alert.alert("Wise Menu", "Não é possível abrir nova comanda.")
+                  } else {
+                    setIsOpenNewTicket(true)
+                  }
+                }}
               />
             </View>
           </View>

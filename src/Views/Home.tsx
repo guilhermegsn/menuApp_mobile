@@ -1,20 +1,22 @@
-import { Dimensions, Image, ImageBackground, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, Dimensions, Image, ImageBackground, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
-import { Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
+import { Button, Card, DataTable, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
-import { addDoc, collection, doc, getDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, doc, DocumentData, getDoc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db, auth } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext'
-import { createSubscription, printThermalPrinter, refreshUserToken } from '../Services/Functions'
+import { calcularDiferencaDias, createSubscription, formatToDoubleBR, getCurrentDate, printThermalPrinter, refreshUserToken } from '../Services/Functions'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
 import { getFunctions } from 'firebase/functions'
 import { base_url } from '../Services/config'
+import ModalPlans from './ModalPlans'
 
 
 export default function Home() {
 
+  const free_trial = 7
   const { width } = Dimensions.get('window');
   const navigation = useNavigation()
   const userContext = useContext(UserContext)
@@ -23,6 +25,10 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [isCreated, setIsCreated] = useState(false)
+  const [isOk, setIsOK] = useState(false)
+  const [isOpenModalPlans, setIsOpenModalPlans] = useState(false)
+  const [isBlocked, setIsBlocked] = useState(false)
+
   const [dataEstab, setDataEstab] = useState({
     name: "",
     fullname: "",
@@ -32,12 +38,13 @@ export default function Home() {
     neighborhood: "",
     city: "",
     state: "",
-    country: "",
+    country: "BR",
     complement: "",
     phone: "",
     number: "",
     owner: auth.currentUser?.uid,
-    id: ""
+    id: "",
+    createdAt: serverTimestamp()
   })
 
   const getCepApi = async () => {
@@ -169,6 +176,78 @@ export default function Home() {
       fetchEstablishmentData();
     }
   }, [userContext.estabId, fetchUserEstablishment, fetchEstablishmentData]);
+
+
+
+
+  useEffect(() => {
+    const getStatusSubscription = async () => {
+      try {
+        if (userContext?.estabId) {
+          // Verificando assinatura
+          const subscriptionDoc = await getDoc(doc(db, "Subscriptions", userContext?.estabId))
+          console.log('estab->', userContext?.estabId)
+
+          if (!subscriptionDoc.exists()) { // Ainda não tem assinatura (período de teste)
+            console.log('nao tem assinatura')
+            try {
+              const establishmentDoc = await getDoc(doc(db, "Establishment", userContext?.estabId))
+              if (!establishmentDoc.exists()) {
+                console.error("Documento de estabelecimento não encontrado!")
+                return;
+              }
+
+              const establishmentData = establishmentDoc.data();
+              const days = calcularDiferencaDias(establishmentData?.createdAt.toDate(), getCurrentDate())
+
+              if (days > free_trial) {
+                setIsBlocked(true)
+                setIsOpenModalPlans(true)
+              } else {
+                const remainingDays = free_trial - days
+                if (!isOk) {
+                  if (remainingDays === 0) {
+                    setIsOpenModalPlans(true)
+                    setTimeout(() => {
+                      Alert.alert("Assine o Wise Menu!", "Hoje é o último dia do seu período de testes. Assine um de nossos planos e mantenha seu estabelecimento digital!")
+                    }, 1000);
+                  } else {
+                    Alert.alert("Período de teste.", `Restam ${remainingDays} dias para encerrar seu período de testes.`)
+                    setIsOK(true);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Erro ao buscar estabelecimento:", error)
+            }
+          } else { // Tem assinatura, verificando status
+            console.log('assinatura encontrada. verificando..')
+            try {
+              const subscriptionData = subscriptionDoc.data()
+
+              if (subscriptionData?.status !== 'active') {
+                const lastPayment = calcularDiferencaDias(subscriptionData?.lastPaymentApproved, getCurrentDate())
+                console.log('lastPayment', lastPayment)
+                if (lastPayment <= 30 + free_trial) {
+                  Alert.alert("Wise Menu", "Não fique sem os nossos serviços!\nVerifique o status de sua assinatura Wise Menu.")
+                } else {
+                  Alert.alert("Wise Menu", "Não fique sem os nossos serviços!\nVerifique o status de sua assinatura Wise Menu.")
+                  userContext?.setExpiredSubscription(true);
+                  const establishmentRef = doc(db, "Establishment", userContext?.estabId)
+                  await updateDoc(establishmentRef, { status: 'inactive' })
+                }
+              }
+            } catch (error) {
+              console.error("Erro ao atualizar status da assinatura:", error)
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar assinatura:", error)
+      }
+    }
+    getStatusSubscription()
+  }, [])
 
 
 
@@ -332,28 +411,13 @@ export default function Home() {
     }
   })
 
-
-  const assinar = async () => {
-    try {
-      // Chama a função para criar a assinatura e obter a URL do Mercado Pago
-      const response = await createSubscription('CwUjI2uOhAh5hOHBU5Kl', 'test_user_942569659@testuser.com', 'Bbi0YEQTrMInhzpw7wZ6')
-      
-      // Verifica se a resposta tem o campo subscriptionUrl
-      if (response && response.subscriptionUrl) {
-        const subscriptionUrl = response.subscriptionUrl; // URL de redirecionamento para o Mercado Pago
-        Linking.openURL(subscriptionUrl);  // Redireciona o usuário para a página do Mercado Pago
-      } else {
-        console.error('Erro: URL de assinatura não encontrada.');
-      }
-    } catch (error) {
-      console.error('Erro ao tentar assinar:', error);
-    }
-    // handleSubscribe()
-  };
-  
-
   return (
     <View style={{ flex: 1, flexGrow: 1 }}>
+      <ModalPlans
+        isOpenModalPlans={isOpenModalPlans}
+        setIsOpenModalPlans={setIsOpenModalPlans}
+        isBlocked={isBlocked}
+      />
       <>
         {isOpenDialogMultiple ? null : isLoading ? <Loading /> : regStage === 0 &&
           // <>
@@ -660,9 +724,7 @@ export default function Home() {
 
         {regStage === 4 &&
           <View style={{ flex: 1, alignItems: 'center' }}>
-
-<Button onPress={assinar}>Assinar</Button>
-
+            {/* <Button onPress={() => setIsOpenModalBlocked(true)}>Assinar</Button> */}
             <Text style={{ fontSize: 20, marginTop: 20 }}>
               {userContext?.estabName}
             </Text>
@@ -753,6 +815,8 @@ export default function Home() {
             </Dialog.Actions>
           </Dialog>
         </Portal>
+
+
       </>
     </View >
   )

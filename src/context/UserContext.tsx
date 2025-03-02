@@ -39,6 +39,9 @@ interface UserContextType {
 
   userRole: string;
   setUserRole: (value: string) => void
+
+  expiredSubscription: boolean;
+  setExpiredSubscription: (value: boolean) => void
 }
 
 export const UserContext = createContext<DocumentData>({});
@@ -56,6 +59,7 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [isUpdatedDataMenu, setIsUpdatedDataMenu] = useState<Boolean>(false)
   const [dataEstablishment, setDataEstablishment] = useState<DocumentData>({} as DocumentData);
   const [userRole, setUserRole] = useState("")
+  const [expiredSubscription, setExpiredSubscription] = useState<Boolean>(false)
 
 
   const registerToken = async (userId: string) => {
@@ -144,7 +148,8 @@ function UserProvider({ children }: { children: ReactNode }) {
       isUpdatedDataMenu, setIsUpdatedDataMenu,
       estabTokenFCM, setEstabTokenFCM,
       dataEstablishment, setDataEstablishment,
-      userRole, setUserRole
+      userRole, setUserRole,
+      expiredSubscription, setExpiredSubscription
     }}>
       {children}
     </UserContext.Provider>

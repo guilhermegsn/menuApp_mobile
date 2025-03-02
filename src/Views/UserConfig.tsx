@@ -1,12 +1,14 @@
 import { StyleSheet, View, ScrollView, Alert, RefreshControl } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
-import { Button, DataTable, Dialog, FAB, Portal, RadioButton, Switch, Text, TextInput } from 'react-native-paper'
-import { collection, DocumentData, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { Button, DataTable, Dialog, Divider, FAB, Portal, RadioButton, Switch, Text, TextInput } from 'react-native-paper'
+import { collection, doc, DocumentData, getDoc, getDocs, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig';
 import Loading from '../Components/Loading';
 import { updateUserClaims } from '../Services/Functions';
+import moment from 'moment';
+import ModalPlans from './ModalPlans';
 
 interface User {
   id: "",
@@ -23,7 +25,11 @@ export default function UserConfig() {
   const [isLoadingDialog, setIsLoadingDialog] = useState(false)
   const [isNewRegister, setIsNewRegister] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false)
+  const [dataSubscription, setDataSubscription] = useState<DocumentData>()
+  const [dataPlans, setDataPlans] = useState<DocumentData[]>([])
+  const [dataEstablishment, setDataEstablishment] = useState<DocumentData>([])
+  const [isOpenModalPlans, setIsOpenModalPlans] = useState(false)
 
   const [emptyUser] = useState<User>({
     id: "",
@@ -40,10 +46,32 @@ export default function UserConfig() {
   })
   const [user, setUser] = useState(emptyUser)
 
+  const lastPaymentDate = dataSubscription?.lastPaymentDate ? 
+    moment(dataSubscription?.lastPaymentDate.toDate()).format('DD/MM/YYYY HH:mm') : "Pendente"
+
   useEffect(() => {
     fetchData()
+    getDataPlans()
+    getDataSubscription()
   }, [])
 
+  const getDataPlans = async () => {
+    const querySnapshot = await getDocs(collection(db, 'Plans'));
+    const data = querySnapshot.docs.map(doc => doc.data());
+    const sortedData = data.sort((a, b) => a.price - b.price);
+    setDataPlans(sortedData)
+  }
+
+  const getDataSubscription = async () => {
+    const docRef = doc(db, 'Subscriptions', userContext.estabId);
+    const docSnapshot = await getDoc(docRef);
+    if (docSnapshot.exists()) {
+
+      const data = docSnapshot.data();
+      console.log('data', data)
+      setDataSubscription(data)
+    }
+  }
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -52,7 +80,6 @@ export default function UserConfig() {
         collection(db, "User"),
         where("association.establishmentId", "==", userContext?.estabId)
       )
-
       const res = await getDocs(q);
       if (!res.empty) {
         //let data = res.docs.map(item => item.data())
@@ -85,7 +112,7 @@ export default function UserConfig() {
             "association.establishmentName": user.association.establishmentName,
             "association.role": user.association.role,
             "association.receiveNotifications": user.association.receiveNotifications
-          });          
+          });
           setIsEdit(false)
 
           await updateUserClaims(userDoc.id, user.association.role, user.association.establishmentId)
@@ -181,26 +208,58 @@ export default function UserConfig() {
   })
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView 
-       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+      <ModalPlans
+        isOpenModalPlans={isOpenModalPlans}
+        setIsOpenModalPlans={setIsOpenModalPlans}
+        isBlocked={false}
+      />
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         {isLoading ? <Loading /> :
-          <DataTable style={{ marginTop: 10 }}>
-            <DataTable.Header>
-              <DataTable.Title style={{ flex: 5 }}>E-mail</DataTable.Title>
-              <DataTable.Title style={{ flex: 5 }}>Nome</DataTable.Title>
-              <DataTable.Title style={{ flex: 2 }}>Tipo</DataTable.Title>
-            </DataTable.Header>
-            {dataUsers?.map((item, index) => (
-              <DataTable.Row key={`row${index}`} onPress={() => edit(item as User)}>
-                <DataTable.Cell key={`cell1-row${index}`} style={{ flex: 5 }}>{item?.email}</DataTable.Cell>
-                <DataTable.Cell key={`cell2-row${index}`} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
-                <DataTable.Cell key={`cell3-row${index}`} style={{ flex: 2 }}>
-                  <Button onPress={() => console.log('item', item)}>{item?.association?.role}</Button>
-                </DataTable.Cell>
-              </DataTable.Row>
-            ))}
-          </DataTable>}
+          <View>
+            <Text variant="headlineSmall" style={{ marginBottom: 12 }}>Meu plano</Text>
+            {dataSubscription && dataPlans ?
+              <View>
+                <Text>Plano: {dataPlans.find(item => item.planId === dataSubscription.planId)?.name || ""}</Text>
+                <Text>Status: {dataSubscription?.status === 'active' ? 'Ativo' : 'Pendente'}</Text>
+                <Text>Último pagamento: {lastPaymentDate}</Text>
+                <Text>Status do Último pagamento: {dataSubscription?.lastPaymentStatus === 'approved' ? 'Aprovado' : dataSubscription?.lastPaymentStatus}</Text>
+                <Button
+                  style={{ marginTop: 12, marginBottom: 25 }}
+                  mode='outlined'
+                  onPress={() => setIsOpenModalPlans(true)}>Alterar forma de pagamento</Button>
+              </View>
+              :
+              <View>
+                <Text>Plano: FREE TRIAL</Text>
+                <Button
+                  style={{ marginTop: 12, marginBottom: 25 }}
+                  mode='outlined'
+                  onPress={() => setIsOpenModalPlans(true)}>Assinar o Wise Menu</Button>
+              </View>
+            }
+
+            <Divider />
+
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Usuários do sistema</Text>
+            <DataTable style={{ marginTop: 10 }}>
+              <DataTable.Header>
+                <DataTable.Title style={{ flex: 5 }}>E-mail</DataTable.Title>
+                <DataTable.Title style={{ flex: 5 }}>Nome</DataTable.Title>
+                <DataTable.Title style={{ flex: 2 }}>Tipo</DataTable.Title>
+              </DataTable.Header>
+              {dataUsers?.map((item, index) => (
+                <DataTable.Row key={`row${index}`} onPress={() => edit(item as User)}>
+                  <DataTable.Cell key={`cell1-row${index}`} style={{ flex: 5 }}>{item?.email}</DataTable.Cell>
+                  <DataTable.Cell key={`cell2-row${index}`} style={{ flex: 5 }}>{item?.name}</DataTable.Cell>
+                  <DataTable.Cell key={`cell3-row${index}`} style={{ flex: 2 }}>
+                    <Button onPress={() => console.log('item', item)}>{item?.association?.role}</Button>
+                  </DataTable.Cell>
+                </DataTable.Row>
+              ))}
+            </DataTable>
+          </View>}
         {/* <Button onPress={()=> console.log(userContext?.estabName)}>dataUser</Button> */}
       </ScrollView>
 
@@ -295,7 +354,13 @@ export default function UserConfig() {
         color={theme.colors.background}
         style={styles.fab}
         icon="plus"
-        onPress={() => setIsNewRegister(true)}
+        onPress={() => {
+          if (userContext?.expiredSubscription) {
+            Alert.alert("Wize Menu", "Não é possível criar um novo usuário")
+          } else {
+            setIsNewRegister(true)
+          }
+        }}
       />
     </View>
   )

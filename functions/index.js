@@ -173,16 +173,15 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
   try {
     const { establishmentId, email, planId } = req.body;
     console.log('Recebendo dados:', { establishmentId, email, planId });
-    // Verifica se os parâmetros necessários estão presentes
+
     if (!establishmentId || !email || !planId) {
       console.log('Parâmetros inválidos!');
       return res.status(400).send({ error: "Parâmetros inválidos." });
     }
 
-    // Verificar se o establishmentId existe no Firestore
-    const userRef = db.collection('Establishment').doc(establishmentId); // Ou onde os dados dos usuários estão armazenados
+    // Verifica se o estabelecimento existe no Firestore
+    const userRef = db.collection('Establishment').doc(establishmentId);
     const userSnap = await userRef.get();
-
     if (!userSnap.exists) {
       console.log(`Usuário com ID ${establishmentId} não encontrado!`);
       return res.status(404).send({ error: "Usuário não encontrado." });
@@ -193,7 +192,6 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
     // Busca o plano no Firestore
     const planRef = db.collection('Plans').doc(planId);
     const planSnap = await planRef.get();
-
     if (!planSnap.exists) {
       console.log(`Plano com ID ${planId} não encontrado!`);
       return res.status(404).send({ error: "Plano não encontrado." });
@@ -202,31 +200,44 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
     const planData = planSnap.data();
     console.log('Plano encontrado:', planData);
 
-    // Criação do pagamento recorrente no Mercado Pago utilizando fetch
-    // Criar uma data de início no futuro (próximo dia)
-    // const startDate = new Date();
-    // startDate.setDate(startDate.getDate() + 1); // Definir o próximo dia
-    // const startDateISOString = new Date().toISOString();//startDate.toISOString();
+    // Verifica se a assinatura já existe
+    const subscriptionRef = db.collection('Subscriptions').doc(establishmentId);
+    const subscriptionSnap = await subscriptionRef.get();
 
+    if (subscriptionSnap.exists) {
+      const subscriptionData = subscriptionSnap.data();
+
+      if (subscriptionData.status === 'active') {
+        console.log(`Assinatura já está ativa para ${establishmentId}`);
+        return res.status(409).send({
+          error: "Assinatura já ativa.",
+          status: subscriptionData.status,
+          mercadoPagoSubscriptionId: subscriptionData.mercadoPagoSubscriptionId,
+        });
+      }
+
+      console.log(`Assinatura existente com status ${subscriptionData.status}, gerando novo pagamento...`);
+    } else {
+      console.log('Criando nova assinatura...');
+    }
+
+    // Criação do pagamento recorrente no Mercado Pago
     console.log('Iniciando criação de pagamento no Mercado Pago...');
     const response = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ACCESS_TOKEN}`, // Token de acesso do Mercado Pago
+        'Authorization': `Bearer ${ACCESS_TOKEN}`,
       },
       body: JSON.stringify({
-        payer_email: email, // E-mail do usuário
-        back_url: 'https://google.com', // URL de redirecionamento
+        payer_email: email,
+        back_url: 'https://google.com',
         reason: `Assinatura do plano ${planData?.name}`,
-        // card_token_id: card_token,
         auto_recurring: {
           frequency: 1,
           frequency_type: 'months',
           transaction_amount: planData?.price,
           currency_id: 'BRL',
-          //   start_date: startDateISOString,
-          end_date: null,
         },
       }),
     });
@@ -239,24 +250,39 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
       return res.status(500).send({ error: "Erro ao criar assinatura no Mercado Pago." });
     }
 
-    const mercadoPagoPlanId = result.id; // ID retornado do Mercado Pago
+    const mercadoPagoPlanId = result.id;
+    const subscriptionUrl = result.init_point || null;
 
-    // Salvar a assinatura no Firestore
-    console.log('Salvando assinatura no Firestore...');
-    const subscriptionRef = db.collection('Subscriptions').doc(establishmentId);
-    await subscriptionRef.set({
-      establishmentId,
-      planId, // O ID do plano do seu sistema
-      mercadoPagoSubscriptionId: mercadoPagoPlanId, // ID do plano do Mercado Pago
-      status: 'pending',
-      nextBillingDate: result?.next_payment_date || null,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Se a assinatura já existia, apenas atualiza no Firestore
+    if (subscriptionSnap.exists) {
+      await subscriptionRef.update({
+        mercadoPagoSubscriptionId: mercadoPagoPlanId,
+        status: 'pending',
+        nextBillingDate: result?.next_payment_date || null,
+        subscriptionUrl,
+      });
 
-    console.log('Assinatura salva com sucesso!');
+      console.log('Assinatura existente atualizada.');
+    } else {
+      // Criar nova assinatura no Firestore
+      await subscriptionRef.set({
+        establishmentId,
+        planId,
+        mercadoPagoSubscriptionId: mercadoPagoPlanId,
+        status: 'pending',
+        nextBillingDate: result?.next_payment_date || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        subscriptionUrl,
+      });
+
+      console.log('Nova assinatura criada com sucesso.');
+    }
+
     return res.status(200).send({
-      message: 'Assinatura iniciada!',
-      subscriptionUrl: result.init_point, // URL para redirecionar o usuário para completar o pagamento
+      message: "Pagamento pendente. Complete o pagamento.",
+      subscriptionUrl,
+      status: "pending",
+      mercadoPagoSubscriptionId: mercadoPagoPlanId,
     });
 
   } catch (error) {
@@ -264,6 +290,7 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
     return res.status(500).send({ error: "Erro interno do servidor." });
   }
 });
+
 
 
 exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
@@ -313,7 +340,9 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
     await subscriptionRef.update({
       status: status,
       lastPaymentStatus: payment.status,
+      lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
       nextBillingDate: nextBillingDate,
+      ...(payment.status === "approved" && { lastPaymentApproved: admin.firestore.FieldValue.serverTimestamp() })
     });
 
     console.log(`Pagamento atualizado para a assinatura: ${payment.metadata.preapproval_id}`);
@@ -339,4 +368,6 @@ exports.mercadoPagoWebhook = functions.https.onRequest(async (req, res) => {
     console.error("Erro no webhook:", error);
     return res.status(500).send(error.message);
   }
-});
+})
+
+

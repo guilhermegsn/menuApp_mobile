@@ -240,12 +240,12 @@ export default function Login() {
     },
     header: {
       alignItems: 'center',
-      padding: 24,
+      padding: 15,
     },
     logo: {
       width: 120,
       height: 120,
-      marginBottom: 16,
+      marginBottom: 10,
       marginTop: -20
     },
     title: {
@@ -264,7 +264,7 @@ export default function Login() {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      padding: 16,
+      padding: 15,
     },
     benefitCard: {
       width: '48%', // 2 colunas
@@ -300,7 +300,6 @@ export default function Login() {
       backgroundColor: theme.colors.primary,
       padding: 16,
       borderRadius: 8,
-      margin: 15,
       alignItems: 'center',
     },
     ctaButtonSignUp: {

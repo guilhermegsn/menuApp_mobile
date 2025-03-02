@@ -136,6 +136,15 @@ export default function ItemsMenu() {
     }
   }
 
+  const newProduct = () => {
+    if (userContext?.expiredSubscription) {
+      Alert.alert("Wise Menu", "Não é possível criar um novo item")
+    } else {
+      setOperation('create')
+      setProduct(emptyProduct)
+    }
+  }
+
   const styles = StyleSheet.create({
     imagem: {
       width: '100%', // Ajusta para ocupar toda a largura
@@ -215,19 +224,19 @@ export default function ItemsMenu() {
           <View style={{ position: 'absolute', bottom: -5, alignSelf: 'center', }}>
             <View style={styles.textWrapper}>
               <Text style={styles.text}
-                // onLongPress={() => Alert.alert(
-                //   'Editar menu', 'Deseja alterar o nome do menu?',
-                //   [
-                //     { text: 'Cancelar', style: 'cancel' },
-                //     {
-                //       text: 'Sim',
-                //       onPress: () => {
+              // onLongPress={() => Alert.alert(
+              //   'Editar menu', 'Deseja alterar o nome do menu?',
+              //   [
+              //     { text: 'Cancelar', style: 'cancel' },
+              //     {
+              //       text: 'Sim',
+              //       onPress: () => {
 
-                //       },
-                //     },
-                //   ],
-                //   { cancelable: true }
-                // )}
+              //       },
+              //     },
+              //   ],
+              //   { cancelable: true }
+              // )}
               >{menu?.menuName}</Text>
             </View>
 
@@ -410,10 +419,7 @@ export default function ItemsMenu() {
           color={theme.colors.background}
           style={styles.fab}
           icon="plus"
-          onPress={() => [
-            setOperation('create'),
-            setProduct(emptyProduct)
-          ]}
+          onPress={newProduct}
         />
       }
 

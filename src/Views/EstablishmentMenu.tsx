@@ -157,6 +157,15 @@ export default function EstablishmentMenu() {
     setMenu(menu as MenuData)
   }
 
+  const newMenu = () => {
+    if (userContext?.expiredSubscription) {
+      Alert.alert("Wise Menu","Não é possível criar um novo menu.")
+    } else {
+      setIsNewMenu(true)
+      setMenu(emptyMenu)
+    }
+  }
+
   const styles = StyleSheet.create({
     scrollViewContent: {
       flexGrow: 1,
@@ -229,7 +238,7 @@ export default function EstablishmentMenu() {
                 margin: width * 0.02,
                 // height: width * 0.5
               }}
-                onPress={() => [setIsNewMenu(true), setMenu(emptyMenu)]}
+                onPress={newMenu}
               >
                 <Card.Content style={{ marginTop: "2%" }}>
                   <Icon

@@ -1,12 +1,11 @@
-import { StatusBar, View } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import { StatusBar } from 'react-native'
+import React, { useContext} from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { UserContext } from '../context/UserContext';
 import Home from '../Views/Home';
 import Login from '../Views/Login';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
-import ProductMenu from '../Views/ProductMenu';
 import { createStackNavigator } from '@react-navigation/stack';
 import { theme } from '../Services/ThemeConfig';
 import { CardStyleInterpolators } from '@react-navigation/stack';
@@ -116,9 +115,9 @@ export default function AppBar() {
                   options={{
                     headerStyle: { backgroundColor: theme.colors.primary },
                     headerTitleStyle: { color: theme.colors.onBackground },
-                    title: "Usuários",
+                    title: "Configurações",
                     drawerIcon: ({ color, size }) => (
-                      <Icon source="account-supervisor" size={size} color={theme.colors.background} />
+                      <Icon source="cog" size={size} color={theme.colors.background} />
                     ),
                   }}
                 />

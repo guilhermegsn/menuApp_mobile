@@ -371,3 +371,17 @@ export const createSubscription = async (establishmentId: string, email: string,
   }
 
 };
+
+export const calcularDiferencaDias = (data1: string | Date, data2: string | Date): number => {
+  const d1 = new Date(data1);
+  const d2 = new Date(data2);
+
+  const diferencaTempo = Math.abs(d2.getTime() - d1.getTime());
+  const diferencaDias = Math.ceil(diferencaTempo / (1000 * 60 * 60 * 24));
+
+  return diferencaDias;
+}
+
+export const printWifi = (typeSecurity: string, ssid: string, password: string) => {
+  return `WIFI:T:${typeSecurity};S:${ssid};P:${password};;`
+}
