@@ -46,9 +46,6 @@ export default function UserConfig() {
   })
   const [user, setUser] = useState(emptyUser)
 
-  const lastPaymentDate = dataSubscription?.lastPaymentDate ? 
-    moment(dataSubscription?.lastPaymentDate.toDate()).format('DD/MM/YYYY HH:mm') : "Pendente"
-
   useEffect(() => {
     fetchData()
     getDataPlans()
@@ -222,13 +219,16 @@ export default function UserConfig() {
             {dataSubscription && dataPlans ?
               <View>
                 <Text>Plano: {dataPlans.find(item => item.planId === dataSubscription.planId)?.name || ""}</Text>
-                <Text>Status: {dataSubscription?.status === 'active' ? 'Ativo' : 'Pendente'}</Text>
-                <Text>Último pagamento: {lastPaymentDate}</Text>
-                <Text>Status do Último pagamento: {dataSubscription?.lastPaymentStatus === 'approved' ? 'Aprovado' : dataSubscription?.lastPaymentStatus}</Text>
+                <Text>Status: {dataSubscription?.status === 'active' ? 'Ativo' : 'paused' ? 'Cancelado' : 'Pendente'}</Text>
+                <Text>
+                  Último pagamento:
+                  {moment(dataSubscription?.lastAuthorizedPayment.toDate()).utcOffset(-3).format("DD/MM/YYYY HH:mm")}
+                </Text>
+
                 <Button
                   style={{ marginTop: 12, marginBottom: 25 }}
                   mode='outlined'
-                  onPress={() => setIsOpenModalPlans(true)}>Alterar forma de pagamento</Button>
+                  onPress={() => setIsOpenModalPlans(true)}>Alterar plano</Button>
               </View>
               :
               <View>
@@ -298,12 +298,12 @@ export default function UserConfig() {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 20 }}>
-                    <RadioButton value="ADM" />
+                    <RadioButton value="ADM" disabled={user?.association.isOwner} />
                     <Text>Administrador</Text>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <RadioButton value="ATD" />
+                    <RadioButton value="ATD" disabled={user?.association.isOwner} />
                     <Text>Atendimento</Text>
                   </View>
                 </View>
@@ -313,6 +313,7 @@ export default function UserConfig() {
                   <Text>Habilitado</Text>
                   <Switch
                     value={user?.association?.enabled}
+                    disabled={user?.association.isOwner}
                     onValueChange={(e) => {
                       let copyData = { ...user }
                       copyData.association.enabled = e
@@ -362,6 +363,7 @@ export default function UserConfig() {
           }
         }}
       />
+      <Button onPress={() => console.log(dataSubscription)}>dataSubscription</Button>
     </View>
   )
 }

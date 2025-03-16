@@ -343,33 +343,22 @@ export const refreshUserToken = async () => {
   }
 };
 
-export const createSubscription = async (establishmentId: string, email: string, planId: string) => {
-  const API_URL = 'https://us-central1-appdesc-e1bf2.cloudfunctions.net/createSubscription'
-  const currentUser = auth.currentUser
-  if (currentUser) {
-    const token = await currentUser.getIdToken(); // Token de autenticação
-    try {
-      const response = await axios.post(
-        API_URL,
-        {
-          establishmentId,
-          email,
-          planId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Passa o token no cabeçalho
-          },
-        }
-      )
-      // O URL de pagamento que o usuário irá acessar
-      return response.data//response.data.subscriptionUrl;
-    } catch (error) {
-      console.error("Erro ao criar assinatura:", error);
-      throw error;
-    }
-  }
 
+
+export const handlePixPayment = async (establishmentId: string, planId: string, email: string, cpf: string) => {
+  try {
+    // 1. Chama sua Cloud Function para criar a cobrança PIX
+    const response = await axios.post('https://us-central1-appdesc-e1bf2.cloudfunctions.net/createPixCharge',
+       { establishmentId, planId, email, cpf });
+
+    // 2. Exibe os dados do PIX (QR Code, chave, etc.)
+    const pixData = response.data;
+    //navigation.navigate('PixScreen', { pixData });
+    console.log(pixData)
+
+  } catch (error) {
+    console.error('Erro ao gerar PIX', error);
+  }
 };
 
 export const calcularDiferencaDias = (data1: string | Date, data2: string | Date): number => {
@@ -385,3 +374,34 @@ export const calcularDiferencaDias = (data1: string | Date, data2: string | Date
 export const printWifi = (typeSecurity: string, ssid: string, password: string) => {
   return `WIFI:T:${typeSecurity};S:${ssid};P:${password};;`
 }
+
+export const validateCreditCardNumber = (number : string) => {
+  // Remove espaços e caracteres não numéricos
+  const cleanNumber = number.replace(/\D/g, '');
+
+  // Verifica se o número tem entre 13 e 19 dígitos
+  if (!/^\d{13,19}$/.test(cleanNumber)) {
+    return false;
+  }
+
+  // Aplica o algoritmo de Luhn
+  let sum = 0;
+  let double = false;
+
+  for (let i = cleanNumber.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleanNumber.charAt(i), 10);
+
+    if (double) {
+      digit *= 2;
+      if (digit > 9) {
+        digit = (digit % 10) + 1;
+      }
+    }
+
+    sum += digit;
+    double = !double;
+  }
+
+  return sum % 10 === 0;
+}
+
