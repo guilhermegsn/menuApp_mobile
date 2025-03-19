@@ -4,12 +4,12 @@ import { ActivityIndicator, Button, Card, Dialog, Icon, Portal, Text, TextInput 
 import { Image, KeyboardAvoidingView } from 'react-native';
 import { GoogleSignin, GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import { configureGoogleSignin } from '../Services/FirebaseConfig';
-import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, auth } from '../Services/FirebaseConfig'
 import messaging from '@react-native-firebase/messaging';
 import { theme } from '../Services/ThemeConfig';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { refreshUserToken, updateUserClaims } from '../Services/Functions';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification, sendPasswordResetEmail, signInWithCredential, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { refreshUserToken } from '../Services/Functions';
 import Loading from '../Components/Loading';
 
 export default function Login() {
@@ -65,7 +65,7 @@ export default function Login() {
         }
       } catch {
         return null
-      }finally{
+      } finally {
         setIsLoading(false)
       }
     }
@@ -100,13 +100,14 @@ export default function Login() {
 
       // Atualizando o perfil do usuário
       await updateProfile(userCredential.user, {
-        displayName: dataUser.name, // Substitua pelo nome do usuário
+        displayName: dataUser.name,
       });
+
+      await sendEmailVerification(userCredential.user);
+      Alert.alert('Verificação de e-mail', 'Um link de verificação foi enviado para o seu e-mail. Confirme antes de fazer login.');
 
       // Pega o UID do usuário recém-criado
       const userId = userCredential.user.uid;
-
-      console.log('uid-->', userId)
 
       // Adiciona o documento na coleção "User" com o UID no corpo do documento
       await setDoc(doc(db, 'User', userId), {
@@ -115,6 +116,9 @@ export default function Login() {
         token: tokenFcm,
         createdAt: serverTimestamp()
       });
+
+      //Desloga o usuário para ele logar somente após a verificação do email
+      await signOut(auth)
 
       console.log('Conta de usuário criada e UID salvo com sucesso!');
     } catch (error: string | any) {
@@ -168,6 +172,29 @@ export default function Login() {
       Alert.alert("Erro", "Falha ao fazer login com Google.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    if (!email) {
+      Alert.alert('Erro', 'Por favor, insira um e-mail válido.');
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Verifique seu e-mail',
+        'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada ou spam.'
+      );
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        Alert.alert('Erro', 'Nenhuma conta encontrada com este e-mail.');
+      } else if (error.code === 'auth/invalid-email') {
+        Alert.alert('Erro', 'E-mail inválido.');
+      } else {
+        Alert.alert('Erro', 'Ocorreu um erro ao tentar redefinir a senha.');
+      }
     }
   };
 
@@ -392,7 +419,7 @@ export default function Login() {
                   style={styles.input}
                   mode="outlined"
                   label="Nome Completo"
-                  placeholder='Digite o seu nome completo. Ex: João da Silva'
+                  placeholder='Seu Nome Completo'
                   value={dataUser.name}
                   onChangeText={(text) => {
                     setDataUser((prevState) => ({
@@ -426,7 +453,8 @@ export default function Login() {
                   }));
                 }}
               />
-              {isSignUp && (
+
+              {isSignUp ? (
                 <TextInput
                   style={styles.input}
                   mode="outlined"
@@ -439,16 +467,22 @@ export default function Login() {
                     }));
                   }}
                 />
-              )}
+              ) :
+                <Button
+                  style={{ marginBottom: 5 }}
+                  mode='text'
+                  onPress={() => resetPassword(dataUser.email)}>Esqueci minha senha</Button>
+              }
 
               <TouchableOpacity
                 style={styles.ctaButton}
+                disabled={!dataUser.email || !dataUser.password}
                 onPress={() => isSignUp ? signUp() : signIn()}>
                 <Text style={styles.ctaText}>  {isSignUp ? 'Inscrever' : 'Login'}</Text>
               </TouchableOpacity>
 
 
-              <Text style={{ marginTop: 30 }}>
+              <Text style={{ marginTop: 35, marginBottom: 10, fontSize: 20 }}>
                 {isSignUp ? 'Já possui uma conta?' : 'Não tem uma conta?'}
               </Text>
               {/* <Button style={{ marginTop: 20 }} onPress={() => setIsSignUp(!isSignUp)}>

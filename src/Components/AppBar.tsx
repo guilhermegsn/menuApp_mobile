@@ -12,7 +12,7 @@ import { CardStyleInterpolators } from '@react-navigation/stack';
 import Orders from '../Views/Orders';
 import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
-import { Button, Icon, Text } from 'react-native-paper';
+import { Button, Icon } from 'react-native-paper';
 import ShoppingCart from '../Views/ShoppingCart';
 import QrCodeReader from '../Views/QrCodeReader';
 import ProductMenuItens from '../Views/ProductMenuItens';

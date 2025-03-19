@@ -12,10 +12,11 @@ import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
 import Sound from 'react-native-sound';
 import KeepAwake from 'react-native-keep-awake';
+import { useStorage } from '../context/StorageContext';
 
 export default function OrderItems() {
 
-
+  const { hasPrinter, autoPrint } = useStorage();
   const userContext = useContext(UserContext)
   const [orders, setOrders] = useState<DocumentData[]>([]);
   const [isLoading, setIsLoading] = useState(false)
@@ -47,7 +48,7 @@ export default function OrderItems() {
       where("establishment", "==", userContext?.estabId),
       where("status", "in", filteredBy === 'closed' ? [0] : [1, 2]),
       orderBy('date', 'desc'),
-      limit(15)
+      limit(50)
     );
     setIsLoading(true);
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -62,7 +63,9 @@ export default function OrderItems() {
               //isNewOrder -> comparo se o pedido tem menos de 5min. Só imprime se tiver menos de 5min
               //Evitando impressao indevido em um reload no app
               if (isNewOrder(newItemData.date.toDate())) {
-                printOrder(newItemData)
+                if (hasPrinter && autoPrint) {
+                  printOrder(newItemData)
+                }
                 vibrate()
                 playSound('deskbell.wav')
               }
@@ -316,15 +319,20 @@ export default function OrderItems() {
         />
       </SafeAreaView>
       <View style={{ flexDirection: 'row', alignItems: 'center', margin: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 30 }}>
-          <Icon source="circle" color={'green'} size={18} />
-          <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em aberto: (${numOpeningTicket})`}</Text>
-        </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Icon source="circle" color={'orange'} size={18} />
-          <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em preparo: (${numProgressTicket})`}</Text>
-        </View>
+        {filteredBy === 'open' &&
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 30 }}>
+              <Icon source="circle" color={'green'} size={18} />
+              <Text variant="bodyLarge" style={{ marginLeft: 5, marginRight: 12 }}>
+                {`Em aberto: (${numOpeningTicket})`}
+              </Text>
+
+              <Icon source="circle" color={'orange'} size={18} />
+              <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em preparo: (${numProgressTicket})`}</Text>
+            </View>
+          </View>
+        }
       </View>
 
       {isLoading ? <Loading /> :
@@ -415,12 +423,14 @@ export default function OrderItems() {
 
           </Dialog.Content>
           <Dialog.Actions>
-            <Button
-              disabled={isLoadingSaveStatus}
-              icon={'printer'}
-              onPress={() => [selectedOrder && printOrder(selectedOrder), setIsChangeStatus(false)]}>
-              Imprimir
-            </Button>
+            {hasPrinter &&
+              <Button
+                disabled={isLoadingSaveStatus}
+                icon={'printer'}
+                onPress={() => [selectedOrder && printOrder(selectedOrder), setIsChangeStatus(false)]}>
+                Imprimir
+              </Button>
+            }
             <Button
               disabled={isLoadingSaveStatus}
               icon={'close-circle-outline'}

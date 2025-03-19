@@ -324,7 +324,7 @@ export default function ItemsMenu() {
             />
             <TextInput
               style={{ margin: 5, marginTop: 10 }}
-              label="Descrição"
+              label="Descrição (Opcional)"
               keyboardType='default'
               multiline
               numberOfLines={3}
@@ -355,6 +355,7 @@ export default function ItemsMenu() {
               <Button
                 onPress={saveProduct}
                 loading={isLoadingSave}
+                disabled={!product.name || !product.price}
               >
                 {operation === 'delete' ? "Excluir" : "Salvar"}
               </Button>

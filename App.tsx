@@ -5,6 +5,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { theme } from './src/Services/ThemeConfig';
 import NotificationHandler from './src/Services/NotificationHandler';
 import { requestNotificationPermission } from './src/Services/Functions';
+import { StorageProvider } from './src/context/StorageContext';
 
 
 const App = () => {
@@ -15,10 +16,12 @@ const App = () => {
 
   return (
     <PaperProvider theme={theme}>
-      <UserProvider>
-        <NotificationHandler />
-        <AppBar />
-      </UserProvider>
+      <StorageProvider>
+        <UserProvider>
+          <NotificationHandler />
+          <AppBar />
+        </UserProvider>
+      </StorageProvider>
     </PaperProvider>
   )
 }

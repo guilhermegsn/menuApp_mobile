@@ -1,12 +1,8 @@
-import { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { ReactNode, createContext, useEffect, useState } from "react";
-import { View } from "react-native";
-import { ActivityIndicator, Text } from "react-native-paper";
+import { Alert, View } from "react-native";
 import { ItemCartData } from "../Interfaces/ProductMenu_Interface";
 import { DocumentData } from "@google-cloud/firestore";
-import messaging from '@react-native-firebase/messaging';
-import { collection, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { db, auth } from '../Services/FirebaseConfig';
+import { auth } from '../Services/FirebaseConfig';
 import SplashScreen from "../Views/SplashScreen";
 
 interface UserContextType {
@@ -42,6 +38,9 @@ interface UserContextType {
 
   expiredSubscription: boolean;
   setExpiredSubscription: (value: boolean) => void
+
+  printConfig: DocumentData,
+  setPrintConfig: (value: DocumentData) => void;
 }
 
 export const UserContext = createContext<DocumentData>({});
@@ -60,35 +59,10 @@ function UserProvider({ children }: { children: ReactNode }) {
   const [dataEstablishment, setDataEstablishment] = useState<DocumentData>({} as DocumentData);
   const [userRole, setUserRole] = useState("")
   const [expiredSubscription, setExpiredSubscription] = useState<Boolean>(false)
-
-
-  const registerToken = async (userId: string) => {
-    console.log('entrei..')
-    const fcmToken = await messaging().getToken()
-    console.log('token:', fcmToken)
-    try {
-      console.log('alterando..')
-      const userQuery = query(
-        collection(db, "User"),
-        where("uid", "==", userId)
-      )
-      console.log('oie')
-      const querySnapshot = await getDocs(userQuery);
-      if (!querySnapshot.empty) {
-        console.log('achei o user')
-        querySnapshot.forEach(async (docSnapshot) => {
-          const docRef = docSnapshot.ref;
-          await updateDoc(docRef, {
-            token: fcmToken,
-          });
-        });
-      } else {
-        console.log('nao achei o user')
-      }
-    } catch (error) {
-      console.log('erroo', error)
-    }
-  }
+  const [printConfig, setPrintConfig] = useState<DocumentData>({
+    print: true, //tem impressora
+    newOrder: false, //imprimir novos pedidos automaticamente
+  } as DocumentData)
 
 
   useEffect(() => {
@@ -102,7 +76,12 @@ function UserProvider({ children }: { children: ReactNode }) {
           await _user.getIdToken(true);
           console.log("Usuário autenticado:", _user.uid);
           setUser(_user);
-          setIsAuthenticated(true);
+          if (!_user.emailVerified) {
+            Alert.alert('Verificação pendente', 'Por favor, confirme seu e-mail antes de continuar.')
+            await auth.signOut()
+          } else {
+            setIsAuthenticated(true);
+          }
         } catch (error: unknown) {
           if (error instanceof Error && "code" in error) {
             const firebaseError = error as { code: string }; // 🔥 Faz cast seguro
@@ -129,7 +108,7 @@ function UserProvider({ children }: { children: ReactNode }) {
 
   if (initializing) {
     return (
-      <View style={{flex: 1}}>
+      <View style={{ flex: 1 }}>
         <SplashScreen />
       </View>
     );
@@ -149,7 +128,8 @@ function UserProvider({ children }: { children: ReactNode }) {
       estabTokenFCM, setEstabTokenFCM,
       dataEstablishment, setDataEstablishment,
       userRole, setUserRole,
-      expiredSubscription, setExpiredSubscription
+      expiredSubscription, setExpiredSubscription,
+      printConfig, setPrintConfig
     }}>
       {children}
     </UserContext.Provider>

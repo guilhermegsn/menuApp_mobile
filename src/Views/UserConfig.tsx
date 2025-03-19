@@ -9,6 +9,7 @@ import Loading from '../Components/Loading';
 import { updateUserClaims } from '../Services/Functions';
 import moment from 'moment';
 import ModalPlans from './ModalPlans';
+import { useStorage } from '../context/StorageContext';
 
 interface User {
   id: "",
@@ -19,6 +20,7 @@ interface User {
 
 export default function UserConfig() {
 
+  const { hasPrinter, setHasPrinter, autoPrint, setAutoPrint } = useStorage();
   const userContext = useContext(UserContext)
   const [dataUsers, setDataUsers] = useState<DocumentData[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -185,6 +187,11 @@ export default function UserConfig() {
     setRefreshing(false);
   }, []);
 
+  useEffect(() => {
+    if (!hasPrinter)
+      setAutoPrint(false)
+  }, [hasPrinter])
+
   const styles = StyleSheet.create({
     scrollView: {
       marginTop: "3%",
@@ -259,7 +266,49 @@ export default function UserConfig() {
                 </DataTable.Row>
               ))}
             </DataTable>
-          </View>}
+
+            <Button
+              style={{ marginTop: 12, marginBottom: 25 }}
+              mode='outlined'
+              onPress={() => {
+                if (userContext?.expiredSubscription) {
+                  Alert.alert("Wize Menu", "Não é possível criar um novo usuário")
+                } else {
+                  setIsNewRegister(true)
+                }
+              }}
+            >Adicionar Usuário</Button>
+            <Divider />
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Configurações de improssora</Text>
+
+            <View style={{ display: 'flex', flexDirection: 'row' }}>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
+                <Text>Habilitado</Text>
+                <Switch
+                  value={hasPrinter}
+                  onValueChange={setHasPrinter}
+                />
+              </View>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
+                <Text>Imprimir pedidos</Text>
+                <Switch
+                  disabled={!hasPrinter}
+                  value={autoPrint}
+                  onValueChange={setAutoPrint}
+                />
+              </View>
+
+            </View>
+
+          </View>
+        }
+
+
+
+
+
+
+
         {/* <Button onPress={()=> console.log(userContext?.estabName)}>dataUser</Button> */}
       </ScrollView>
 
@@ -349,9 +398,10 @@ export default function UserConfig() {
             </Dialog.Actions>
           </Dialog.Content>
         </Dialog>
+
       </Portal>
 
-      <FAB
+      {/* <FAB
         color={theme.colors.background}
         style={styles.fab}
         icon="plus"
@@ -363,7 +413,7 @@ export default function UserConfig() {
           }
         }}
       />
-      <Button onPress={() => console.log(dataSubscription)}>dataSubscription</Button>
+      <Button onPress={() => console.log(dataSubscription)}>dataSubscription</Button> */}
     </View>
   )
 }

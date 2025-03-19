@@ -182,7 +182,7 @@ export default function Home() {
 
   const isMounted = useRef(true);
   useEffect(() => {
-   
+
     const getStatusSubscription = async () => {
       try {
         if (!userContext?.estabId) return;
@@ -224,13 +224,12 @@ export default function Home() {
           console.log('assinatura encontrada. verificando..')
           try {
             const subscriptionData = subscriptionDoc.data()
-            if (subscriptionData?.status !== 'active') {
-              const lastPayment = calcularDiferencaDias(subscriptionData?.lastAuthorizedPayment.toDate(), getCurrentDate())
-              console.log('lastPayment', lastPayment)
+            const lastPayment = calcularDiferencaDias(subscriptionData?.lastAuthorizedPayment.toDate(), getCurrentDate())
+            if (subscriptionData?.status !== 'active' || lastPayment > 31) {
               if (isMounted.current)
-                Alert.alert("Wise Menu", "Não fique sem os nossos serviços!\nVerifique o status de sua assinatura Wise Menu.")
+                Alert.alert("Wise Menu", "Não fique sem os nossos serviços!\nVerifique o status de sua assinatura.")
               if (lastPayment > (30 + free_trial)) {
-                userContext?.setExpiredSubscription(true);
+                userContext?.setExpiredSubscription(true)
                 const establishmentRef = doc(db, "Establishment", userContext?.estabId)
                 await updateDoc(establishmentRef, { status: 'inactive' })
               }
@@ -262,33 +261,27 @@ export default function Home() {
   }
 
 
-  const setContextData = (idEstablishment: string) => {
-    console.log('adicionando id contextData ', idEstablishment)
-    if (userContext) {
-      console.log('entrei aq', userContext?.userRole)
-      userContext.setShoppingCart([])
-      userContext.setEstabId(idEstablishment)
-      setIsOpenDialogMultiple(false)
-    } else {
-      console.log('sem context')
-    }
-  }
-
   const getCnpjData = async (cnpj: string) => {
-    const res = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
-    if (res.data) {
-      setDataEstab(prevData => ({
-        ...prevData,
-        name: res.data?.nome_fantasia,
-        fullname: res.data?.razao_social,
-        zip_code: res.data?.cep,
-        address: res.data?.logradouro,
-        number: res.data?.numero,
-        neighborhood: res.data?.bairro,
-        city: res.data?.municipio,
-        state: res.data?.uf,
-        phone: res.data?.ddd_telefone_1
-      }))
+    try {
+      console.log('consultando..', `https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+      const res = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+      console.log(res.data)
+      if (res.data) {
+        setDataEstab(prevData => ({
+          ...prevData,
+          name: res.data?.nome_fantasia,
+          fullname: res.data?.razao_social,
+          zip_code: res.data?.cep,
+          address: res.data?.logradouro,
+          number: res.data?.numero,
+          neighborhood: res.data?.bairro,
+          city: res.data?.municipio,
+          state: res.data?.uf,
+          phone: res.data?.ddd_telefone_1
+        }))
+      }
+    } catch (e) {
+      console.log('ocorreu um erro.', e)
     }
   }
 
@@ -422,30 +415,13 @@ export default function Home() {
       />
       <>
         {isOpenDialogMultiple ? null : isLoading ? <Loading /> : regStage === 0 &&
-          // <>
-          //   <Text style={{ fontSize: 25 }}>Olá!</Text>
-          //   <Text style={{ fontSize: 17, padding: "6%", textAlign: 'center' }}>Falta pouco para dar um Up em seu estabelecimento e torna-lo ainda mais inteligente.</Text>
-          //   <Text style={{ fontSize: 20, marginBottom: "10%" }}>Vamos completar o seu cadastro!</Text>
-          //   <Button style={{ width: "90%", marginTop: "4%" }}
-          //     icon="hexagon-multiple"
-          //     mode="contained"
-          //     onPress={() => setRegStage(1)}
-          //   >
-          //     Vamos lá!
-          //   </Button>
-          // </>
           <ScrollView style={styles.container}>
             {/* Banner */}
-
-
             <ImageBackground
               source={require('../assets/images/banner_wise.png')}
               style={styles.banner}
               imageStyle={styles.bannerImage} // Estilos específicos para a imagem
             >
-
-              {/* Texto branco por cima */}
-              {/* <Text style={styles.bannerTitle}>MenuPedia</Text> */}
             </ImageBackground>
 
             {/* Cards */}
@@ -470,11 +446,6 @@ export default function Home() {
                 </View>
               </View>
             </TouchableOpacity>
-
-            {/* Call-to-Action */}
-            {/* <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Comece agora</Text>
-            </TouchableOpacity> */}
           </ScrollView>
 
 
@@ -508,7 +479,7 @@ export default function Home() {
                   state_registration: formatCNPJ(text)
                 }))
                 if (text.length === 18) {
-                  getCnpjData(text.replace("/", "").replaceAll(".", ""))
+                  getCnpjData(text.replace("/", "").replace("-", "").replaceAll(".", ""))
                 }
               }}
             />
@@ -683,20 +654,6 @@ export default function Home() {
                 }))
               }}
             />
-            {/* <Button style={{ width: "90%", marginTop: "4%" }}
-              icon="hexagon-multiple"
-              mode="contained"
-              onPress={() => save()}
-            >
-              {isEditing ? "Finalizar edição" : "Finalizar cadastro"}
-            </Button>
-            <Button style={{ width: "90%", marginTop: "4%" }}
-              icon="skip-previous"
-              mode="text"
-              onPress={() => setRegStage(2)}
-            >
-              Voltar
-            </Button> */}
             <View style={styles.buttomBar}>
               {/* Botão "Voltar" */}
               <View style={{ width: "45%" }}>
@@ -726,7 +683,6 @@ export default function Home() {
 
         {regStage === 4 &&
           <View style={{ flex: 1, alignItems: 'center' }}>
-            {/* <Button onPress={() => setIsOpenModalBlocked(true)}>Assinar</Button> */}
             <Text style={{ fontSize: 20, marginTop: 20 }}>
               {userContext?.estabName}
             </Text>
@@ -772,33 +728,6 @@ export default function Home() {
 
 
             </View>
-            {/* <View style={styles.buttomBar}>
-           
-              <View style={{ width: "45%" }}>
-                <Button
-                  style={{ width: "100%", marginTop: "4%" }}
-                  icon="pencil"
-                  mode="text"
-                  onPress={() => [setRegStage(1), setIsEditing(true)]}
-                >
-                  Editar Informações
-                </Button>
-              </View>
-             
-              <View style={{ width: "45%" }}>
-                <Button
-                  style={{ width: "100%", marginTop: "4%" }}
-                  icon="printer"
-                  mode="text"
-                  onPress={() => printEstablishment()}
-                >
-                  Imprimir informações
-                </Button>
-              </View>
-            </View> */}
-
-
-
           </View>
         }
 
@@ -817,8 +746,6 @@ export default function Home() {
             </Dialog.Actions>
           </Dialog>
         </Portal>
-
-
       </>
     </View >
   )

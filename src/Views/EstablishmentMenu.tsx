@@ -316,6 +316,7 @@ export default function EstablishmentMenu() {
             <Dialog.Actions>
               <Button onPress={() => [setIsNewMenu(false), setIsEdit(false)]}>Cancelar</Button>
               <Button
+                disabled={!menu.menuName || !menu.imageUrl}
                 onPress={() => saveNewMenu(menu)}
                 loading={isLoadingSave}
               >

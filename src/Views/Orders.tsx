@@ -1,4 +1,4 @@
-import { Alert, FlatList, Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, Dimensions, FlatList, Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
 import { collection, query, where, DocumentData, onSnapshot, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
@@ -23,7 +23,7 @@ interface RouteParams {
 
 
 export default function Orders() {
-
+  const { width } = Dimensions.get('window');
   const userContext = useContext(UserContext)
   const [ticketType, setTicketType] = useState(1) //1-QrCode 2-Mesa 3-Delivey 4-Nfc
 
@@ -328,19 +328,13 @@ export default function Orders() {
       backgroundColor: theme.colors.primary
     },
     grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between', // Distribui os cards igualmente
-      paddingHorizontal: 20, // Espaçamento nas laterais
-
-      paddingVertical: 20, // Espaçamento vertical (opcional)
-      //padding: 12,
+       flexDirection: 'row',
+       flexWrap: 'wrap',
     },
     card: {
-      marginBottom: 15,
-      width: "48%",
-      height: 230,
-      padding: 0.3
+      width: width * 0.46,
+      margin: width * 0.02,
+      
     },
     container: {
       maxHeight: 350,
