@@ -273,7 +273,7 @@ export default function CloseOrder() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode>${base_url}/menu/${userContext?.estabId}/1/${id}</qrcode>\n` +
+      `[L]<qrcode>${base_url}/${userContext?.estabId}/1/${id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
@@ -540,7 +540,7 @@ export default function CloseOrder() {
             <View style={{ alignItems: 'center' }}>
               <Text style={{ textAlignVertical: 'center' }}>{`Aponto a câmera do celular e acesse o cardápio digital\n`}</Text>
               <QRCode
-                value={`${base_url}/menu/${userContext?.estabId}/1/${id}`}
+                value={`${base_url}/${userContext?.estabId}/1/${id}`}
                 size={120}
               />
             </View>

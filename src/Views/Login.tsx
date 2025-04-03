@@ -328,6 +328,7 @@ export default function Login() {
       padding: 16,
       borderRadius: 8,
       alignItems: 'center',
+      marginBottom: 20
     },
     ctaButtonSignUp: {
       width: '90%',

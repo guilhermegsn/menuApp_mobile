@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, Alert, RefreshControl } from 'react-native'
+import { StyleSheet, View, ScrollView, Alert, RefreshControl, Linking } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Button, DataTable, Dialog, Divider, FAB, Portal, RadioButton, Switch, Text, TextInput } from 'react-native-paper'
 import { collection, doc, DocumentData, getDoc, getDocs, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
@@ -20,7 +20,7 @@ interface User {
 
 export default function UserConfig() {
 
-  const { hasPrinter, setHasPrinter, autoPrint, setAutoPrint } = useStorage();
+  const { hasPrinter, setHasPrinter, autoPrint, setAutoPrint, hasOnlinePayment, setHasOnlinePayment } = useStorage();
   const userContext = useContext(UserContext)
   const [dataUsers, setDataUsers] = useState<DocumentData[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -32,6 +32,8 @@ export default function UserConfig() {
   const [dataPlans, setDataPlans] = useState<DocumentData[]>([])
   const [dataEstablishment, setDataEstablishment] = useState<DocumentData>([])
   const [isOpenModalPlans, setIsOpenModalPlans] = useState(false)
+  const [isOpenDialogOnlinePayment, setIsOpenDialogOnlinePayment] = useState(false)
+  const [stepAccountMercadoPago, setStepAccountMercadoPago] = useState(0)
 
   const [emptyUser] = useState<User>({
     id: "",
@@ -169,6 +171,14 @@ export default function UserConfig() {
     }
   }
 
+  const authorizeMercadoPago = () => {
+    setIsOpenDialogOnlinePayment(false)
+    setStepAccountMercadoPago(0)
+    const url = `https://auth.mercadopago.com/authorization?client_id=809428962080372&response_type=code&platform_id=mp&state=${userContext?.estabId}&redirect_uri=https://us-central1-appdesc-e1bf2.cloudfunctions.net/mercadoPagoOAuthCallback`
+    Linking.openURL(url)
+      .catch(err => console.error('Erro ao tentar abrir o link', err));
+  }
+
   const edit = (item: User) => {
     console.log(item)
     setIsEdit(true)
@@ -246,6 +256,25 @@ export default function UserConfig() {
                   onPress={() => setIsOpenModalPlans(true)}>Assinar o Wise Menu</Button>
               </View>
             }
+
+            <Divider />
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Receber pagamentos online</Text>
+
+            <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 20 }}>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
+                <Text>Habilitado</Text>
+                <Switch
+                  value={hasOnlinePayment}
+                  onValueChange={setHasOnlinePayment}
+                />
+              </View>
+            </View>
+
+            <Button
+              style={{ marginTop: 12, marginBottom: 25 }}
+              mode='outlined'
+              onPress={() => setIsOpenDialogOnlinePayment(true)}
+            >Configurar conta</Button>
 
             <Divider />
 
@@ -400,6 +429,78 @@ export default function UserConfig() {
         </Dialog>
 
       </Portal>
+
+
+      {/* Modal Usuário */}
+      <Portal>
+        <Dialog visible={isOpenDialogOnlinePayment} onDismiss={() => setIsOpenDialogOnlinePayment(false)}>
+          <Dialog.Title style={{ textAlign: 'center' }}>{'Receber pagamentos online'}</Dialog.Title>
+          {stepAccountMercadoPago === 0 ?
+            <View style={{ margin: 20 }}>
+              <Text variant="titleSmall">Para receber pagamentos online, você deve ter uma conta no Mercado Pago.</Text>
+              <Text variant="titleSmall" style={{ marginTop: 10 }}>Os pagamentos serão processados pelo Mercado Pago e cairá diretamente na sua conta na mesma hora!</Text>
+
+              <Text variant="titleMedium" style={{ marginTop: 10 }}>Confira nossas taxas:</Text>
+
+              <Text variant="titleSmall" style={{ marginTop: 10 }}>Taxa do aplicativo: 3,00%</Text>
+
+              <Text variant="titleMedium" style={{ marginTop: 10 }}>Taxas do Mercado Pago:</Text>
+              <Text variant="titleSmall" style={{ marginTop: 10 }}>Crédito à vista: 4,98%</Text>
+              <Text variant="titleSmall">PIX: 0,00%</Text>
+
+
+              <Text variant="bodyMedium" style={{ marginTop: 30 }}>Ainda nâo possui uma conta  Mercado Pago?</Text>
+
+              <Button style={{ marginTop: 10 }}
+                onPress={() => setStepAccountMercadoPago(1)}
+                mode='outlined'>Criar uma conta no Mercado Pago</Button>
+
+
+              <Text variant="bodyMedium" style={{ marginTop: 30 }}>Já possui uma conta  Mercado Pago?</Text>
+              <Button style={{ marginTop: 10 }}
+                onPress={authorizeMercadoPago}
+                mode='outlined'>Vincular minha conta Mercado Pago
+              </Button>
+            </View>
+            : stepAccountMercadoPago === 1 ?
+              <View style={{ margin: 20 }}>
+                <Text variant="headlineSmall" style={{ marginTop: 10 }}>Atenção!</Text>
+                <Text variant="titleMedium" style={{ marginTop: 10 }}>
+                  Após criar sua conta no Mercado Pago, você deve voltar as configurações para vincular sua conta Mercado pago com o aplicativo.
+                </Text>
+                <Button style={{ marginTop: 40 }}
+                  onPress={() => {
+                    setStepAccountMercadoPago(2)
+                    Linking.openURL('https://www.mercadopago.com.br/hub/registration/landing')
+                      .catch(err => console.error('Erro ao tentar abrir o link', err));
+                  }}
+                  mode='outlined'>OK</Button>
+              </View>
+              :
+              <View style={{padding: 20}}>
+                <Text variant="bodyMedium" style={{ marginTop: 30,marginBottom: 20 }}>Deu tudo certo com a criação da conta?</Text>
+                <Button style={{ marginTop: 10 }}
+                  onPress={authorizeMercadoPago}
+                  mode='outlined'>Vincular minha conta Mercado Pago
+                </Button>
+              </View>
+          }
+
+          <Dialog.Content style={{ marginTop: 40 }}>
+            <Dialog.Actions>
+              {stepAccountMercadoPago === 1 &&
+                <Button onPress={() => setStepAccountMercadoPago(0)}>Voltar </Button>
+              }
+              <Button onPress={() => {
+                setIsOpenDialogOnlinePayment(false)
+                setStepAccountMercadoPago(0)
+              }}>Fechar </Button>
+            </Dialog.Actions>
+          </Dialog.Content>
+        </Dialog>
+
+      </Portal>
+
 
       {/* <FAB
         color={theme.colors.background}

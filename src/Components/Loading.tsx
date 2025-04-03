@@ -6,21 +6,28 @@ import { theme } from '../Services/ThemeConfig'
 export default function Loading() {
 
   const styles = StyleSheet.create({
-    activityIndicator: {
+    overlay: {
       position: 'absolute',
+      top: 0,
       left: 0,
       right: 0,
-      top: 0,
       bottom: 0,
+   //   backgroundColor: 'rgba(0, 0, 0, 0.4)', // "fumê" (fundo semitransparente)
+      justifyContent: 'center',
       alignItems: 'center',
-      justifyContent: 'center'
-    }
-  })
+      zIndex: 9999, // Garante que o loading fique à frente de outros componentes
+    },
+    activityIndicator: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
 
   return (
-    <View
-      style={styles.activityIndicator}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
+    <View style={styles.overlay}>
+      <View style={styles.activityIndicator}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
     </View>
   )
 }

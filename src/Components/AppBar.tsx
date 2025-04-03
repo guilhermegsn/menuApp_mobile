@@ -15,7 +15,6 @@ import CloseOrder from '../Views/CloseOrder';
 import { Button, Icon } from 'react-native-paper';
 import ShoppingCart from '../Views/ShoppingCart';
 import QrCodeReader from '../Views/QrCodeReader';
-import ProductMenuItens from '../Views/ProductMenuItens';
 import UserConfig from '../Views/UserConfig';
 import EstablishmentMenu from '../Views/EstablishmentMenu';
 import ItemsMenu from '../Views/ItemsMenu';
@@ -170,17 +169,6 @@ export default function AppBar() {
           component={CloseOrder}
           options={{
             title: "Conferência de consumo",
-            headerStyle: { backgroundColor: theme.colors.primary },
-            headerTitleStyle: { color: theme.colors.onBackground },
-            headerTintColor: theme.colors.onBackground,
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-          }}
-        />
-        <Stack.Screen
-          name="ProductMenuItens"
-          component={ProductMenuItens}
-          options={{
-            title: "Produtos",
             headerStyle: { backgroundColor: theme.colors.primary },
             headerTitleStyle: { color: theme.colors.onBackground },
             headerTintColor: theme.colors.onBackground,

@@ -1,1 +1,1 @@
-export const base_url = "https://appdesc-e1bf2.web.app"
+export const base_url = "https://wisemenu.com.br"

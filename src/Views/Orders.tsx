@@ -195,7 +195,7 @@ export default function Orders() {
       if (saveTicket) {
         setIdNewTicket(saveTicket?.id)
         if (ticketType === 1) {
-          setSavedNewTicket(`${base_url}/menu/${userContext?.estabId}/1/${saveTicket.id}`)
+          setSavedNewTicket(`${base_url}/${userContext?.estabId}/1/${saveTicket.id}`)
           // printTicket({
           //   id: saveTicket.id,
           //   name: paramsTicket.name,
@@ -261,7 +261,7 @@ export default function Orders() {
       `[C]Peca de onde estiver.\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'>${base_url}/menu/${userContext?.estabId}/3/Delivery</qrcode>\n\n` +
+      `[L]<qrcode size='20'>${base_url}/${userContext?.estabId}</qrcode>\n\n` +
       `[C]Agradecemos a preferencia!\n`
     printThermalPrinter(text3)
   }

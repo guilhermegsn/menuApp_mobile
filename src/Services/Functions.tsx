@@ -121,7 +121,7 @@ export const openImagePicker = async (
 export const uploadImage = async (image: string | null, idEstablishment: string) => {
   if (image) {
     const storage = getStorage();
-    const storageRef = ref(storage, `images/${idEstablishment}/` + new Date().getTime() + '.jpg');
+    const storageRef = ref(storage, `images/${idEstablishment}/` + generateUUID() + '.jpg');
     const response = await fetch(image);
     const blob = await response.blob();
 
@@ -349,7 +349,7 @@ export const handlePixPayment = async (establishmentId: string, planId: string, 
   try {
     // 1. Chama sua Cloud Function para criar a cobrança PIX
     const response = await axios.post('https://us-central1-appdesc-e1bf2.cloudfunctions.net/createPixCharge',
-       { establishmentId, planId, email, cpf });
+      { establishmentId, planId, email, cpf });
 
     // 2. Exibe os dados do PIX (QR Code, chave, etc.)
     const pixData = response.data;
@@ -375,7 +375,7 @@ export const printWifi = (typeSecurity: string, ssid: string, password: string) 
   return `WIFI:T:${typeSecurity};S:${ssid};P:${password};;`
 }
 
-export const validateCreditCardNumber = (number : string) => {
+export const validateCreditCardNumber = (number: string) => {
   // Remove espaços e caracteres não numéricos
   const cleanNumber = number.replace(/\D/g, '');
 
@@ -403,5 +403,17 @@ export const validateCreditCardNumber = (number : string) => {
   }
 
   return sum % 10 === 0;
+}
+
+export const urlNormalize = (establishmentName: string) => {
+  const uniqueName = establishmentName
+    .normalize('NFD') // Normaliza para decompor caracteres com acento
+    .replace(/[\u0300-\u036f]/g, '') // Remove os acentos
+    .toLowerCase() // Converte para minúsculas
+    .replace(/\s+/g, '')
+    .replace(/[^\w\-]+/g, '') // Remove caracteres especiais, mantendo letras, números, hífens e underlines
+    .replace(/_+/g, '-'); // Substitui múltiplos underlines por um hífen, caso existam
+
+  return uniqueName
 }
 

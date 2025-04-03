@@ -1,22 +1,21 @@
-import { Alert, Dimensions, Image, ImageBackground, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Alert, Dimensions, Image, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Button, Card, DataTable, Dialog, Icon, Portal, RadioButton, Text, TextInput } from 'react-native-paper'
+import { Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
 import axios from 'axios'
-import { addDoc, collection, doc, DocumentData, getDoc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { db, auth } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext'
-import { calcularDiferencaDias, getCurrentDate, printThermalPrinter, refreshUserToken } from '../Services/Functions'
+import { calcularDiferencaDias, getCurrentDate, printThermalPrinter, refreshUserToken, urlNormalize } from '../Services/Functions'
 import Loading from '../Components/Loading'
 import { theme } from '../Services/ThemeConfig'
 import { useNavigation } from '@react-navigation/native'
-import { getFunctions } from 'firebase/functions'
 import { base_url } from '../Services/config'
 import ModalPlans from './ModalPlans'
 
 
 export default function Home() {
 
-  const free_trial = 7
+  const free_trial = 8
   const { width } = Dimensions.get('window');
   const navigation = useNavigation()
   const userContext = useContext(UserContext)
@@ -25,7 +24,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [isCreated, setIsCreated] = useState(false)
-  const [isOk, setIsOK] = useState(false)
+  const [uniqueNameExists, setUniqueNameExists] = useState(false)
   const [isOpenModalPlans, setIsOpenModalPlans] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
 
@@ -44,7 +43,8 @@ export default function Home() {
     number: "",
     owner: auth.currentUser?.uid,
     id: "",
-    createdAt: serverTimestamp()
+    createdAt: serverTimestamp(),
+    uniqueName: ""
   })
 
   const getCepApi = async () => {
@@ -70,7 +70,7 @@ export default function Home() {
       `[L]\n` +
       `[L]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode size='20'${base_url}/menu/${dataEstab.id}</qrcode>\n` +
+      `[L]<qrcode size='20'${base_url}/${dataEstab.id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       `[L]${dataEstab.address}\n` +
@@ -79,6 +79,13 @@ export default function Home() {
       `[L]<font size='tall'>Fone: ${dataEstab.phone}</font>\n`
     printThermalPrinter(text)
   }
+
+  useEffect(() => {
+    setDataEstab(prevData => ({
+      ...prevData,
+      uniqueName: urlNormalize(dataEstab.name)
+    }))
+  }, [dataEstab.name])
 
   const save = async () => {
     try {
@@ -91,36 +98,45 @@ export default function Home() {
         setRegStage(4);
       } else {
         // Criando um novo estabelecimento
-        const newEstablishmentRef = await addDoc(collection(db, "Establishment"), dataEstab);
-        const newEstablishmentId = newEstablishmentRef.id;
+        // const newEstablishmentRef = await addDoc(collection(db, "Establishment"), dataEstab);
+        const newEstablishmentRef = doc(db, "Establishment", dataEstab.uniqueName)
+        //verifico se já existe este uniqueName 
+        const docSnapshot = await getDoc(newEstablishmentRef)
+        if (docSnapshot.exists()) {
+          setUniqueNameExists(true)
+          Alert.alert('Nome único em uso.', `Já existe um estabelecimento com o nome "${dataEstab.uniqueName}". Escolha outro nome.`)
+          setRegStage(1)
+        } else {
+          await setDoc(newEstablishmentRef, dataEstab)
+          const newEstablishmentId = dataEstab.uniqueName
+          // Atualiza o estado local com o novo ID
+          setDataEstab((prevData) => ({
+            ...prevData,
+            id: newEstablishmentId,
+          }));
 
-        // Atualiza o estado local com o novo ID
-        setDataEstab((prevData) => ({
-          ...prevData,
-          id: newEstablishmentId,
-        }));
+          const uid_user = auth.currentUser?.uid || ""
+          const userRef = doc(db, "User", uid_user)
 
-        const uid_user = auth.currentUser?.uid || ""
-        const userRef = doc(db, "User", uid_user)
+          await updateDoc(userRef, {
+            association: {
+              enabled: true,
+              establishmentId: newEstablishmentId,
+              establishmentName: dataEstab?.name,
+              role: "ADM",
+              isOwner: true
+            }
+          });
+          userContext?.setShoppingCart([])
+          userContext?.setEstabId(newEstablishmentId)
+          userContext?.setEstabName(dataEstab.name)
+          userContext?.setUserRole('ADM')
 
-        await updateDoc(userRef, {
-          association: {
-            enabled: true,
-            establishmentId: newEstablishmentId,
-            establishmentName: dataEstab?.name,
-            role: "ADM",
-            isOwner: true
-          }
-        });
-        userContext?.setShoppingCart([])
-        userContext?.setEstabId(newEstablishmentId)
-        userContext?.setEstabName(dataEstab.name)
-        userContext?.setUserRole('ADM')
+          await refreshUserToken()
 
-        await refreshUserToken()
-
-        setIsCreated(true);
-        setRegStage(4);
+          setIsCreated(true);
+          setRegStage(4);
+        }
       }
     } catch (error) {
       console.error("Erro ao salvar documento:", error);
@@ -238,7 +254,6 @@ export default function Home() {
             console.error("Erro ao atualizar status da assinatura:", error)
           }
         }
-
       } catch (error) {
         console.error("Erro ao buscar assinatura:", error)
       }
@@ -263,7 +278,6 @@ export default function Home() {
 
   const getCnpjData = async (cnpj: string) => {
     try {
-      console.log('consultando..', `https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
       const res = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
       console.log(res.data)
       if (res.data) {
@@ -406,6 +420,13 @@ export default function Home() {
     }
   })
 
+  useEffect(()=> {
+    const now = new Date('2025-03-31T00:00:00Z'); // Data de hoje
+const sevenDaysLater = new Date(now.getTime() + (5 * 24 * 60 * 60 * 1000)); // Adicionar 7 dias em milissegundos
+const timestamp_ms_7_days_later = sevenDaysLater.getTime(); // Timestamp em milissegundos
+console.log(timestamp_ms_7_days_later); // Resultado final
+  }, [])
+
   return (
     <View style={{ flex: 1, flexGrow: 1 }}>
       <ModalPlans
@@ -454,85 +475,106 @@ export default function Home() {
         }
 
         {regStage === 1 &&
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Image
-              source={require('../assets/images/wise_logo1.png')}
-              style={{
-                width: '15%',
-                aspectRatio: 1,
-                height: width * 0.2,
-                marginTop: 15,
-                marginBottom: 10
-              }}
-            />
-            <Text style={{ fontSize: 20, width: "90%", marginTop: 10, marginBottom: 20 }}>
-              Entre com os dados de seu estabelecimento ;)
-            </Text>
-            <TextInput
-              style={{ width: "90%", marginBottom: "2%" }}
-              mode="outlined"
-              label="CNPJ"
-              value={dataEstab.state_registration}
-              onChangeText={(text) => {
-                setDataEstab((prevState) => ({
-                  ...prevState,
-                  state_registration: formatCNPJ(text)
-                }))
-                if (text.length === 18) {
-                  getCnpjData(text.replace("/", "").replace("-", "").replaceAll(".", ""))
-                }
-              }}
-            />
-            <TextInput
-              style={{ width: "90%", marginBottom: "2%" }}
-              mode="outlined"
-              label="Nome do estabelecimento"
-              value={dataEstab.name}
-              onChangeText={(text) => {
-                setDataEstab((prevState) => ({
-                  ...prevState,
-                  name: text
-                }))
-              }}
-            />
-            <TextInput
-              style={{ width: "90%", marginBottom: "2%" }}
-              mode="outlined"
-              label="Razâo social"
-              value={dataEstab.fullname}
-              onChangeText={(text) => {
-                setDataEstab((prevState) => ({
-                  ...prevState,
-                  fullname: text
-                }))
-              }}
-            />
-            <View style={styles.buttomBar}>
-              {/* Botão "Voltar" */}
-              <View style={{ width: "45%" }}>
-                <Button
-                  style={{ width: "100%", marginTop: "4%" }}
-                  icon="skip-previous"
-                  mode="text"
-                  onPress={() => isEditing ? setRegStage(4) : setRegStage(0)}
-                >
-                  Voltar
-                </Button>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+
+              <Image
+                source={require('../assets/images/wisemenu.png')}
+                style={{
+                  width: '15%',
+                  aspectRatio: 3,
+                  height: width * 0.2,
+                  marginTop: 15,
+                  marginBottom: 10
+                }}
+              />
+              <Text style={{ fontSize: 20, width: "90%", marginTop: 10, marginBottom: 20 }}>
+                Entre com os dados de seu estabelecimento ;)
+              </Text>
+              <TextInput
+                style={{ width: "90%", marginBottom: "2%" }}
+                mode="outlined"
+                keyboardType='numeric'
+                label="CNPJ"
+                value={dataEstab.state_registration}
+                onChangeText={(text) => {
+                  setDataEstab((prevState) => ({
+                    ...prevState,
+                    state_registration: formatCNPJ(text)
+                  }))
+                  if (text.length === 18) {
+                    getCnpjData(text.replace("/", "").replace("-", "").replaceAll(".", ""))
+                  }
+                }}
+              />
+              <TextInput
+                style={{ width: "90%", marginBottom: "2%" }}
+                mode="outlined"
+                label="Razâo social"
+                value={dataEstab.fullname}
+                onChangeText={(text) => {
+                  setDataEstab((prevState) => ({
+                    ...prevState,
+                    fullname: text
+                  }))
+                }}
+              />
+              <TextInput
+                style={{ width: "90%", marginBottom: "2%" }}
+                mode="outlined"
+                label="Nome do estabelecimento"
+                value={dataEstab.name}
+                onChangeText={(text) => {
+                  setDataEstab((prevState) => ({
+                    ...prevState,
+                    name: text
+                  }))
+                }}
+              />
+              <TextInput
+                style={{ width: "90%", marginBottom: "2%" }}
+                mode="outlined"
+                label="Nome único"
+                value={dataEstab.uniqueName}
+                error={uniqueNameExists}
+                onChangeText={(text) => {
+                  setUniqueNameExists(false)
+                  setDataEstab((prevState) => ({
+                    ...prevState,
+                    uniqueName: urlNormalize(text)
+                  }))
+                }}
+              />
+              <View style={{ alignItems: 'flex-start' }}>
+                <Text>wisemenu.com.br/{dataEstab.uniqueName}</Text>
               </View>
-              {/* Botão "Próximo" */}
-              <View style={{ width: "45%" }}>
-                <Button
-                  style={{ width: "100%", marginTop: "4%" }}
-                  icon="hexagon-multiple"
-                  mode="text"
-                  onPress={() => setRegStage(2)}
-                >
-                  Próximo
-                </Button>
+              <View style={styles.buttomBar}>
+                {/* Botão "Voltar" */}
+                <View style={{ width: "45%" }}>
+                  <Button
+                    style={{ width: "100%", marginTop: "4%" }}
+                    icon="skip-previous"
+                    mode="text"
+                    onPress={() => isEditing ? setRegStage(4) : setRegStage(0)}
+                  >
+                    Voltar
+                  </Button>
+                </View>
+                {/* Botão "Próximo" */}
+                <View style={{ width: "45%" }}>
+                  <Button
+                    style={{ width: "100%", marginTop: "4%" }}
+                    icon="hexagon-multiple"
+                    mode="text"
+                    onPress={() => setRegStage(2)}
+                  >
+                    Próximo
+                  </Button>
+                </View>
               </View>
             </View>
-
-          </View>}
+          </ScrollView>
+        }
 
         {regStage === 2 &&
           <View style={{ flex: 1, alignItems: 'center' }}>

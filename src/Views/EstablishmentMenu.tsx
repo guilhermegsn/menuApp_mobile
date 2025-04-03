@@ -2,7 +2,7 @@ import { Image, StyleSheet, View, TouchableOpacity, Alert, ScrollView, RefreshCo
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Button, Card, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper'
 import { UserContext } from '../context/UserContext'
-import { addDoc, collection, doc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../Services/FirebaseConfig';
 import { DocumentData } from '@google-cloud/firestore'
 import Loading from '../Components/Loading'
@@ -33,11 +33,13 @@ export default function EstablishmentMenu() {
   const [menu, setMenu] = useState(emptyMenu)
   const [isNewMenu, setIsNewMenu] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
+  const [isDelete, setIsDelete] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingSave, setIsLoadingSave] = useState(false)
   const [listMenu, setListMenu] = useState<DocumentData[]>([])
   const [uri, setUri] = useState("")
   const [refreshing, setRefreshing] = useState(false);
+  const [confirmTitleDelete, setConfirmTitleDelete] = useState("")
 
   useEffect(() => {
     fetchData()
@@ -118,26 +120,37 @@ export default function EstablishmentMenu() {
         throw new Error("ID do estabelecimento não encontrado");
       }
       const menuRef = collection(db, "Establishment", userContext.estabId, "Menu");
+     
+      
       if (isEdit) {
-        const menuDocRef = doc(db, "Establishment", userContext.estabId, "Menu", menu.id);
+        console.log('editando...')
         const updateData: any = { menuName: menu?.menuName };
         if (menu.imageUrl !== uri) {// A imagem foi alterada
           const urlImageSave = await uploadImage(menu.imageUrl, userContext.estabId);
           updateData.imageUrl = urlImageSave;
         }
+        const menuDocRef = doc(db, "Establishment", userContext.estabId, "Menu", menu.id);
         await updateDoc(menuDocRef, updateData);
         console.log("Menu atualizado com sucesso!");
         setIsEdit(false)
+      } else if (isDelete) {
+        const menuDocRef = doc(db, "Establishment", userContext.estabId, "Menu", menu.id);
+        console.log('excluindo...')
+        await deleteDoc(menuDocRef)
+        setIsDelete(false)
       } else {
+        console.log('adicionando...')
+        console.log(menuRef)
         const urlImageSave = await uploadImage(menu.imageUrl, userContext.estabId);
         const docRef = await addDoc(menuRef, { menuName: menu.menuName, imageUrl: urlImageSave });
+
         console.log("Menu criado com ID:", docRef.id);
         setIsNewMenu(false)
       }
-      fetchData()
     } catch (error) {
       console.error("Erro ao salvar o menu", error);
     } finally {
+      fetchData()
       setIsLoadingSave(false);
     }
   };
@@ -159,11 +172,15 @@ export default function EstablishmentMenu() {
 
   const newMenu = () => {
     if (userContext?.expiredSubscription) {
-      Alert.alert("Wise Menu","Não é possível criar um novo menu.")
+      Alert.alert("Wise Menu", "Não é possível criar um novo menu.")
     } else {
       setIsNewMenu(true)
       setMenu(emptyMenu)
     }
+  }
+
+  const deleteMenu = () => {
+
   }
 
   const styles = StyleSheet.create({
@@ -271,56 +288,88 @@ export default function EstablishmentMenu() {
 
       {/* Modal ADD Novo menu */}
       <Portal>
-        <Dialog visible={isNewMenu || isEdit} onDismiss={() => [setIsNewMenu(false), setIsEdit(false)]}>
-          <Dialog.Title style={{ textAlign: 'center' }}>{isEdit ? 'Editar Menu' : 'Novo Menu'}</Dialog.Title>
+        <Dialog visible={isNewMenu || isEdit || isDelete} onDismiss={() => [setIsNewMenu(false), setIsEdit(false)]}>
+          <Dialog.Title style={{ textAlign: 'center' }}>
+            {isEdit ? 'Editar Menu'
+              : isDelete ? 'Excluir menu'
+                : 'Novo Menu'}
+          </Dialog.Title>
 
-          <View style={{ padding: 15 }}>
-            <TextInput
-              style={{ margin: 5, marginTop: 10 }}
-              mode='outlined'
-              label="Nome"
-              placeholder='Exemplo: Lanches'
-              keyboardType='default'
-              value={menu.menuName}
-              onChangeText={(text) => {
-                setMenu(prevMenu => ({
-                  ...prevMenu,
-                  menuName: text
-                }))
-              }}
-            />
+          {isDelete ?
 
-            <View>
-              {menu.imageUrl ?
-                <TouchableOpacity
-                  onPress={openImageNewMenu}
-                >
-                  <Image
-                    source={{ uri: menu.imageUrl }}
-                    style={styles.imagem}
-                  />
-                </TouchableOpacity> :
-                <View style={{ alignSelf: 'center', marginTop: 50 }}>
-                  <Button
-                    icon="image"
-                    mode="outlined"
-                    onPress={openImageNewMenu}
-                  >Adicionar imagem
-                  </Button>
-                </View>
-              }
+            <View style={{ padding: 15 }}>
+              <Text>Confirma a exclusão do menu {menu.menuName}?</Text>
+              <Text>Todos os itens serão excluídos.</Text>
+              <Text>Esta ação não poderá ser desfeita.</Text>
+
+              <Text style={{marginTop: 10}}>Para confirmar, digite o nome do menu a ser excluído:</Text>
+              <TextInput
+                style={{ margin: 5, marginTop: 10 }}
+                mode='outlined'
+                label="Nome do menu a ser excluído"
+                placeholder={menu.menuName}
+                keyboardType='default'
+                value={confirmTitleDelete}
+                onChangeText={(text) => setConfirmTitleDelete(text)}
+              />
+
+
             </View>
-          </View>
+            :
+            <View style={{ padding: 15 }}>
+              <TextInput
+                style={{ margin: 5, marginTop: 10 }}
+                mode='outlined'
+                label="Nome"
+                placeholder='Exemplo: Lanches'
+                keyboardType='default'
+                value={menu.menuName}
+                onChangeText={(text) => {
+                  setMenu(prevMenu => ({
+                    ...prevMenu,
+                    menuName: text
+                  }))
+                }}
+              />
+
+              <View>
+                {menu.imageUrl ?
+                  <TouchableOpacity
+                    onPress={openImageNewMenu}
+                  >
+                    <Image
+                      source={{ uri: menu.imageUrl }}
+                      style={styles.imagem}
+                    />
+                  </TouchableOpacity> :
+                  <View style={{ alignSelf: 'center', marginTop: 50 }}>
+                    <Button
+                      icon="image"
+                      mode="outlined"
+                      onPress={openImageNewMenu}
+                    >Adicionar imagem
+                    </Button>
+                  </View>
+                }
+              </View>
+            </View>
+          }
+
 
           <Dialog.Content style={{ marginTop: 40 }}>
             <Dialog.Actions>
-              <Button onPress={() => [setIsNewMenu(false), setIsEdit(false)]}>Cancelar</Button>
+              {isEdit && 
+                <Button style={{ marginRight: 50 }}
+                  onPress={() => [setIsDelete(true), setIsEdit((false))]}>Excluir
+                </Button>
+              }
+              <Button onPress={() => [setIsNewMenu(false), setIsEdit(false), setIsDelete(false)]}>Cancelar</Button>
               <Button
-                disabled={!menu.menuName || !menu.imageUrl}
+                disabled={!menu.menuName || !menu.imageUrl || (isDelete && confirmTitleDelete !== menu.menuName)}
                 onPress={() => saveNewMenu(menu)}
                 loading={isLoadingSave}
               >
-                Salvar
+                {isDelete ? 'Excluir' : 'Salvar'}
               </Button>
             </Dialog.Actions>
           </Dialog.Content>
