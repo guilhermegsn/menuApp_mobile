@@ -111,7 +111,7 @@ export default function ShoppingCart() {
       setTicket(ticketId)
       setIsLoadingTicket(true)
       try {
-        const docRef = doc(db, 'Ticket', ticketId);
+        const docRef = doc(db, 'Establishment', userContext?.estabId, 'Tickets', ticketId);
         const docSnapshot = await getDoc(docRef);
         const dataTicket = docSnapshot.data()
         if (dataTicket) {
@@ -158,7 +158,7 @@ export default function ShoppingCart() {
 
       console.log('dataOrder-->>', dataOrder)
 
-      const orderItemsRef = collection(db, "OrderItems");
+      const orderItemsRef = collection(db, 'Establishment', userContext?.estabId, 'Orders');
       const saveOrder = await addDoc(orderItemsRef, dataOrder)
 
       if (saveOrder) {
@@ -179,7 +179,7 @@ export default function ShoppingCart() {
     setIsLoadingSearch(true)
     try {
       const q = query(
-        collection(db, "Ticket"),
+        collection(db, 'Establishment', userContext?.estabId, 'Tickets'),
         where("status", "==", 1),
         where("establishment", "==", userContext?.estabId),
       )

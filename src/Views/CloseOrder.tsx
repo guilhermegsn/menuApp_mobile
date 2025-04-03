@@ -70,7 +70,7 @@ export default function CloseOrder() {
 
   const fetchData = async () => {
     const q = query(
-      collection(db, "OrderItems"),
+      collection(db, 'Establishment', userContext?.estabId, 'Orders'),
       where("order_id", "==", id),
       orderBy('date')
     );
@@ -158,7 +158,7 @@ export default function CloseOrder() {
   })
 
   const closeOrder = async () => {
-    const docRef = doc(db, "Ticket", id)
+    const docRef = doc(db, 'Establishment', userContext?.estabId, 'Tickets', id)
     try {
       await updateDoc(docRef, {
         status: 0,
@@ -248,7 +248,7 @@ export default function CloseOrder() {
     }
 
     try {
-      const orderRef = collection(db, "OrderItems");
+      const orderRef = collection(db, 'Establishment', userContext?.estabId, 'Orders');
       const saveOrder = await addDoc(orderRef, cancelOrder)
       if (saveOrder) {
         fetchData()

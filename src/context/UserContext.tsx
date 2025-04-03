@@ -76,12 +76,12 @@ function UserProvider({ children }: { children: ReactNode }) {
           await _user.getIdToken(true);
           console.log("Usuário autenticado:", _user.uid);
           setUser(_user);
-          if (!_user.emailVerified) {
-            Alert.alert('Verificação pendente', 'Por favor, confirme seu e-mail antes de continuar.')
-            await auth.signOut()
-          } else {
+          // if (!_user.emailVerified) {
+          //   Alert.alert('Verificação pendente', 'Por favor, confirme seu e-mail antes de continuar.')
+          //   await auth.signOut()
+          // } else {
             setIsAuthenticated(true);
-          }
+          //}
         } catch (error: unknown) {
           if (error instanceof Error && "code" in error) {
             const firebaseError = error as { code: string }; // 🔥 Faz cast seguro

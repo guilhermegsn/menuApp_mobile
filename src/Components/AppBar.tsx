@@ -9,8 +9,8 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 import { createStackNavigator } from '@react-navigation/stack';
 import { theme } from '../Services/ThemeConfig';
 import { CardStyleInterpolators } from '@react-navigation/stack';
+import Tickets from '../Views/Tickets';
 import Orders from '../Views/Orders';
-import OrderItems from '../Views/OrderItems';
 import CloseOrder from '../Views/CloseOrder';
 import { Button, Icon } from 'react-native-paper';
 import ShoppingCart from '../Views/ShoppingCart';
@@ -64,17 +64,6 @@ export default function AppBar() {
               }}
             />
             {userContext?.estabId !== "" && <>
-              {/* <Drawer.Screen name="ProductMenu"
-                component={ProductMenu}
-                options={{
-                  headerStyle: { backgroundColor: theme.colors.primary },
-                  headerTitleStyle: { color: theme.colors.onBackground },
-                  title: "Cardápio",
-                  drawerIcon: ({ color, size }) => (
-                    <Icon source="book-open-variant" size={size} color={theme.colors.background} />
-                  ),
-                }}
-              /> */}
               <Drawer.Screen name="EstablishmentMenu"
                 component={EstablishmentMenu}
                 options={{
@@ -86,8 +75,8 @@ export default function AppBar() {
                   ),
                 }}
               />
-              <Drawer.Screen name="OrderItems"
-                component={OrderItems}
+              <Drawer.Screen name="Orders"
+                component={Orders}
                 options={{
                   headerStyle: { backgroundColor: theme.colors.primary },
                   headerTitleStyle: { color: theme.colors.onBackground },
@@ -97,8 +86,8 @@ export default function AppBar() {
                   ),
                 }}
               />
-              <Drawer.Screen name="Orders"
-                component={Orders}
+              <Drawer.Screen name="Tickets"
+                component={Tickets}
                 options={{
                   headerStyle: { backgroundColor: theme.colors.primary },
                   headerTitleStyle: { color: theme.colors.onBackground },
@@ -152,8 +141,6 @@ export default function AppBar() {
           </>
         }
       </Drawer.Navigator>
-
-     
     )
   }
 
