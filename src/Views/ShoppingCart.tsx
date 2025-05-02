@@ -134,7 +134,7 @@ export default function ShoppingCart() {
 
   const sendOrder = async () => {
     console.log(dataTicket)
-    console.log(userContext)
+    console.log('usettttt',userContext?.user.displayName)
     setIsLoading(true)
     try {
       const items = userContext?.shoppingCart.map((item: DocumentData) => ({
@@ -153,7 +153,8 @@ export default function ShoppingCart() {
         order_id: ticket,
         status: 1,
         name: dataTicket?.name,
-        type: dataTicket?.type
+        type: dataTicket?.type,
+        operator: userContext?.user?.displayName
       }
 
       console.log('dataOrder-->>', dataOrder)

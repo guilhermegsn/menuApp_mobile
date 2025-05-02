@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const fetch = require("node-fetch");
 const crypto = require("crypto");
+const cors = require("cors")({ origin: true });
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -35,6 +36,35 @@ function decrypt(encryptedText) {
   return decrypted;
 }
 
+const generateUUID = () => {
+  let d = new Date().getTime();
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    d += performance.now(); // use high-precision timer if available
+  }
+  const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (d + Math.random() * 16) % 16 | 0;
+    d = Math.floor(d / 16);
+    return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+  return uuid;
+}
+
+async function authenticateRequest(req, res) {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    res.status(401).send("Token de autenticação não enviado.");
+    return null;
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    return decodedToken.uid;
+  } catch {
+    res.status(401).send("Token inválido.");
+    return null;
+  }
+}
 
 
 exports.sendNewOrderNotification = functions.firestore
@@ -201,6 +231,10 @@ exports.updateUserClaims = functions.https.onCall(async (data, context) => {
 
 exports.createSubscription = functions.https.onRequest(async (req, res) => {
   try {
+
+    const uid = await authenticateRequest(req, res)
+    if (!uid) return
+
     const { establishmentId, email, planId, cardToken } = req.body;
     console.log('Recebendo dados:', { establishmentId, email, planId, cardToken });
 
@@ -327,6 +361,10 @@ exports.createSubscription = functions.https.onRequest(async (req, res) => {
 
 exports.unsubscribe = functions.https.onRequest(async (req, res) => {
   try {
+
+    const uid = await authenticateRequest(req, res)
+    if (!uid) return
+
     const { establishmentId } = req.body;
     const subscriptionRef = db.collection('Subscriptions').doc(establishmentId);
     const subscriptionSnap = await subscriptionRef.get();
@@ -498,6 +536,7 @@ exports.mercadoPagoOAuthCallback = functions.https.onRequest(async (req, res) =>
         code,
         grant_type: "authorization_code",
         redirect_uri: REDIRECT_URI,
+        test_token: true
       }),
     });
 
@@ -609,50 +648,87 @@ exports.renewTokensMercadoPago = functions.pubsub.schedule("every 24 hours").onR
   }
 });
 
-
-exports.executePaymentToEstablishment = functions.https.onRequest(async (req, res) => {
-  try {
-    const { establishmentId, transactionAmount, payerEmail, payment_method, description } = data;
-    if (!establishmentId || !transactionAmount || !payerEmail || payment_method) {
-      throw new Error("Parâmetros inválidos");
-    }
-
-    const tokenDoc = await admin.firestore().collection("AccessTokens").doc(establishmentId).get()
-    if (!tokenDoc.exists) {
-      throw new Error("Token do estabelecimento não encontrado");
-    }
-
-    const tokenData = tokenDoc.data();
-    const accessToken = decrypt(tokenData.token_data.access_token);
-
+exports.getPublicMpKey = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
     try {
+      const { establishmentId } = req.body;
+      if (!establishmentId) {
+        return res.status(400).send("Parâmetro inválido")
+      }
+      const tokenDoc = await admin.firestore().collection("AccessTokens").doc(establishmentId).get();
+      if (!tokenDoc.exists) {
+        return res.status(400).send("Token do estabelecimento não encontrado")
+      }
+      const tokenData = tokenDoc.data();
+      const accessToken = JSON.parse(decrypt(tokenData.token_data))
+      console.log('accceeess::', accessToken)
+      console.log('publickey', accessToken?.public_key)
+      const public_key = accessToken?.public_key
+      return res.status(200).json(public_key);
+    } catch {
+      return res.status(500).send('Ocorreu um erro inesperado.')
+    }
+  })
+})
+
+
+exports.executePaymentToEstablishment = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const { establishmentId, transactionAmount, payerEmail, description, cardToken } = req.body;
+
+      if (!establishmentId || !transactionAmount || !payerEmail || !cardToken) {
+        throw new Error("Parâmetros inválidos");
+      }
+
+      const tokenDoc = await admin.firestore().collection("AccessTokens").doc(establishmentId).get();
+      if (!tokenDoc.exists) {
+        throw new Error("Token do estabelecimento não encontrado");
+      }
+
+      console.log('tokenDoc ->', tokenDoc.data())
+
+      const tokenData = tokenDoc.data();
+      const accessToken = JSON.parse(decrypt(tokenData.token_data));
+
+      console.log('acces::', accessToken)
+
       const response = await fetch("https://api.mercadopago.com/v1/payments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`, // Token do estabelecimento
+          "Authorization": `Bearer ${accessToken?.access_token}`,
+          "X-Idempotency-Key": generateUUID()
         },
         body: JSON.stringify({
+          installments: 1,
           transaction_amount: transactionAmount,
           application_fee: 4,
           description: description || "",
-          payment_method_id: payment_method,
+          payment_method_id: "master",
           payer: {
             email: payerEmail
           },
-        }),
+          token: cardToken || ""
+        })
       });
 
       const paymentData = await response.json();
       console.log("Pagamento criado:", paymentData);
-      
-    } catch {
-      console.log('Erro ao processar o pagamento.')
-      return res.status(400).send('Erro ao processar o pagamento com o Mercado Pago')
-    }
 
-  } catch {
-    return res.status(500).send('Erro ao processar o pagamento.')
-  }
-})
+      if (response.ok) {
+        return res.status(response.status).json(paymentData);
+      } else {
+        return res.status(response.status).json({
+          error: paymentData.message || "Erro ao processar o pagamento",
+          details: paymentData
+        });
+      }
+
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+      return res.status(500).send('Erro ao processar o pagamento.');
+    }
+  });
+});
 

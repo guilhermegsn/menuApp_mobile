@@ -5,7 +5,7 @@ import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import { OrderData } from '../Interfaces/Order_interface';
-import {getInitialsName, playSound, printThermalPrinter, removeAccents, vibrate } from '../Services/Functions'
+import { getInitialsName, playSound, printThermalPrinter, removeAccents, vibrate } from '../Services/Functions'
 import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
@@ -17,6 +17,7 @@ export default function Orders() {
   const { hasPrinter, autoPrint } = useStorage();
   const userContext = useContext(UserContext)
   const [orders, setOrders] = useState<DocumentData[]>([]);
+  const [closedOrders, setClosedOrders] = useState<DocumentData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMoreData, setIsLoadingMoreData] = useState(false)
   const [isChangeStatus, setIsChangeStatus] = useState(false)
@@ -29,6 +30,7 @@ export default function Orders() {
   const numOpeningTicket = orders.filter((item) => item.status === 1)?.length || 0
   const numProgressTicket = orders.filter((item) => item.status === 2)?.length || 0
 
+  const data = filteredBy === 'open' ? orders : closedOrders;
 
   //Deixando a tela sempre ativa.
   useEffect(() => {
@@ -37,59 +39,116 @@ export default function Orders() {
   }, []);
 
   useEffect(() => {
-    fetchData()
-  }, [filteredBy]);
+    if (filteredBy === 'open')
+      fetchData()
+    else
+      getClosedTickets()
+  }, [userContext?.estabId, filteredBy]);
 
-  const fetchData = () => {
+
+  const fetchData = async () => {
+    setIsLoading(true);
+
     const q = query(
       collection(db, 'Establishment', userContext?.estabId, 'Orders'),
-      where("establishment", "==", userContext?.estabId),
-      where("status", "in", filteredBy === 'closed' ? [0] : [1, 2]),
+      where('status', 'in', [1, 2]),
       orderBy('date', 'desc'),
       limit(50)
     );
-    setIsLoading(true);
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const ordersData: DocumentData[] = [];
-      try {
-        for (const change of querySnapshot.docChanges()) {
-          if (change.type === "added") {
 
-            const newItemData = change.doc.data();
-            //imprimo apenas pedidos com status 1 (aberto)
-            if (newItemData.status === 1) {
-              //isNewOrder -> comparo se o pedido tem menos de 5min. Só imprime se tiver menos de 5min
-              //Evitando impressao indevido em um reload no app
-              if (isNewOrder(newItemData.date.toDate())) {
-                if (hasPrinter && autoPrint) {
-                  printOrder(newItemData)
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        try {
+          setOrders((prevOrders) => {
+            const updatedOrders = [...prevOrders];
+
+            querySnapshot.docChanges().forEach((change) => {
+              const docData = change.doc.data();
+              const docId = change.doc.id;
+
+              // Ignora pedidos cancelados (status 3)
+              //if (docData.status === 3) return;
+
+              const existingIndex = updatedOrders.findIndex((o) => o.id === docId);
+
+              if (change.type === 'added') {
+                // Evita duplicatas
+                if (existingIndex === -1) {
+                  if (docData.status === 1 && isNewOrder(docData.date.toDate())) {
+                    if (hasPrinter && autoPrint) printOrder(docData);
+                    vibrate();
+                    playSound('deskbell.wav');
+                  }
+
+                  updatedOrders.push({
+                    id: docId,
+                    ...docData,
+                    elapsedTime: moment(docData.date.toDate()).fromNow(),
+                  });
                 }
-                vibrate()
-                playSound('deskbell.wav')
+
+              } else if (change.type === 'modified') {
+                if (existingIndex !== -1) {
+                  updatedOrders[existingIndex] = {
+                    id: docId,
+                    ...docData,
+                    elapsedTime: moment(docData.date.toDate()).fromNow(),
+                  };
+                }
+              } else if (change.type === 'removed') {
+                if (existingIndex !== -1) {
+                  updatedOrders.splice(existingIndex, 1);
+                }
               }
-            }
-            break;
-          }
+            });
+
+            // Reordenar por data (caso a ordem mude com update)
+            return updatedOrders
+              .sort((a, b) => b.date.toDate().getTime() - a.date.toDate().getTime());
+          });
+        } catch (error) {
+          console.log('Erro ao atualizar pedidos:', error);
+        } finally {
+          setIsLoading(false);
         }
-        querySnapshot.forEach((doc) => {
-          //Não exibindo itens cancelados.
-          if (doc.data().status !== 3)
-            ordersData.push({ id: doc.id, ...doc.data() });
-        });
-        setOrders(ordersData.map((item) => ({
-          ...item,
-          elapsedTime: moment(item.date.toDate()).fromNow()
-        })));
-      } catch (e) {
-        console.log('error: ', e);
-      } finally {
+      },
+      (error) => {
+        console.log('Erro no onSnapshot:', error);
         setIsLoading(false);
       }
-    }, (error) => {
-      console.log('Error in onSnapshot:', error);
-      setIsLoading(false);
-    });
+    );
+
     return () => unsubscribe();
+  };
+
+
+  const getClosedTickets = async () => {
+    const q = query(
+      collection(db, 'Establishment', userContext?.estabId, 'Orders'),
+      where("status", "==", 0),
+      orderBy('date', 'desc'),
+      limit(50)
+    );
+
+
+    if (closedOrders.length <= 0)
+      setIsLoading(true)
+    try {
+      const res = await getDocs(q)
+      if (!res.empty) {
+        const data = res.docs.map(item => ({
+          ...item.data(),
+          id: item.id, // Adiciona o ID do documento
+        }));
+        setClosedOrders(data)
+      }
+    } catch {
+      Alert.alert('Erro', 'Erro ao obter os dados.')
+      setClosedOrders([])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
 
@@ -127,9 +186,9 @@ export default function Orders() {
     if (orders) {
       const q = query(
         collection(db, 'Establishment', userContext?.estabId, 'Orders'),
-        where("establishment", "==", userContext?.estabId),
+        where("status", "==", 0),
         orderBy('date', 'desc'),
-        limit(15),
+        limit(50),
         startAfter(orders[orders.length - 1].date),
       );
       try {
@@ -140,7 +199,7 @@ export default function Orders() {
           dat.push(item.data() as OrderData)
         })
         if (dat) {
-          setOrders(prevOrders => [...prevOrders, ...dat])
+          setClosedOrders(prevOrders => [...prevOrders, ...dat])
         }
       } catch (e) {
         console.log(e)
@@ -207,7 +266,7 @@ export default function Orders() {
 
 
   const changeStatusOrder = async (id: string, status: string) => {
-    const docRef = doc( db, 'Establishment', userContext?.estabId, 'Orders', id);
+    const docRef = doc(db, 'Establishment', userContext?.estabId, 'Orders', id);
     setIsChangeStatus(false)
     try {
       await updateDoc(docRef, { status: parseInt(status) });
@@ -247,7 +306,7 @@ export default function Orders() {
             },
             {
               value: 'closed',
-              label: 'Finalizadossss',
+              label: 'Finalizados',
               icon: 'lock-open-variant-outline'
             },
           ]}
@@ -274,7 +333,7 @@ export default function Orders() {
         <ScrollView
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={styles.scrollViewContent}>
-          {orders?.map((order, index) => (
+          {data?.map((order, index) => (
             <View key={index}>
               <Card key={index}
                 style={{
@@ -282,7 +341,6 @@ export default function Orders() {
                   margin: 8,
                   paddingRight: 7,
                 }}
-
               >
                 <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }} onPress={() => selectOrder(order.id)}>
                   <Card.Title
@@ -294,7 +352,8 @@ export default function Orders() {
                     left={(props) => order?.type === 1 ? <Avatar.Text size={40} label={getInitialsName(order?.name)} /> : <Avatar.Icon {...props} icon={order?.type === 3 ? "moped-outline" :
                       order?.type === 2 ? "account-group" : "account"} />}
                     right={() => <View>
-                      <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).format('HH:mm') + `\n` + (order.elapsedTime ? order.elapsedTime : "")}
+                      <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).utcOffset(-3).format('HH:mm') + `\n`
+                        + (order.elapsedTime ? order.elapsedTime : moment(order.date.toDate()).utcOffset(-3).format('DD/MM/YYYY'))}
                       </Text>
 
                       <View style={{ alignItems: "flex-end", marginTop: 15, marginEnd: 10 }}>
@@ -310,7 +369,7 @@ export default function Orders() {
                   <Card.Content>
                     <View style={{ marginLeft: 3, marginTop: -5 }}>
                       {order?.items.map((item: string | any, index: number) => (
-                        <Text variant='labelLarge' key={index}>{item?.qty} x {item?.name}</Text>
+                        <Text variant='titleMedium' key={index}>{item?.qty} x {item?.name}</Text>
                       ))}
                     </View>
                   </Card.Content>
@@ -321,7 +380,8 @@ export default function Orders() {
             ))} */}
             </View>
           ))}
-          {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> :
+
+          {isLoadingMoreData ? <ActivityIndicator size={20} style={{ margin: 20 }} /> : filteredBy === 'closed' &&
             <View style={{ marginBottom: 20, marginTop: 10, alignItems: 'center' }}>
               <IconButton
                 icon="dots-horizontal"
@@ -330,7 +390,6 @@ export default function Orders() {
                 onPress={() => loadMoreData()}
               />
             </View>
-
           }
         </ScrollView>}
 
@@ -375,8 +434,6 @@ export default function Orders() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-
-      {/* <Button onPress={()=> console.log(orders)}>orders</Button> */}
     </View>
   )
 }

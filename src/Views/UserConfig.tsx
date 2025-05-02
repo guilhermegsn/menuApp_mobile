@@ -174,7 +174,7 @@ export default function UserConfig() {
   const authorizeMercadoPago = () => {
     setIsOpenDialogOnlinePayment(false)
     setStepAccountMercadoPago(0)
-    const url = `https://auth.mercadopago.com/authorization?client_id=809428962080372&response_type=code&platform_id=mp&state=${userContext?.estabId}&redirect_uri=https://us-central1-appdesc-e1bf2.cloudfunctions.net/mercadoPagoOAuthCallback`
+    const url = `https://auth.mercadopago.com/authorization?client_id=8023157023344936&response_type=code&platform_id=mp&state=${userContext?.estabId}&redirect_uri=https://us-central1-appdesc-e1bf2.cloudfunctions.net/mercadoPagoOAuthCallback`
     Linking.openURL(url)
       .catch(err => console.error('Erro ao tentar abrir o link', err));
   }
@@ -438,17 +438,13 @@ export default function UserConfig() {
           {stepAccountMercadoPago === 0 ?
             <View style={{ margin: 20 }}>
               <Text variant="titleSmall">Para receber pagamentos online, você deve ter uma conta no Mercado Pago.</Text>
-              <Text variant="titleSmall" style={{ marginTop: 10 }}>Os pagamentos serão processados pelo Mercado Pago e cairá diretamente na sua conta na mesma hora!</Text>
-
-              <Text variant="titleMedium" style={{ marginTop: 10 }}>Confira nossas taxas:</Text>
-
-              <Text variant="titleSmall" style={{ marginTop: 10 }}>Taxa do aplicativo: 3,00%</Text>
-
-              <Text variant="titleMedium" style={{ marginTop: 10 }}>Taxas do Mercado Pago:</Text>
+              <Text variant="titleSmall" style={{ marginTop: 10 }}>
+                Os pagamentos serão processados pelo Mercado Pago e cairá diretamente na sua conta no mesmo dia.
+              </Text>
+              <Text variant="titleMedium" style={{ marginTop: 10 }}>Confira as taxas:</Text>
               <Text variant="titleSmall" style={{ marginTop: 10 }}>Crédito à vista: 4,98%</Text>
               <Text variant="titleSmall">PIX: 0,00%</Text>
-
-
+              <Text variant="titleSmall" style={{ marginTop: 10 }}>Taxa do aplicativo: 3,00%</Text>
               <Text variant="bodyMedium" style={{ marginTop: 30 }}>Ainda nâo possui uma conta  Mercado Pago?</Text>
 
               <Button style={{ marginTop: 10 }}
@@ -477,8 +473,8 @@ export default function UserConfig() {
                   mode='outlined'>OK</Button>
               </View>
               :
-              <View style={{padding: 20}}>
-                <Text variant="bodyMedium" style={{ marginTop: 30,marginBottom: 20 }}>Deu tudo certo com a criação da conta?</Text>
+              <View style={{ padding: 20 }}>
+                <Text variant="bodyMedium" style={{ marginTop: 30, marginBottom: 20 }}>Deu tudo certo com a criação da conta?</Text>
                 <Button style={{ marginTop: 10 }}
                   onPress={authorizeMercadoPago}
                   mode='outlined'>Vincular minha conta Mercado Pago

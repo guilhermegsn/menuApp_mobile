@@ -2,8 +2,8 @@ import { Alert, StyleSheet, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
-import { ActivityIndicator, Button, DataTable, Dialog, IconButton, Menu, Portal, Text, TextInput } from 'react-native-paper';
-import { DocumentData, addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { ActivityIndicator, Button, DataTable, Dialog, Divider, IconButton, Menu, Portal, Text, TextInput } from 'react-native-paper';
+import { DocumentData, addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { theme } from '../Services/ThemeConfig';
 import { formatCurrencyInput, formatToCurrencyBR, formatToDoubleBR, printThermalPrinter } from '../Services/Functions'
@@ -20,7 +20,8 @@ interface RouteParams {
   openingDate: Date
   name: string,
   status: number,
-  type: number
+  type: number,
+  amountReceived: number
 }
 
 export default function CloseOrder() {
@@ -28,8 +29,9 @@ export default function CloseOrder() {
   const userContext = useContext(UserContext);
   const navigation = useNavigation();
   const route = useRoute();
-  const { id, local, openingDate, name, status, type } = route.params as RouteParams || {};
+  const { id, local, openingDate, name, status, type, amountReceived } = route.params as RouteParams || {};
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingSave, setIsLoadingSave] = useState(false)
   const [data, setData] = useState<DocumentData[]>([]);
   const [isCloseOrder, setIsCloeOrder] = useState(false)
   const [totalOrder, setTotalOrder] = useState(0)
@@ -39,10 +41,11 @@ export default function CloseOrder() {
   const [percentTax, setPercentTax] = useState<string>('')
   const [taxValue, setTaxValue] = useState<string>('0')
   const [resultTotal, setResultTotal] = useState<number>(0)
-  const [amountReceived, setAmmountReceived] = useState<string>('0')
+  const [paramAmountedReceived, setParamAmmountReceived] = useState<string>('0')
   const [changeValueOrder, setChangeValueOorder] = useState('0')
   const [isOpenMenu, setIsOpenMenu] = useState(false)
   const [isOpenQrCode, setIsOpenQrCode] = useState(false)
+  const [ticketData, setTicketData] = useState<DocumentData>({})
 
   useEffect(() => {
     fetchData()
@@ -83,12 +86,13 @@ export default function CloseOrder() {
       });
       let orderItems: Array<DocumentData> = [];
 
+      setTicketData(orderItems)
       ordersData.forEach((order) => {
         const items = order.items.map((item: DocumentData) => ({
           ...item,
-          date: order.date
+          date: order.date,
+          operator: order.operator
         }))
-        console.log('----<', order)
         orderItems.push(items)
       })
       // Extrair os itens e criar um array plano
@@ -107,6 +111,21 @@ export default function CloseOrder() {
       setIsLoading(false)
     }
   }
+
+  const getInfoTicket = async () => {
+    const docRef = doc(db, "Establishment", userContext?.estabId, 'Tickets', id)
+    //verifico se já existe este uniqueName 
+    const docSnapshot = await getDoc(docRef)
+    if (docSnapshot.exists()) {
+      setTicketData(docSnapshot.data())
+    }
+  }
+
+  useEffect(() => {
+    if (status === 2) {
+      getInfoTicket()
+    }
+  }, [status])
 
   const print = async () => {
     let total = 0
@@ -159,17 +178,55 @@ export default function CloseOrder() {
 
   const closeOrder = async () => {
     const docRef = doc(db, 'Establishment', userContext?.estabId, 'Tickets', id)
-    try {
-      await updateDoc(docRef, {
-        status: 0,
-        closingDate: serverTimestamp(),
-        totalValue: resultTotal,
-        paymentMethod: paymentMethod
-      })
-      setIsCloeOrder(false)
-      navigation.goBack();
-    } catch {
-      console.log('erro ao fechar')
+    const data = {
+      status: 0,
+      closingDate: serverTimestamp(),
+      totalValue: resultTotal,
+      paymentMethod: paymentMethod,
+      amountReceived: parseFloat(paramAmountedReceived)
+    }
+    const save = async (data: DocumentData) => {
+      setIsLoadingSave(true)
+      try {
+        await updateDoc(docRef, data)
+        setIsCloeOrder(false)
+        navigation.goBack();
+      } catch {
+        console.log('erro ao fechar')
+      }finally{
+        setIsLoadingSave(false)
+        fetchData()
+      }
+    }
+    let received = parseFloat(paramAmountedReceived.replace(".", "").replace(",", "."))
+    if (status === 2) {
+      received = received + amountReceived
+    }
+    if (received < totalOrder) {
+      Alert.alert(
+        "Comanda em débito!",
+        `O Valor recebido é menor que o valor total da comanda. \n\nA comanda passará para o status 'Em débito'.\n\nDeseja continuar?`,
+        [
+          {
+            text: "Não",
+            onPress: () => null,
+            style: "cancel",
+          },
+          {
+            text: "Sim",
+            onPress: async () => {
+              const newData = { ...data, status: 2, amountReceived: received}
+              save(newData)
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    }else{
+      if(status === 2){//somo os valores 
+        data.amountReceived = received
+      }
+      save(data)
     }
   }
 
@@ -323,16 +380,24 @@ export default function CloseOrder() {
             {/* View da Esquerda */}
             <View style={{ flex: 1, justifyContent: 'flex-start' }}>
               <Text variant="titleMedium">{name}</Text>
-              <Text>Abertura: {moment(new Date(openingDate)).format('DD/MM/YYYY HH:mm')}</Text>
+              <Text>Abertura: {moment(openingDate).format('DD/MM/YYYY HH:mm')}</Text>
+              <Divider style={{ marginTop: 10 }} />
+              <Text variant="titleLarge" style={{ marginTop: 10 }}>Total: {formatToCurrencyBR(resultTotal)}</Text>
+              {status === 2 &&
+                <View>
+                  <Text>Pago: {formatToCurrencyBR(amountReceived)}</Text>
+                  <Text>À Pagar: {formatToCurrencyBR(totalOrder - amountReceived)}</Text>
+                </View>
+              }
             </View>
 
             {/* View da Direita */}
-            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', flexDirection: 'row' }}>
+            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-start', flexDirection: 'row' }}>
               <IconButton
                 icon="cash-check"
                 iconColor={theme.colors.primary}
                 size={30}
-                disabled={status !== 1}
+                disabled={status === 0}
                 onPress={() => setIsCloeOrder(true)}
               />
               <IconButton
@@ -386,7 +451,8 @@ export default function CloseOrder() {
                 onLongPress={() => confirmItemCancel(index)}
                 onPress={() => Alert.alert(
                   "Detalhes do pedido",
-                  `${item?.qty} x ${item?.name}\n${moment(item?.date.toDate()).utcOffset(-3).format('DD/MM/YYYY HH:mm')}`
+                  `${item?.qty} x ${item?.name}\n${moment(item?.date.toDate()).utcOffset(-3).format('DD/MM/YYYY HH:mm')}` +
+                  `\n\n\nOperador: ${item?.operator || ""}`
                 )}
               >
                 <DataTable.Cell style={{ flex: 2 }}>{index + 1}</DataTable.Cell>
@@ -435,26 +501,32 @@ export default function CloseOrder() {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
 
                   {paymentMethods.map(pay => (
-                    <Button key={`button${pay}`} style={{ margin: 2 }}
+                    <Button key={`button${pay.id}`} style={{ margin: 2 }}
                       mode={paymentMethod === pay.id ? 'contained' : 'outlined'}
                       onPress={() => {
                         if (pay.id === 'CASH') {
                           setChangeValueOorder(formatToDoubleBR(0))
                         }
                         setPaymentMethod(pay.id)
-                        setAmmountReceived(pay.id === 'CASH' ? formatToDoubleBR(0) : formatToDoubleBR(totalOrder))
+                        if (status !== 2)
+                          setParamAmmountReceived(pay.id === 'CASH' ? formatToDoubleBR(0) : formatToDoubleBR(totalOrder))
                       }}>{pay.name}
                     </Button>
                   ))}
                 </View>
 
-                <Text variant="titleLarge" style={{ margin: 10 }}>À pagar: R$ {formatToDoubleBR(resultTotal || 0)}</Text>
+                <Text variant="titleLarge" style={{ margin: 10 }}>
+                  À pagar:
+                  {status === 2 ?
+                    formatToCurrencyBR(totalOrder - amountReceived)
+                    :
+                    formatToDoubleBR(resultTotal || 0)}</Text>
                 <TextInput
                   style={{ margin: 5 }}
                   label="Valor recebido"
                   keyboardType='numeric'
-                  value={amountReceived}
-                  onChangeText={(e) => setAmmountReceived(formatCurrencyInput(e))}
+                  value={paramAmountedReceived}
+                  onChangeText={(e) => setParamAmmountReceived(formatCurrencyInput(e))}
                 />
                 {paymentMethod === 'CASH' &&
                   <View>
@@ -467,7 +539,7 @@ export default function CloseOrder() {
                     />
                     <Button
                       onPress={() => {
-                        const result = parseFloat(amountReceived) - resultTotal
+                        const result = parseFloat(paramAmountedReceived) - resultTotal
                         setChangeValueOorder(formatToDoubleBR(result))
                       }}
                     >Calcular</Button>
@@ -476,7 +548,7 @@ export default function CloseOrder() {
               </Dialog.Content>
               <Dialog.Actions>
                 <Button onPress={() => setIsCloeOrder(false)}>Cancelar</Button>
-                <Button onPress={() => closeOrder()}>Finalizar</Button>
+                <Button loading={isLoadingSave} onPress={() => closeOrder()}>Finalizar</Button>
               </Dialog.Actions>
             </Dialog>
           </Portal>
@@ -550,8 +622,10 @@ export default function CloseOrder() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-
-
+        {/* <Button onPress={() => console.log(data)}>data</Button>
+        <Button onPress={() => console.log(ticketData)}>ticker</Button>
+        <Button onPress={() => console.log(route.params)}>parmas</Button>
+        <Button onPress={() => console.log(openingDate)}>openingDate</Button> */}
 
     </View>
   )

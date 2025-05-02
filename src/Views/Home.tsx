@@ -749,7 +749,7 @@ console.log(timestamp_ms_7_days_later); // Resultado final
 
               <Card
                 style={{ width: "46%", margin: "2%", height: 240 }}
-                onPress={() => navigation.navigate('Orders')}
+                onPress={() => navigation.navigate('Tickets')}
               >
                 <Card.Cover source={require('../assets/images/pos.jpeg')} />
                 <Card.Content style={{ marginTop: "4%" }}>
@@ -759,7 +759,7 @@ console.log(timestamp_ms_7_days_later); // Resultado final
 
               <Card
                 style={{ width: "46%", margin: "2%", height: 240 }}
-                onPress={() => navigation.navigate('OrderItems')}
+                onPress={() => navigation.navigate('Orders')}
               >
                 <Card.Cover source={require('../assets/images/banner3.jpeg')} />
                 <Card.Content style={{ marginTop: "4%" }}>
