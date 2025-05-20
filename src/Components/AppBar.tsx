@@ -1,5 +1,5 @@
 import { StatusBar } from 'react-native'
-import React, { useContext} from 'react'
+import React, { useContext } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { UserContext } from '../context/UserContext';
@@ -19,6 +19,8 @@ import UserConfig from '../Views/UserConfig';
 import EstablishmentMenu from '../Views/EstablishmentMenu';
 import ItemsMenu from '../Views/ItemsMenu';
 import { auth } from '../Services/FirebaseConfig'
+import moment from 'moment';
+import { getCurrentDate, printThermalPrinter } from '../Services/Functions';
 
 export default function AppBar() {
 
@@ -35,6 +37,19 @@ export default function AppBar() {
     auth.signOut();
   }
 
+  const printExpirationDate = async (month: number) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + month);
+    const expires =  moment(date).format('DD/MM/YYYY')
+    const text =
+      `[C]<u><font size='big'>HAMBURGUER</font></u>\n` +
+      `[L]\n\n\n` +
+      `[L]<font size='tall'>Data: ${moment(getCurrentDate()).format('DD/MM/YYYY')}\n` +
+      `[L]Validade: ${expires}\n</font>` 
+      // `[C]--------------------------------\n`
+    printThermalPrinter(text)
+  }
+
   const DrawerNavigator = () => {
     return (
       <Drawer.Navigator
@@ -48,7 +63,7 @@ export default function AppBar() {
           },
         }}
         initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
-        //initialRouteName={'Login'}
+      //initialRouteName={'Login'}
       >
         {userContext?.isAuthenticated ?
           <>
@@ -97,6 +112,7 @@ export default function AppBar() {
                   ),
                 }}
               />
+
               {userContext.userRole === 'ADM' &&
                 <Drawer.Screen name="UserConfig"
                   component={UserConfig}
@@ -111,7 +127,6 @@ export default function AppBar() {
                 />
               }
             </>}
-
             <Drawer.Screen
               name="Logoff"
               options={{
@@ -124,6 +139,19 @@ export default function AppBar() {
               }}
             >
               {() => <Button onPress={signOut}>sair</Button>}
+            </Drawer.Screen>
+            <Drawer.Screen
+              name="Imprimir"
+              options={{
+                headerStyle: { backgroundColor: theme.colors.primary },
+                headerTitleStyle: { color: theme.colors.onBackground },
+                title: 'Imprimir',
+                drawerIcon: ({ color, size }) => (
+                  <Icon source="account-circle" size={size} color={theme.colors.background} />
+                ),
+              }}
+            >
+              {() => <Button onPress={()=>printExpirationDate(4)}>Imprimir </Button>}
             </Drawer.Screen>
           </> :
           <>
@@ -162,7 +190,7 @@ export default function AppBar() {
             cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           }}
         />
-         <Stack.Screen
+        <Stack.Screen
           name="ItemsMenu"
           component={ItemsMenu}
           options={{

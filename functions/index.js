@@ -68,7 +68,7 @@ async function authenticateRequest(req, res) {
 
 
 exports.sendNewOrderNotification = functions.firestore
-  .document('OrderItems/{orderId}')
+  .document('Establishment/{establishmentId}/Orders/{orderId}')
   .onCreate(async (snapshot, context) => {
     const orderData = snapshot.data();
 
@@ -703,9 +703,8 @@ exports.executePaymentToEstablishment = functions.https.onRequest((req, res) => 
         body: JSON.stringify({
           installments: 1,
           transaction_amount: transactionAmount,
-          application_fee: 4,
+          application_fee: Number((transactionAmount * 0.04).toFixed(2)),
           description: description || "",
-          payment_method_id: "master",
           payer: {
             email: payerEmail
           },
@@ -732,3 +731,34 @@ exports.executePaymentToEstablishment = functions.https.onRequest((req, res) => 
   });
 });
 
+
+exports.savePayment = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).send({ error: 'Método não permitido' })
+    }
+
+    const payment = {
+      ...req.body,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (!payment.establishmentId || !payment.status || !payment.id) {
+      return res.status(400).send({ error: 'Dados inválidos ou incompletos.' })
+    }
+
+    try {
+      const paymentsRef = db
+        .collection('Establishment')
+        .doc(payment.establishmentId)
+        .collection('Payments')
+
+      await paymentsRef.doc(payment.id.toString()).set(payment)
+
+      return res.status(200).send({ success: true, message: 'Pagamento salvo com sucesso.' })
+    } catch (error) {
+      console.error('Erro ao salvar pagamento:', error);
+      return res.status(500).send({ error: 'Erro interno do servidor.' })
+    }
+  })
+})

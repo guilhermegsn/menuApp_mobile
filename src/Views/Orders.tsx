@@ -5,7 +5,7 @@ import { UserContext } from '../context/UserContext';
 import { db } from '../Services/FirebaseConfig';
 import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, IconButton, Portal, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import { OrderData } from '../Interfaces/Order_interface';
-import { getInitialsName, playSound, printThermalPrinter, removeAccents, vibrate } from '../Services/Functions'
+import { formatToDoubleBR, getInitialsName, playSound, printThermalPrinter, removeAccents, vibrate } from '../Services/Functions'
 import moment from 'moment-timezone'
 import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
@@ -76,7 +76,12 @@ export default function Orders() {
                 // Evita duplicatas
                 if (existingIndex === -1) {
                   if (docData.status === 1 && isNewOrder(docData.date.toDate())) {
-                    if (hasPrinter && autoPrint) printOrder(docData);
+                    if (hasPrinter && autoPrint) {
+                      console.log('imprimindo...')
+                      printOrder(docData)
+                    } else {
+                      console.log('nao--->>>', hasPrinter, autoPrint)
+                    }
                     vibrate();
                     playSound('deskbell.wav');
                   }
@@ -211,13 +216,14 @@ export default function Orders() {
 
 
   const printOrder = async (newOrder: DocumentData) => {
+
     let itemsText = ""
     newOrder?.items.forEach((item: string | any, index: number) => {
       const itemName = item?.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
       itemsText = itemsText + `[L]<font size='small'>${(index + 1).toString().padEnd(0)} ${item?.qty.toString().padStart(4)} ${itemName.padStart(6)} </font>\n`
     })
     const initialText =
-      `[C]<u><font size='tall'>Pedido</font></u>\n` +
+      `[C]<u><font size='tall'>Pedido ${String(newOrder.orderNumber).padStart(4, '0')}</font></u>\n` +
       `[L]\n` +
       `[L]Data: ${moment(newOrder.date.toDate()).format('DD/MM/YYYY HH:mm')}\n` +
       `[C]================================\n` +
@@ -229,12 +235,13 @@ export default function Orders() {
       `[C]================================\n` +
       `[L]<font size='small'>${newOrder?.name}</font>\n` +
       `[C]--------------------------------\n` +
-      `[L]<font size='small'>${newOrder?.local.replaceAll(" - ", "\n")}</font>\n`
+      `[L]<font size='small'>${newOrder.type !== 2 ? newOrder?.local.replaceAll(" - ", "\n") : ""}</font>\n`
 
     const deliveryText = `[C]--------------------------------\n` +
-      `[L]TOTAL ${newOrder?.totalOrder}\n` +
+      `[L]TOTAL ${formatToDoubleBR(newOrder?.totalOrder)}\n` +
       `[L]Pagamento: ${newOrder?.paymentType === 'CASH' ? 'Dinheiro' : newOrder?.paymentType === 'CRD' ? 'Credito' : 'Debito'}\n` +
-      `[L]${newOrder?.obs}\n`
+      `[L]${newOrder?.obs}\n` +
+      `[C]${newOrder?.isOnlinePayment ? `*** PAGO ONLINE ***\n*** NAO RECEBER DO CLIENTE ***` : ""}\n`
 
 
     let fullText = ""
@@ -342,32 +349,49 @@ export default function Orders() {
                   paddingRight: 7,
                 }}
               >
-                <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }} onPress={() => selectOrder(order.id)}>
+                <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }}
+                  onPress={() => selectOrder(order.id)}>
                   <Card.Title
                     titleStyle={{ marginBottom: -10 }}
                     title={order?.name}
                     subtitleVariant={'bodySmall'}
                     titleVariant='titleMedium'
                     subtitle={order.type !== 2 ? order?.local : ""}
-                    left={(props) => order?.type === 1 ? <Avatar.Text size={40} label={getInitialsName(order?.name)} /> : <Avatar.Icon {...props} icon={order?.type === 3 ? "moped-outline" :
-                      order?.type === 2 ? "account-group" : "account"} />}
-                    right={() => <View>
-                      <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).utcOffset(-3).format('HH:mm') + `\n`
-                        + (order.elapsedTime ? order.elapsedTime : moment(order.date.toDate()).utcOffset(-3).format('DD/MM/YYYY'))}
-                      </Text>
+                    left={(props) =>
 
-                      <View style={{ alignItems: "flex-end", marginTop: 15, marginEnd: 10 }}>
-                        <Icon
-                          source="circle-slice-8"
-                          color={order.status === 1 ? 'green' :
-                            order.status === 2 ? '#F39C12' : 'gray'}
-                          size={18}
-                        />
+                      <View style={{ marginTop: 10 }}>
+                        {order?.type === 1 ?
+                          <Avatar.Text size={40} label={getInitialsName(order?.name)} /> :
+                          <Avatar.Icon {...props} icon={order?.type === 3 ? "moped-outline" :
+                            order?.type === 2 ? "account-group" : "account"} />}
+                        <Text
+                          variant='labelMedium'
+                          style={{ marginLeft: 3, marginTop: 4 }}>
+                          {`${order.orderNumber ? String(order?.orderNumber).padStart(5, '0') : "00000"}`}
+                        </Text>
                       </View>
-                    </View>}
+
+                    }
+
+                    right={() =>
+
+                      <View>
+                        <Text style={{ textAlign: 'right', marginRight: 10 }}> {moment(order.date.toDate()).utcOffset(-3).format('HH:mm') + `\n`
+                          + (order.elapsedTime ? order.elapsedTime : moment(order.date.toDate()).utcOffset(-3).format('DD/MM/YYYY'))}
+                        </Text>
+
+                        <View style={{ alignItems: "flex-end", marginTop: 15, marginEnd: 10 }}>
+                          <Icon
+                            source="circle-slice-8"
+                            color={order.status === 1 ? 'green' :
+                              order.status === 2 ? '#F39C12' : 'gray'}
+                            size={18}
+                          />
+                        </View>
+                      </View>}
                   />
                   <Card.Content>
-                    <View style={{ marginLeft: 3, marginTop: -5 }}>
+                    <View style={{ marginLeft: 3, marginTop: 10 }}>
                       {order?.items.map((item: string | any, index: number) => (
                         <Text variant='titleMedium' key={index}>{item?.qty} x {item?.name}</Text>
                       ))}
@@ -375,9 +399,6 @@ export default function Orders() {
                   </Card.Content>
                 </Card>
               </Card>
-              {/* {order.items.map((item: string | any) => (
-              <Text>{item?.name}</Text>
-            ))} */}
             </View>
           ))}
 
@@ -397,9 +418,15 @@ export default function Orders() {
       <Portal>
         <Dialog visible={isChangeStatus} onDismiss={() => setIsChangeStatus(false)}>
           {isLoadingSaveStatus && <Loading />}
-          <Dialog.Title>{selectedOrder?.local}</Dialog.Title>
+          <Dialog.Title>
+            {String(selectedOrder?.orderNumber).padStart(5, '0')}&nbsp;-&nbsp;
+            {selectedOrder?.local !== selectedOrder?.name ? selectedOrder?.name : selectedOrder?.local}
+          </Dialog.Title>
           <Dialog.Content>
-            <Text variant="bodyMedium">Selecione o status:</Text>
+
+            <Text style={{ marginTop: -20 }}>{selectedOrder?.local !== selectedOrder?.name && selectedOrder?.local || ""}</Text>
+
+            <Text style={{ marginTop: 25 }} variant="titleMedium">Selecione o status:</Text>
 
             <RadioButton.Group
               value={selectedOrder?.status ? selectedOrder?.status.toString() : "0"}
@@ -434,6 +461,7 @@ export default function Orders() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+      <Button onPress={() => console.log(hasPrinter, autoPrint)}>log</Button>
     </View>
   )
 }

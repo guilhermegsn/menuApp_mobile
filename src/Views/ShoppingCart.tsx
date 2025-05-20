@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { ActivityIndicator, Button, Card, DataTable, Dialog, Icon, IconButton, Portal, Text, TextInput } from 'react-native-paper'
 import { UserContext } from '../context/UserContext';
 import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
-import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, getDoc, getDocs, query, runTransaction, where } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import Loading from '../Components/Loading';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
@@ -131,12 +131,32 @@ export default function ShoppingCart() {
     }
   }
 
+  const generateOrderNumber = async () => {
+    const counterRef = doc(db, 'Establishment', userContext?.estabId, 'Configs', 'orderCounter')
+    const newNumber = await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef)
+      if (!counterDoc.exists()) {
+        transaction.set(counterRef, { lastNumber: 1 })
+        return 1
+      } else {
+        console.log('erro')
+      }
+      const data = counterDoc.data()
+      const nextNumber = (data.lastNumber || 0) + 1
+      transaction.update(counterRef, { lastNumber: nextNumber })
+      return nextNumber
+    })
+    return newNumber
+  }
+
 
   const sendOrder = async () => {
+   
     console.log(dataTicket)
-    console.log('usettttt',userContext?.user.displayName)
+    console.log('usettttt', userContext?.user.displayName)
     setIsLoading(true)
     try {
+      const orderNumber = await generateOrderNumber()
       const items = userContext?.shoppingCart.map((item: DocumentData) => ({
         idItem: item.product.id,
         idMenu: item.menuId,
@@ -147,6 +167,7 @@ export default function ShoppingCart() {
 
       const dataOrder = {
         date: new Date(),
+        orderNumber,
         establishment: userContext?.estabId,
         items: items,
         local: dataTicket?.local,

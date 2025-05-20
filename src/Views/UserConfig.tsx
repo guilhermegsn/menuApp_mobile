@@ -328,7 +328,7 @@ export default function UserConfig() {
               </View>
 
             </View>
-
+<Button onPress={()=> console.log(hasPrinter, autoPrint)}>log</Button>
           </View>
         }
 

@@ -232,7 +232,7 @@ export default function Tickets() {
       `[L]\n` +
       `[C]Acesse o QR Code para pedir:\n` +
       `[L]\n` +
-      `[L]<qrcode>${base_url}${userContext?.estabId}/1/${params.id}</qrcode>\n` +
+      `[L]<qrcode>${base_url}/${userContext?.estabId}/1/${params.id}</qrcode>\n` +
       `[L]\n` +
       `[L]\n` +
       // `[C]<barcode type='ean13' height='10'>${gerarCodigoComanda()}</barcode>\n` +
