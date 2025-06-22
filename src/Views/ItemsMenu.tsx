@@ -137,12 +137,12 @@ export default function ItemsMenu() {
   }
 
   const newProduct = () => {
-    if (userContext?.expiredSubscription) {
-      Alert.alert("Wise Menu", "Não é possível criar um novo item")
-    } else {
+    // if (userContext?.expiredSubscription) {
+    //   Alert.alert("Wise Menu", "Não é possível criar um novo item")
+    // } else {
       setOperation('create')
       setProduct(emptyProduct)
-    }
+   // }
   }
 
   const styles = StyleSheet.create({

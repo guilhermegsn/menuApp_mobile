@@ -196,6 +196,7 @@ export default function Tickets() {
       if (saveTicket) {
         setIdNewTicket(saveTicket?.id)
         if (ticketType === 1) {
+          console.log('url', `${base_url}/${userContext?.estabId}/1/${saveTicket.id}`)
           setSavedNewTicket(`${base_url}/${userContext?.estabId}/1/${saveTicket.id}`)
         }
       }
@@ -422,11 +423,11 @@ export default function Tickets() {
               size={22}
               mode='outlined'
               onPress={() => {
-                if (userContext?.expiredSubscription) {
-                  Alert.alert("Wise Menu", "Não é possível abrir nova comanda.")
-                } else {
+                // if (userContext?.expiredSubscription) {
+                //   Alert.alert("Wise Menu", "Não é possível abrir nova comanda.")
+                // } else {
                   setIsOpenNewTicket(true)
-                }
+                //}
               }}
             />
           </View>

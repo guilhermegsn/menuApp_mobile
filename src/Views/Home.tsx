@@ -199,66 +199,66 @@ export default function Home() {
   const isMounted = useRef(true);
   useEffect(() => {
 
-    const getStatusSubscription = async () => {
-      try {
-        if (!userContext?.estabId) return;
-        // Verificando assinatura
-        const subscriptionDoc = await getDoc(doc(db, "Subscriptions", userContext?.estabId))
-        console.log('estab->', userContext?.estabId)
+    // const getStatusSubscription = async () => {
+    //   try {
+    //     if (!userContext?.estabId) return;
+    //     // Verificando assinatura
+    //     const subscriptionDoc = await getDoc(doc(db, "Subscriptions", userContext?.estabId))
+    //     console.log('estab->', userContext?.estabId)
 
-        if (!subscriptionDoc.exists()) { // Ainda não tem assinatura (período de teste)
-          console.log('nao tem assinatura')
-          try {
-            const establishmentDoc = await getDoc(doc(db, "Establishment", userContext?.estabId))
-            if (!establishmentDoc.exists()) {
-              console.error("Documento de estabelecimento não encontrado!")
-              return;
-            }
+    //     if (!subscriptionDoc.exists()) { // Ainda não tem assinatura (período de teste)
+    //       console.log('nao tem assinatura')
+    //       try {
+    //         const establishmentDoc = await getDoc(doc(db, "Establishment", userContext?.estabId))
+    //         if (!establishmentDoc.exists()) {
+    //           console.error("Documento de estabelecimento não encontrado!")
+    //           return;
+    //         }
 
-            const establishmentData = establishmentDoc.data();
-            const days = calcularDiferencaDias(establishmentData?.createdAt.toDate(), getCurrentDate())
+    //         const establishmentData = establishmentDoc.data();
+    //         const days = calcularDiferencaDias(establishmentData?.createdAt.toDate(), getCurrentDate())
 
-            if (days > free_trial) {
-              setIsBlocked(true)
-              setIsOpenModalPlans(true)
-            } else {
-              const remainingDays = free_trial - days
-              if (remainingDays === 0 && isMounted.current) {
-                setIsOpenModalPlans(true)
-                setTimeout(() => {
-                  Alert.alert("Assine o Wise Menu!", "Hoje é o último dia do seu período de testes. Assine um de nossos planos e mantenha seu estabelecimento digital!")
-                }, 1000);
-              } else if (isMounted.current) {
-                Alert.alert("Período de teste.", `Restam ${remainingDays} dias para encerrar seu período de testes.`)
-              }
+    //         if (days > free_trial) {
+    //           setIsBlocked(true)
+    //           setIsOpenModalPlans(true)
+    //         } else {
+    //           const remainingDays = free_trial - days
+    //           if (remainingDays === 0 && isMounted.current) {
+    //             setIsOpenModalPlans(true)
+    //             setTimeout(() => {
+    //               Alert.alert("Assine o Wise Menu!", "Hoje é o último dia do seu período de testes. Assine um de nossos planos e mantenha seu estabelecimento digital!")
+    //             }, 1000);
+    //           } else if (isMounted.current) {
+    //             Alert.alert("Período de teste.", `Restam ${remainingDays} dias para encerrar seu período de testes.`)
+    //           }
 
-            }
-          } catch (error) {
-            console.error("Erro ao buscar estabelecimento:", error)
-          }
-        } else { // Tem assinatura, verificando status
-          console.log('assinatura encontrada. verificando..')
-          try {
-            const subscriptionData = subscriptionDoc.data()
-            const lastPayment = calcularDiferencaDias(subscriptionData?.lastAuthorizedPayment.toDate(), getCurrentDate())
-            if (subscriptionData?.status !== 'active' || lastPayment > 31) {
-              if (isMounted.current)
-                Alert.alert("Wise Menu", "Não fique sem os nossos serviços!\nVerifique o status de sua assinatura.")
-              if (lastPayment > (30 + free_trial)) {
-                userContext?.setExpiredSubscription(true)
-                const establishmentRef = doc(db, "Establishment", userContext?.estabId)
-                await updateDoc(establishmentRef, { status: 'inactive' })
-              }
-            }
-          } catch (error) {
-            console.error("Erro ao atualizar status da assinatura:", error)
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao buscar assinatura:", error)
-      }
-    }
-    getStatusSubscription()
+    //         }
+    //       } catch (error) {
+    //         console.error("Erro ao buscar estabelecimento:", error)
+    //       }
+    //     } else { // Tem assinatura, verificando status
+    //       console.log('assinatura encontrada. verificando..')
+    //       try {
+    //         const subscriptionData = subscriptionDoc.data()
+    //         const lastPayment = calcularDiferencaDias(subscriptionData?.lastAuthorizedPayment.toDate(), getCurrentDate())
+    //         if (subscriptionData?.status !== 'active' || lastPayment > 31) {
+    //           if (isMounted.current)
+    //             Alert.alert("Wise Menu", "Não fique sem os nossos serviços!\nVerifique o status de sua assinatura.")
+    //           if (lastPayment > (30 + free_trial)) {
+    //             userContext?.setExpiredSubscription(true)
+    //             const establishmentRef = doc(db, "Establishment", userContext?.estabId)
+    //             await updateDoc(establishmentRef, { status: 'inactive' })
+    //           }
+    //         }
+    //       } catch (error) {
+    //         console.error("Erro ao atualizar status da assinatura:", error)
+    //       }
+    //     }
+    //   } catch (error) {
+    //     console.error("Erro ao buscar assinatura:", error)
+    //   }
+    // }
+    // getStatusSubscription()
 
     return () => {
       isMounted.current = false;

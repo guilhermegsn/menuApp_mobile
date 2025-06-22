@@ -171,12 +171,12 @@ export default function EstablishmentMenu() {
   }
 
   const newMenu = () => {
-    if (userContext?.expiredSubscription) {
-      Alert.alert("Wise Menu", "Não é possível criar um novo menu.")
-    } else {
+    // if (userContext?.expiredSubscription) {
+    //   Alert.alert("Wise Menu", "Não é possível criar um novo menu.")
+    // } else {
       setIsNewMenu(true)
       setMenu(emptyMenu)
-    }
+    //}
   }
 
   const deleteMenu = () => {

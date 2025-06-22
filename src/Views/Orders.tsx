@@ -11,6 +11,8 @@ import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
 import KeepAwake from 'react-native-keep-awake';
 import { useStorage } from '../context/StorageContext';
+import { PieChart, ProgressChart } from 'react-native-chart-kit';
+import { theme } from '../Services/ThemeConfig';
 
 export default function Orders() {
 
@@ -79,8 +81,6 @@ export default function Orders() {
                     if (hasPrinter && autoPrint) {
                       console.log('imprimindo...')
                       printOrder(docData)
-                    } else {
-                      console.log('nao--->>>', hasPrinter, autoPrint)
                     }
                     vibrate();
                     playSound('deskbell.wav');
@@ -322,7 +322,7 @@ export default function Orders() {
       <View style={{ flexDirection: 'row', alignItems: 'center', margin: 12 }}>
 
         {filteredBy === 'open' &&
-          <View>
+          <View >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 30 }}>
               <Icon source="circle" color={'green'} size={18} />
               <Text variant="bodyLarge" style={{ marginLeft: 5, marginRight: 12 }}>
@@ -352,8 +352,20 @@ export default function Orders() {
                 <Card style={{ backgroundColor: '#EAECEE', borderBottomRightRadius: 0, borderTopRightRadius: 0 }}
                   onPress={() => selectOrder(order.id)}>
                   <Card.Title
-                    titleStyle={{ marginBottom: -10 }}
-                    title={order?.name}
+                    titleStyle={{ marginBottom: -5 }}
+                    title={
+                      <View style={{ display: 'flex', flexDirection: 'row' }}>
+                        <Text variant='titleMedium'>{order?.name}</Text>
+                        {order?.isOnlinePayment &&
+                         <View style={{marginTop: 2, marginLeft: 4}}>
+                           <Icon      
+                                      
+                            source="cash-check"
+                            size={25}
+                          />
+                         </View>
+                        }
+                      </View>}
                     subtitleVariant={'bodySmall'}
                     titleVariant='titleMedium'
                     subtitle={order.type !== 2 ? order?.local : ""}
@@ -365,6 +377,8 @@ export default function Orders() {
                           <Avatar.Icon {...props} icon={order?.type === 3 ? "moped-outline" :
                             order?.type === 2 ? "account-group" : "account"} />}
                         <Text
+                          numberOfLines={1}
+                          ellipsizeMode='clip'
                           variant='labelMedium'
                           style={{ marginLeft: 3, marginTop: 4 }}>
                           {`${order.orderNumber ? String(order?.orderNumber).padStart(5, '0') : "00000"}`}

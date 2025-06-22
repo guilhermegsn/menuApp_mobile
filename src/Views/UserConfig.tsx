@@ -242,10 +242,12 @@ export default function UserConfig() {
                   {moment(dataSubscription?.lastAuthorizedPayment.toDate()).utcOffset(-3).format("DD/MM/YYYY HH:mm")}
                 </Text>
 
-                <Button
-                  style={{ marginTop: 12, marginBottom: 25 }}
-                  mode='outlined'
-                  onPress={() => setIsOpenModalPlans(true)}>Alterar plano</Button>
+                <View style={{ marginLeft: 'auto' }}>
+                  <Button
+                    style={{ marginTop: 12, marginBottom: 25 }}
+                    mode='outlined'
+                    onPress={() => setIsOpenModalPlans(true)}>Alterar plano</Button>
+                </View>
               </View>
               :
               <View>
@@ -269,12 +271,13 @@ export default function UserConfig() {
                 />
               </View>
             </View>
-
-            <Button
-              style={{ marginTop: 12, marginBottom: 25 }}
-              mode='outlined'
-              onPress={() => setIsOpenDialogOnlinePayment(true)}
-            >Configurar conta</Button>
+            <View style={{ marginLeft: 'auto' }}>
+              <Button
+                style={{ marginTop: 12, marginBottom: 25 }}
+                mode='outlined'
+                onPress={() => setIsOpenDialogOnlinePayment(true)}
+              >Configurar conta</Button>
+            </View>
 
             <Divider />
 
@@ -296,17 +299,19 @@ export default function UserConfig() {
               ))}
             </DataTable>
 
-            <Button
-              style={{ marginTop: 12, marginBottom: 25 }}
-              mode='outlined'
-              onPress={() => {
-                if (userContext?.expiredSubscription) {
-                  Alert.alert("Wize Menu", "Não é possível criar um novo usuário")
-                } else {
-                  setIsNewRegister(true)
-                }
-              }}
-            >Adicionar Usuário</Button>
+            <View style={{ marginLeft: 'auto' }}>
+              <Button
+                style={{ marginTop: 20, marginBottom: 25 }}
+                mode='outlined'
+                onPress={() => {
+                  // if (userContext?.expiredSubscription) {
+                  //   Alert.alert("Wize Menu", "Não é possível criar um novo usuário")
+                  // } else {
+                    setIsNewRegister(true)
+                  //}
+                }}
+              >Adicionar Usuário</Button>
+            </View>
             <Divider />
             <Text variant="headlineSmall" style={{ marginTop: 12 }}>Configurações de improssora</Text>
 
@@ -328,7 +333,7 @@ export default function UserConfig() {
               </View>
 
             </View>
-<Button onPress={()=> console.log(hasPrinter, autoPrint)}>log</Button>
+            <Button onPress={() => console.log(hasPrinter, autoPrint)}>log</Button>
           </View>
         }
 
