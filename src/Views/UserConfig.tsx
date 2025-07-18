@@ -260,7 +260,7 @@ export default function UserConfig() {
             }
 
             <Divider />
-            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Receber pagamentos online</Text>
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Habilitar Delivery</Text>
 
             <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 20 }}>
               <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
@@ -439,17 +439,18 @@ export default function UserConfig() {
       {/* Modal Usuário */}
       <Portal>
         <Dialog visible={isOpenDialogOnlinePayment} onDismiss={() => setIsOpenDialogOnlinePayment(false)}>
-          <Dialog.Title style={{ textAlign: 'center' }}>{'Receber pagamentos online'}</Dialog.Title>
+          <Dialog.Title style={{ textAlign: 'center' }}>{'Habilitar Delivery'}</Dialog.Title>
           {stepAccountMercadoPago === 0 ?
             <View style={{ margin: 20 }}>
-              <Text variant="titleSmall">Para receber pagamentos online, você deve ter uma conta no Mercado Pago.</Text>
+              <Text variant="titleSmall">Para habilitar o sistema de Delivery, é necessário possuir uma conta  
+                no Mercado Pago para receber os pagamentos.
+                </Text>
               <Text variant="titleSmall" style={{ marginTop: 10 }}>
                 Os pagamentos serão processados pelo Mercado Pago e cairá diretamente na sua conta no mesmo dia.
               </Text>
               <Text variant="titleMedium" style={{ marginTop: 10 }}>Confira as taxas:</Text>
               <Text variant="titleSmall" style={{ marginTop: 10 }}>Crédito à vista: 4,98%</Text>
-              <Text variant="titleSmall">PIX: 0,00%</Text>
-              <Text variant="titleSmall" style={{ marginTop: 10 }}>Taxa do aplicativo: 3,00%</Text>
+              <Text variant="titleSmall" style={{ marginTop: 10 }}>Taxa : 5,02%</Text>
               <Text variant="bodyMedium" style={{ marginTop: 30 }}>Ainda nâo possui uma conta  Mercado Pago?</Text>
 
               <Button style={{ marginTop: 10 }}

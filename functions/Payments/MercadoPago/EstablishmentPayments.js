@@ -105,13 +105,11 @@ exports.renewTokensMercadoPago = functions.pubsub.schedule("every 24 hours").onR
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000; // 7 dias em milissegundos
   const nextSeveenDays = now + sevenDaysMs
 
-  console.log("Agora:", now);
-  console.log("7 dias a partir de agora:", nextSeveenDays);
 
   try {
     // Buscar tokens que expiram nos próximos 7 dias
     const tokensSnapshot = await admin.firestore().collection("AccessTokens")
-      .where("expires_at", "<", (now + sevenDaysMs))
+      .where("expires_at", "<", (nextSeveenDays))
       .get();
 
     if (tokensSnapshot.empty) {
@@ -119,14 +117,10 @@ exports.renewTokensMercadoPago = functions.pubsub.schedule("every 24 hours").onR
       return null;
     }
 
-    console.log('tokensSnapshot->', tokensSnapshot.docs)
 
     for (const doc of tokensSnapshot.docs) {
       const { token_data } = doc.data();
       console.log(`Token do estabelecimento ${doc.id} está vencendo. Renovando...`);
-
-      console.log('doc->', doc)
-      console.log('token_data', token_data)
 
       try {
         const strToken = decrypt(token_data)
@@ -151,7 +145,6 @@ exports.renewTokensMercadoPago = functions.pubsub.schedule("every 24 hours").onR
         const data = await response.json();
 
         if (data.access_token) {
-          console.log(`Novo token gerado para ${doc.id}`);
 
           const expiresInMs = data.expires_in * 1000; // Converter para ms
           const expiresAt = now + expiresInMs; // Nova data de expiração
@@ -193,8 +186,6 @@ exports.getPublicMpKey = functions.https.onRequest((req, res) => {
       }
       const tokenData = tokenDoc.data();
       const accessToken = JSON.parse(decrypt(tokenData.token_data))
-      console.log('accceeess::', accessToken)
-      console.log('publickey', accessToken?.public_key)
       const public_key = accessToken?.public_key
       return res.status(200).json(public_key);
     } catch {
@@ -218,12 +209,8 @@ exports.executePaymentToEstablishment = functions.https.onRequest((req, res) => 
         throw new Error("Token do estabelecimento não encontrado");
       }
 
-      console.log('tokenDoc ->', tokenDoc.data())
-
       const tokenData = tokenDoc.data();
       const accessToken = JSON.parse(decrypt(tokenData.token_data));
-
-      console.log('acces::', accessToken)
 
       const response = await fetch("https://api.mercadopago.com/v1/payments", {
         method: "POST",
@@ -245,7 +232,6 @@ exports.executePaymentToEstablishment = functions.https.onRequest((req, res) => 
       });
 
       const paymentData = await response.json();
-      console.log("Pagamento criado:", paymentData);
 
       if (response.ok) {
         return res.status(response.status).json(paymentData);

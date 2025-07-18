@@ -195,10 +195,9 @@ export const readTagNfc = async (setIsOpenNFC: React.Dispatch<React.SetStateActi
 export const getDataNfcTicket = async (idTag: string, idEstablishment: string) => {
   try {
     const q = query(
-      collection(db, "Ticket"),
+      collection(db, "Establishment", idEstablishment, "Tickets"),
       where("idTag", "==", idTag),
-      where("status", "==", 1),
-      where("establishment", "==", idEstablishment),
+      where("status", "==", 1)
     )
     const querySnapshot = await getDocs(q)
     const doc = querySnapshot.docs[0]

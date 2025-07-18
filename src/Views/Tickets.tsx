@@ -1,7 +1,7 @@
-import { Alert, Dimensions, FlatList, Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
-import React, { useCallback, useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Avatar, Button, Card, Dialog, Icon, Switch, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
-import { collection, query, where, DocumentData, onSnapshot, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
+import { Alert, Dimensions, FlatList, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import React, { useContext, useEffect, useState } from 'react'
+import { ActivityIndicator, Button, Card, Dialog, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper'
+import { collection, query, where, DocumentData, orderBy, addDoc, serverTimestamp, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../Services/FirebaseConfig';
 import { UserContext } from '../context/UserContext';
 import { theme } from '../Services/ThemeConfig';
@@ -57,7 +57,6 @@ export default function Tickets() {
   const [searchQuery, setSearchQuery] = useState('')
   const [refreshing, setRefreshing] = useState(false);
   const [fixedTicketType, setFixedTicketType] = useState('0')
-  const [isPausedPrint, setIsPausedPrint] = useState(false)
   const [sequentialNumber, setSequentialNumber] = useState({
     start: '1',
     end: '5'
@@ -198,7 +197,8 @@ export default function Tickets() {
         if (ticketType === 1) {
           console.log('url', `${base_url}/${userContext?.estabId}/1/${saveTicket.id}`)
           setSavedNewTicket(`${base_url}/${userContext?.estabId}/1/${saveTicket.id}`)
-        }
+        } else if (ticketType === 4)
+          setIsOpenNewTicket(false)
       }
     } catch (error) {
       console.log('erro....')
@@ -266,20 +266,23 @@ export default function Tickets() {
       let start = parseInt(sequentialNumber.start)
       let end = parseInt(sequentialNumber.end)
       if (start < end) {
+        let text = '';
         for (let i = start; i <= end; i++) {
-          const name = `${paramsTicket.name.trim()} ${i.toString()}`
-          const text =
-            `[L]<qrcode size='20'>${base_url}/${userContext?.estabId}/2/${encodeURIComponent(name)}</qrcode>\n` +
-            `[L]${name}\n`
-          if (isPausedPrint) {
-            await new Promise<void>((resolve) => {
-              setTimeout(async () => {
-                await printThermalPrinter(text);
-                resolve(); // Resolve a Promise quando a impressão terminar
-              }, 1000); // Tempo de delay
-            });
-          } else {
+          const name = `${paramsTicket.name.trim()} ${i.toString()}`;
+          const qrCodeUrl = `${base_url}/${userContext?.estabId}/2/${encodeURIComponent(name)}`;
+      
+          // Adiciona o QR Code e o nome ao texto
+          text = `[L]<qrcode size='20'>${qrCodeUrl}</qrcode>\n` +
+                 `[L]${name}\n`;
+      
+          try {
+            // Envia para a impressora
             await printThermalPrinter(text);
+      
+            // Pausa entre as impressões
+            await new Promise(resolve => setTimeout(resolve, 500))
+          } catch (error) {
+            console.error("Erro ao enviar para a impressora:", error);
           }
         }
       }
@@ -426,7 +429,7 @@ export default function Tickets() {
                 // if (userContext?.expiredSubscription) {
                 //   Alert.alert("Wise Menu", "Não é possível abrir nova comanda.")
                 // } else {
-                  setIsOpenNewTicket(true)
+                setIsOpenNewTicket(true)
                 //}
               }}
             />
@@ -568,7 +571,7 @@ export default function Tickets() {
               </View>
               {ticketType === 2 &&
                 <View style={{ padding: 5, marginTop: 8, marginBottom: 10, alignItems: 'center' }}>
-                   <Text
+                  <Text
                     style={{ marginBottom: 8 }}
                     variant='titleLarge'>
                     Comanda fixa
@@ -656,14 +659,6 @@ export default function Tickets() {
                             onChangeText={(text) => setSequentialNumber((prevData) => ({ ...prevData, end: text }))}
                           />
                         </View>
-                      </View>
-                      <View style={{ marginTop: 20, marginLeft: 10 }}>
-                        <Text>Imprimprir pausadamente</Text>
-                        <Switch
-                          style={{ marginRight: 'auto' }}
-                          value={isPausedPrint}
-                          onValueChange={(e) => setIsPausedPrint(e)}
-                        />
                       </View>
                     </View>
 

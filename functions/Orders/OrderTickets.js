@@ -85,9 +85,21 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
       }
 
       // Delivery
-      if (clientIdUrl.typeId === '3') {
+      console.log('clientIdUrl.typeId', clientIdUrl.typeId)
+      console.log('dataTicket?.type', dataTicket?.type)
+
+      if (clientIdUrl.typeId === '3' || clientIdUrl.typeId === '5') {
+        console.log('aq deu.. hehe')
+      }
+
+      if (dataTicket?.type === 3 || dataTicket?.type === 5) {
+        console.log('entrei. dataTicket = 3 ou 5')
         // Prepara dados personalizados para o endereço
-        const deliveryLocal = `${dataAddress?.address}, ${dataAddress?.number} - ${dataAddress?.neighborhood} - ${dataAddress?.complement} - ${dataAddress.city}/${dataAddress.state}`;
+        let deliveryLocal = ""
+        if (dataTicket?.type === 3)
+          deliveryLocal = `${dataAddress?.address}, ${dataAddress?.number} - ${dataAddress?.neighborhood} - ${dataAddress?.complement} - ${dataAddress.city}/${dataAddress.state}`;
+        else
+          deliveryLocal = 'Autoatendimento'
         const deliveryName = dataAddress?.name;
         const deliveryPhone = dataAddress?.phoneNumber;
 
@@ -134,6 +146,8 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
           .collection('Tickets')
           .add(copyDataTicket);
         orderId = ticketRef.id;
+      }else{
+        console.log('sai. dataTicket nao é 3 ou 5')
       }
 
       // Monta pedido com dados atualizados
@@ -143,13 +157,13 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
         establishment: idEstablishment,
         items: shoopingCart,
         local:
-          clientIdUrl.typeId === '3'
+          dataTicket.type === 3
             ? `${dataAddress?.address}, ${dataAddress?.number} - ${dataAddress?.neighborhood} - ${dataAddress?.complement} - ${dataAddress.city}/${dataAddress.state}`
             : dataTicket?.local,
         order_id: orderId,
         status: 1,
-        name: clientIdUrl.typeId === '3' ? dataAddress?.name : dataTicket?.name,
-        phone: clientIdUrl.typeId === '3' ? dataAddress?.phoneNumber : "",
+        name: dataTicket.type === 3 || dataTicket.type === 5 ? dataAddress?.name : dataTicket?.name,
+        phone: dataTicket.type === 3 || dataTicket.type === 5 ? dataAddress?.phoneNumber : "",
         type: dataTicket?.type,
         obs: dataAddress?.obs || "",
         operator: dataTicket?.name || "",
@@ -159,7 +173,7 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
 
       await saveItemsOrder(idEstablishment, dataOrder);
 
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, orderNumber: orderNumber });
     } catch (e) {
       console.error('Erro na sendOrderSecure:', e);
       return res.status(500).json({ error: 'Erro interno no servidor.' });

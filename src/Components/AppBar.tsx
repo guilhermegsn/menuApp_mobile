@@ -44,7 +44,7 @@ export default function AppBar() {
     const text =
       `[C]<u><font size='big'>HAMBURGUER</font></u>\n` +
       `[L]\n\n\n` +
-      `[L]<font size='tall'>Data: ${moment(getCurrentDate()).format('DD/MM/YYYY')}\n` +
+      `[L]<font size='tall'>Data: ${moment().format('DD/MM/YYYY')}\n` +
       `[L]Validade: ${expires}\n</font>` 
       // `[C]--------------------------------\n`
     printThermalPrinter(text)
@@ -140,7 +140,7 @@ export default function AppBar() {
             >
               {() => <Button onPress={signOut}>sair</Button>}
             </Drawer.Screen>
-            <Drawer.Screen
+            {/* <Drawer.Screen
               name="Imprimir"
               options={{
                 headerStyle: { backgroundColor: theme.colors.primary },
@@ -152,7 +152,7 @@ export default function AppBar() {
               }}
             >
               {() => <Button onPress={()=>printExpirationDate(4)}>Imprimir </Button>}
-            </Drawer.Screen>
+            </Drawer.Screen> */}
           </> :
           <>
             <Drawer.Screen name="Login"
