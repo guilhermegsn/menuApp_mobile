@@ -270,15 +270,15 @@ export default function Tickets() {
         for (let i = start; i <= end; i++) {
           const name = `${paramsTicket.name.trim()} ${i.toString()}`;
           const qrCodeUrl = `${base_url}/${userContext?.estabId}/2/${encodeURIComponent(name)}`;
-      
+
           // Adiciona o QR Code e o nome ao texto
           text = `[L]<qrcode size='20'>${qrCodeUrl}</qrcode>\n` +
-                 `[L]${name}\n`;
-      
+            `[L]${name}\n`;
+
           try {
             // Envia para a impressora
             await printThermalPrinter(text);
-      
+
             // Pausa entre as impressões
             await new Promise(resolve => setTimeout(resolve, 500))
           } catch (error) {
@@ -489,15 +489,23 @@ export default function Tickets() {
                               size={50}
                             />
                             <Text style={{ fontSize: 10 }}>{item.local}</Text>
-                          </View> : item.type === 3 && //Delivery
-                          <View style={{ alignItems: 'center' }}>
-                            <Icon
-                              source="moped-outline"
-                              color={theme.colors.primary}
-                              size={50}
-                            />
-                            <Text style={{ fontSize: 12 }}>Delivery</Text>
-                          </View>
+                          </View> : item.type === 3 ? //Delivery
+                            <View style={{ alignItems: 'center' }}>
+                              <Icon
+                                source="moped-outline"
+                                color={theme.colors.primary}
+                                size={50}
+                              />
+                              <Text style={{ fontSize: 12 }}>Delivery</Text>
+                            </View> : item.type === 5 &&
+                            <View style={{ alignItems: 'center' }}>
+                              <Icon
+                                source="camera-front"
+                                color={theme.colors.primary}
+                                size={50}
+                              />
+                              <Text style={{ fontSize: 12 }}>Autoatendimento</Text>
+                            </View>
                       }
                     </View>
                   </Card.Content>

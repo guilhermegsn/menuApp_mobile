@@ -135,6 +135,7 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
         // Atualiza dataTicket com dados do cliente
         const copyDataTicket = {
           ...dataTicket,
+          status: dataTicket?.isOnlinePayment && dataTicket?.paymentId ? 0 : 1, //Pagamento online fecha a comanda automaticamente.
           local: deliveryLocal,
           name: deliveryName,
           phone: deliveryPhone,
@@ -146,9 +147,7 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
           .collection('Tickets')
           .add(copyDataTicket);
         orderId = ticketRef.id;
-      }else{
-        console.log('sai. dataTicket nao é 3 ou 5')
-      }
+      } 
 
       // Monta pedido com dados atualizados
       const dataOrder = {
