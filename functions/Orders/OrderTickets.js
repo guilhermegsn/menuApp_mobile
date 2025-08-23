@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { executeDirectPayment, saveDirectPayment } = require('../Payments/MercadoPago/EstablishmentPayments');
 const cors = require("cors")({ origin: true });
 
 const db = admin.firestore();
@@ -44,6 +45,81 @@ const getTicketNumber = async (idEstablishment, local) => {
 const saveItemsOrder = async (idEstablishment, dataOrder) => {
   const orderRef = await db.collection('Establishment').doc(idEstablishment).collection('Orders').add(dataOrder)
   return orderRef.id;
+}
+
+const getUpdatedCartItems = async (shoppingCart, idEstablishment) => {
+  const promises = shoppingCart.map(async (item) => {
+    const produtoSnap = await db
+      .collection("Establishment")
+      .doc(idEstablishment)
+      .collection("Menu")
+      .doc(item.idMenu)
+      .collection("items")
+      .doc(item.idItem)
+      .get()
+
+    const data = produtoSnap.data()
+
+    return {
+      idItem: item.idItem,
+      idMenu: item.idMenu,
+      qty: item.qty,
+      name: data?.name ?? "",
+      price: data?.price ?? 0,
+    }
+  })
+
+  const updatedItems = await Promise.all(promises)
+  return updatedItems
+}
+
+const calculateCartTotal = (updatedCartItems) => {
+  if (!Array.isArray(updatedCartItems)) return 0
+
+  return updatedCartItems.reduce((sum, item) => {
+    const price = item.price ?? 0
+    const qty = item.qty ?? 1
+    return sum + price * qty
+  }, 0)
+}
+
+
+const saveDirectOrder = async (idEstablishment, shoppingCart, dataAddress, dataTicket, paymentId, orderNumber, totalOrder) => {
+  console.log('salvando ordem')
+  try {
+    const dataOrder = {
+      orderNumber,
+      date: admin.firestore.FieldValue.serverTimestamp(),
+      establishment: idEstablishment,
+      items: shoppingCart,
+      local:
+        dataTicket.type === 3
+          ? `${dataAddress?.address}, ${dataAddress?.number} ${dataAddress?.complement} - ${dataAddress?.neighborhood} - ${dataAddress.city}/${dataAddress.state}`
+          : dataTicket?.local,
+      status: 1,
+      name: dataAddress?.name || "",
+      phone: dataAddress?.phoneNumber || "",
+      type: dataTicket?.type,
+      obs: dataAddress?.obs || "",
+      operator: dataTicket?.name || "",
+      paymentId,
+      totalOrder,
+      paymentType: 'CRD',
+      isOnlinePayment: true,
+      userEmail: dataAddress?.email
+    }
+
+    console.log('dataorder', dataOrder)
+
+    const orderId = await saveItemsOrder(idEstablishment, dataOrder)
+    return {
+      success: true,
+      orderId
+    }
+
+  } catch (e) {
+    return { success: false, error: e }
+  }
 }
 
 exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
@@ -92,7 +168,7 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
         console.log('aq deu.. hehe')
       }
 
-      if (dataTicket?.type === 3 || dataTicket?.type === 5) {
+      if (dataTicket?.type === 3 || dataTicket?.type === 5) {//Delivery ou autoatendimento
         console.log('entrei. dataTicket = 3 ou 5')
         // Prepara dados personalizados para o endereço
         let deliveryLocal = ""
@@ -147,7 +223,7 @@ exports.sendOrderSecure = functions.https.onRequest(async (req, res) => {
           .collection('Tickets')
           .add(copyDataTicket);
         orderId = ticketRef.id;
-      } 
+      }
 
       // Monta pedido com dados atualizados
       const dataOrder = {
@@ -204,3 +280,126 @@ exports.getTicketData = functions.https.onRequest(async (req, res) => {
     }
   })
 });
+
+
+exports.getOrderStatus = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    const { idEstablishment, orderId } = req.body;
+
+    if (!idEstablishment || !orderId) {
+      return res.status(400).json({ error: 'Invalid parameters' });
+    }
+
+    try {
+      const docRef = db.collection('Establishment').doc(idEstablishment).collection('Orders').doc(orderId);
+      const snapshot = await docRef.get();
+
+      if (!snapshot.exists) {
+        return res.status(404).json({ error: 'Invalid Order' });
+      }
+
+      const data = snapshot.data()
+
+      if (data?.status === 0)
+        return res.status(404).json({ error: 'Invalid Order' })
+     
+      return res.status(200).json({ status: data?.status, orderNumber: data?.orderNumber })
+
+    } catch (e) {
+      console.error('Erro ao buscar Order:', e);
+      return res.status(500).json({ error: 'Internal Error' });
+    }
+  })
+});
+
+
+
+exports.sendSimplifiedOrder = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    try {
+      const {
+        idEstablishment,
+        dataTicket,
+        shoopingCart,
+        dataAddress,
+        clientIdUrl,
+        cardToken
+      } = req.body;
+
+      if (!idEstablishment || !dataTicket || !shoopingCart || !clientIdUrl || !cardToken) {
+        return res.status(400).json({ error: 'Incomplete data.' });
+      }
+
+      //Gerando Número do pedido
+      const orderNumber = await generateOrderNumber(idEstablishment)
+
+      //Atualizo os dados com o Firebase (preço, nome, etc), evitando manipulação dos dados
+      const updatedDataCart = await getUpdatedCartItems(shoopingCart, idEstablishment)
+      console.log('updatedDataCart:', updatedDataCart)
+
+      //calculando total
+      const totalOrder = calculateCartTotal(updatedDataCart)
+      console.log('totalOrder:', totalOrder)
+      if (totalOrder > 0) {
+        //Criando pagamento
+        const payment = await executeDirectPayment(
+          idEstablishment,
+          totalOrder,
+          'test_user_942569659@testuser.com',
+          'WMenu',
+          cardToken
+        )
+        console.log('payment:', payment)
+        if (payment.success) {
+
+          const paymentData = {
+            id: payment?.data?.id.toString(),
+            establishmentId: idEstablishment || "",
+            status: payment?.data?.status || "",
+            status_detail: payment?.data?.status_detail || "",
+            transaction_amount: payment?.data?.transaction_amount || "",
+            description: payment?.data?.description || "",
+            payment_method_id: payment?.data?.payment_method_id || "",
+            date_approved: payment?.data?.date_approved || "",
+            payer_email: payment?.data?.payer?.email || "",
+            authorization_code: payment?.data?.authorization_code || "",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          }
+
+          try {
+            const [saveDirectPaymentResult, saveDirectOrderResult] = await Promise.all([
+              saveDirectPayment(paymentData, idEstablishment),
+              saveDirectOrder(idEstablishment, updatedDataCart, dataAddress, dataTicket, payment?.data?.id, orderNumber, totalOrder)
+            ])
+
+
+            if (saveDirectOrderResult.error) {
+              return res.status(400).json({ error: 'Erro ao finalizar pedido.' })
+            }
+
+            if (saveDirectPaymentResult.error) {
+              console.error('Erro ao salvar pagamento:', saveDirectPaymentResult.error)
+              return res.status(400).json({ error: 'Erro ao salvar pagamento.' })
+            }
+
+            return res.status(200).json({ success: true, orderNumber: orderNumber, orderId: saveDirectOrderResult?.orderId })
+
+          } catch (e) {
+            console.error('Erro ao finalizar pedido:', e);
+            return res.status(400).json({ error: 'Erro ao finalizar pedido.' })
+          }
+
+        } else {
+          return res.status(400).json({ error: 'Não foi possível processar o pagamento.' })
+        }
+      } else {
+        return res.status(400).json({ error: 'Dados inválidos.' })
+      }
+
+
+    } catch (e) {
+      console.error('Erro na sendOrderSecure:', e)
+      return res.status(500).json({ error: 'Erro interno no servidor.' })
+    }
+  })
+})

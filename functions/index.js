@@ -12,10 +12,13 @@ exports.sendNewOrderNotification = require('./Notifications/FireBaseMessaging').
 exports.setCustomClaims = require('./Notifications/FireBaseMessaging').setCustomClaims;
 exports.updateUserClaimsOnEstablishmentCreate = require('./Notifications/FireBaseMessaging').updateUserClaimsOnEstablishmentCreate;
 exports.updateUserClaims = require('./Notifications/FireBaseMessaging').updateUserClaims;
+exports.sendEmailOrder = require('./Notifications/EmailOrder').sendEmailOrder;
 
 //Pedidos
 exports.sendOrderSecure = require('./Orders/OrderTickets').sendOrderSecure;
 exports.getTicketData = require('./Orders/OrderTickets').getTicketData;
+exports.sendSimplifiedOrder = require('./Orders/OrderTickets').sendSimplifiedOrder
+exports.getOrderStatus = require('./Orders/OrderTickets').getOrderStatus
 
 //Pagamentos estabelecimento
 exports.mercadoPagoOAuthCallback = require('./Payments/MercadoPago/EstablishmentPayments').mercadoPagoOAuthCallback;

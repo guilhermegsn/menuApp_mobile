@@ -28,5 +28,6 @@ export const theme = {
     text: '#000000', // Cor do texto
     onBackground: '#FFFFFF', // Cor do texto sobre o fundo
     onSurface: '#1C1C1C', // Cor do texto sobre a superfície
+    success: '#2AA63E'
   },
 };

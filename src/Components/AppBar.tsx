@@ -20,7 +20,9 @@ import EstablishmentMenu from '../Views/EstablishmentMenu';
 import ItemsMenu from '../Views/ItemsMenu';
 import { auth } from '../Services/FirebaseConfig'
 import moment from 'moment';
-import { getCurrentDate, printThermalPrinter } from '../Services/Functions';
+import { printThermalPrinter } from '../Services/Functions';
+import GenerateQrCodes from '../Views/GenerateQrCodes';
+import OrderDetails from '../Views/OrderDetails';
 
 export default function AppBar() {
 
@@ -40,13 +42,13 @@ export default function AppBar() {
   const printExpirationDate = async (month: number) => {
     const date = new Date();
     date.setMonth(date.getMonth() + month);
-    const expires =  moment(date).format('DD/MM/YYYY')
+    const expires = moment(date).format('DD/MM/YYYY')
     const text =
       `[C]<u><font size='big'>HAMBURGUER</font></u>\n` +
       `[L]\n\n\n` +
       `[L]<font size='tall'>Data: ${moment().format('DD/MM/YYYY')}\n` +
-      `[L]Validade: ${expires}\n</font>` 
-      // `[C]--------------------------------\n`
+      `[L]Validade: ${expires}\n</font>`
+    // `[C]--------------------------------\n`
     printThermalPrinter(text)
   }
 
@@ -101,7 +103,7 @@ export default function AppBar() {
                   ),
                 }}
               />
-              <Drawer.Screen name="Tickets"
+              {/* <Drawer.Screen name="Tickets"
                 component={Tickets}
                 options={{
                   headerStyle: { backgroundColor: theme.colors.primary },
@@ -109,6 +111,18 @@ export default function AppBar() {
                   title: "Comandas",
                   drawerIcon: ({ color, size }) => (
                     <Icon source="credit-card-multiple-outline" size={size} color={theme.colors.background} />
+                  ),
+                }}
+              /> */}
+
+              <Drawer.Screen name="GenerateQrCodes"
+                component={GenerateQrCodes}
+                options={{
+                  headerStyle: { backgroundColor: theme.colors.primary },
+                  headerTitleStyle: { color: theme.colors.onBackground },
+                  title: "Gerar QrCode",
+                  drawerIcon: ({ color, size }) => (
+                    <Icon source="qrcode" size={size} color={theme.colors.background} />
                   ),
                 }}
               />
@@ -182,6 +196,17 @@ export default function AppBar() {
         <Stack.Screen
           name="CloseOrder"
           component={CloseOrder}
+          options={{
+            title: "Conferência de consumo",
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            headerTintColor: theme.colors.onBackground,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+          }}
+        />
+        <Stack.Screen
+          name="OrderDetails"
+          component={OrderDetails}
           options={{
             title: "Conferência de consumo",
             headerStyle: { backgroundColor: theme.colors.primary },

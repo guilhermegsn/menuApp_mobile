@@ -46,6 +46,81 @@ const generateUUID = () => {
   return uuid;
 }
 
+async function executeDirectPayment(establishmentId, transactionAmount, payerEmail, description, cardToken) {
+  try {
+    const tokenDoc = await admin.firestore().collection("AccessTokens").doc(establishmentId).get()
+    if (!tokenDoc.exists) {
+      throw new Error("Token do estabelecimento não encontrado");
+    }
+
+
+    const tokenData = tokenDoc.data()
+    const accessToken = JSON.parse(decrypt(tokenData.token_data))
+
+    const response = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken?.access_token}`,
+        "X-Idempotency-Key": generateUUID()
+      },
+      body: JSON.stringify({
+        installments: 1,
+        transaction_amount: transactionAmount,
+        application_fee: Number((transactionAmount * 0.04).toFixed(2)),
+        description: description || "",
+        payer: {
+          email: payerEmail
+        },
+        token: cardToken || ""
+      })
+    });
+
+    const paymentData = await response.json();
+    if (response.ok) {
+      if (paymentData.status === 'approved')
+        return { success: true, data: paymentData }
+      else
+        return { success: false, data: paymentData }
+    } else {
+      return {
+        error: paymentData.message || "Erro ao processar o pagamento",
+        details: paymentData
+      }
+    }
+
+  } catch (e) {
+    console.error(e);
+    return {
+      success: false,
+      error: "Erro interno ao processar pagamento",
+      details: e.message
+    };
+  }
+}
+
+async function saveDirectPayment(paymentData, idEstablishment) {
+  try {
+    if (!paymentData?.id) {
+      console.error("ID do pagamento ausente!", paymentData)
+      return { error: 'ID do pagamento ausente.' }
+    }
+
+    const paymentsRef = db
+      .collection('Establishment')
+      .doc(idEstablishment)
+      .collection('Payments')
+
+    await paymentsRef.doc(paymentData.id).set(paymentData)
+
+    console.log("Pagamento salvo com sucesso:", paymentData.id)
+
+    return { success: true, message: 'Pagamento salvo com sucesso.' }
+  } catch (error) {
+    console.error('Erro ao salvar pagamento:', error);
+    return { error: 'Erro interno do servidor.' }
+  }
+}
 
 
 //Armazenando dados do Mercado Pago do estabelecimento para Recebimentos em seu nome
@@ -280,3 +355,7 @@ exports.savePayment = functions.https.onRequest(async (req, res) => {
     }
   })
 })
+
+exports.executeDirectPayment = executeDirectPayment;
+exports.saveDirectPayment = saveDirectPayment;
+

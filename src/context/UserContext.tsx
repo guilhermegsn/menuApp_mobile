@@ -50,7 +50,7 @@ function UserProvider({ children }: { children: ReactNode }) {
 
   const [user, setUser] = useState<DocumentData>({} as DocumentData);
   const [initializing, setInitializing] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState<Boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<Boolean>(true)
   const [estabName, setEstabName] = useState("")
   const [estabId, setEstabId] = useState("")
   const [estabTokenFCM, setEstabTokenFCM] = useState("")

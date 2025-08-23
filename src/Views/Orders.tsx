@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, View, SafeAreaView, RefreshControl } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View, SafeAreaView, RefreshControl, TouchableOpacity } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { DocumentData, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, updateDoc, where } from 'firebase/firestore';
 import { UserContext } from '../context/UserContext';
@@ -11,11 +11,12 @@ import 'moment/locale/pt-br'
 import Loading from '../Components/Loading';
 import KeepAwake from 'react-native-keep-awake';
 import { useStorage } from '../context/StorageContext';
-import { PieChart, ProgressChart } from 'react-native-chart-kit';
+import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
 import { theme } from '../Services/ThemeConfig';
 
 export default function Orders() {
 
+  const isFocused = useIsFocused();
   const { hasPrinter, autoPrint } = useStorage();
   const userContext = useContext(UserContext)
   const [orders, setOrders] = useState<DocumentData[]>([]);
@@ -25,7 +26,10 @@ export default function Orders() {
   const [isChangeStatus, setIsChangeStatus] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DocumentData | undefined>({})
   const [isLoadingSaveStatus, setIsLoadingSaveStatus] = useState(false)
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [isOpenDetails, setIsOpenDetails] = useState(false)
+  const navigation = useNavigation()
 
   const [filteredBy, setFilteredBy] = useState("open")
 
@@ -258,30 +262,21 @@ export default function Orders() {
     printThermalPrinter(removeAccents(fullText))
   }
 
-  const styles = StyleSheet.create({
-    scrollViewContent: {
-      flexGrow: 1,
-    },
-    card: {
-      marginLeft: 8,
-      marginRight: 8,
-      marginBottom: 10,
-      paddingRight: 6,
-      backgroundColor: 'green'
-    }
-  })
-
-
   const changeStatusOrder = async (id: string, status: string) => {
-    const docRef = doc(db, 'Establishment', userContext?.estabId, 'Orders', id);
-    setIsChangeStatus(false)
-    try {
-      await updateDoc(docRef, { status: parseInt(status) });
-    } catch {
-      Alert.alert(
-        `Ocorreu um erro. Por favor, tente novamente`,
-      )
+    if (status === '3' && !confirmCancel) {
+      setConfirmCancel(true)
+    } else {
+      const docRef = doc(db, 'Establishment', userContext?.estabId, 'Orders', id);
+      setIsChangeStatus(false)
+      try {
+        await updateDoc(docRef, { status: parseInt(status) });
+      } catch {
+        Alert.alert(
+          `Ocorreu um erro. Por favor, tente novamente`,
+        )
+      }
     }
+
   }
 
 
@@ -297,6 +292,11 @@ export default function Orders() {
     setRefreshing(false);
   }, []);
 
+  const closeModalStatus = () => {
+    setIsChangeStatus(false)
+    setConfirmCancel(false)
+    setIsOpenDetails(false)
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -328,7 +328,6 @@ export default function Orders() {
               <Text variant="bodyLarge" style={{ marginLeft: 5, marginRight: 12 }}>
                 {`Em aberto: (${numOpeningTicket})`}
               </Text>
-
               <Icon source="circle" color={'orange'} size={18} />
               <Text variant="bodyLarge" style={{ marginLeft: 5 }}>{`Em preparo: (${numProgressTicket})`}</Text>
             </View>
@@ -357,13 +356,13 @@ export default function Orders() {
                       <View style={{ display: 'flex', flexDirection: 'row' }}>
                         <Text variant='titleMedium'>{order?.name}</Text>
                         {order?.isOnlinePayment &&
-                         <View style={{marginTop: 2, marginLeft: 4}}>
-                           <Icon      
-                                      
-                            source="cash-check"
-                            size={25}
-                          />
-                         </View>
+                          <View style={{ marginTop: 2, marginLeft: 4 }}>
+                            <Icon
+
+                              source="cash-check"
+                              size={25}
+                            />
+                          </View>
                         }
                       </View>}
                     subtitleVariant={'bodySmall'}
@@ -404,13 +403,21 @@ export default function Orders() {
                         </View>
                       </View>}
                   />
-                  <Card.Content>
-                    <View style={{ marginLeft: 3, marginTop: 10 }}>
-                      {order?.items.map((item: string | any, index: number) => (
-                        <Text variant='titleMedium' key={index}>{item?.qty} x {item?.name}</Text>
-                      ))}
-                    </View>
-                  </Card.Content>
+                  {order?.status === 1 ?
+                    <Card.Content>
+                      <View style={{ marginLeft: 3, marginTop: 10 }}>
+                        <Text variant='titleMedium' key={index}>Ver pedido</Text>
+                      </View>
+                    </Card.Content>
+                    :
+                    <Card.Content>
+                      <View style={{ marginLeft: 3, marginTop: 10 }}>
+                        {order?.items.map((item: string | any, index: number) => (
+                          <Text variant='titleMedium' key={index}>{item?.qty} x {item?.name}</Text>
+                        ))}
+                      </View>
+                    </Card.Content>
+                  }
                 </Card>
               </Card>
             </View>
@@ -430,7 +437,13 @@ export default function Orders() {
 
 
       <Portal>
-        <Dialog visible={isChangeStatus} onDismiss={() => setIsChangeStatus(false)}>
+        <Dialog
+          visible={isChangeStatus}
+          dismissable={false}
+          onDismiss={() => {
+            setIsChangeStatus(false)
+            setConfirmCancel(false)
+          }}>
           {isLoadingSaveStatus && <Loading />}
           <Dialog.Title>
             {String(selectedOrder?.orderNumber).padStart(5, '0')}&nbsp;-&nbsp;
@@ -438,26 +451,95 @@ export default function Orders() {
           </Dialog.Title>
           <Dialog.Content>
 
-            <Text style={{ marginTop: -20 }}>{selectedOrder?.local !== selectedOrder?.name && selectedOrder?.local || ""}</Text>
 
-            <Text style={{ marginTop: 25 }} variant="titleMedium">Selecione o status:</Text>
+            {selectedOrder?.status === 1 && !confirmCancel &&
 
-            <RadioButton.Group
-              value={selectedOrder?.status ? selectedOrder?.status.toString() : "0"}
-              onValueChange={(e) => {
-                setSelectedOrder((items) => ({
-                  ...items, status: e
-                }))
-                changeStatusOrder(selectedOrder?.id, e)
-              }}
-            >
-              <RadioButton.Item label="Aberto" color='green' value="1" />
-              <RadioButton.Item label="Em preparo" color='#F39C12' value="2" />
-              <RadioButton.Item label="Finalizado" color='black' value="0" />
-            </RadioButton.Group>
 
+              <Card>
+                <Card.Content>
+                  <View style={{ marginLeft: 3, marginTop: 5 }}>
+                    {selectedOrder?.items.map((item: string | any, index: number) => (
+                      <Text variant='titleMedium' key={index}>{item?.qty} x {item?.name}</Text>
+                    ))}
+                  </View>
+                  {selectedOrder?.local !== selectedOrder?.name &&
+                    <Text style={{ marginTop: 20, marginBottom: 20 }}>{selectedOrder?.local || ""}</Text>
+                  }
+                </Card.Content>
+              </Card>
+
+
+
+            }
+
+            {confirmCancel ?
+              <View>
+                <Text variant="bodyLarge" style={{ color: 'red' }}>Cancelar pedido?</Text>
+                <Text variant="bodyMedium">Caso o pagamento do pedido tenha sido realizado online, o reembolso será processado automaticamente.</Text>
+
+                <Button
+                  style={{ margin: 30 }}
+                  icon={'close-circle'}
+                  mode="contained"
+                  onPress={() => {
+                    changeStatusOrder(selectedOrder?.id, '3')
+                    closeModalStatus()
+                  }}>
+                  Confirmar cancelamento
+                </Button>
+
+              </View>
+              :
+              <View style={{ marginTop: 20 }}>
+                {selectedOrder?.status !== 2 &&
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: theme.colors.success }]}
+                    onPress={() => changeStatusOrder(selectedOrder?.id, "2")}
+                  >
+                    <Text style={[styles.buttonText]}>
+                      Preparar pedido
+                    </Text>
+                  </TouchableOpacity>
+                }
+
+
+                {/* Botão para 'Cancelar Pedido' */}
+                <TouchableOpacity
+                  style={[styles.button, { backgroundColor: theme.colors.error }]}
+                  onPress={() => setConfirmCancel(true)}
+                >
+                  <Text style={styles.buttonText}>
+                    Cancelar pedido
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Botão para 'Finalizar' */}
+                {selectedOrder?.status !== 1 && (
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: theme.colors.secondary }]}
+                    onPress={() => changeStatusOrder(selectedOrder?.id, "0")}
+                  >
+                    <Text style={styles.buttonText}>
+                      Finalizar
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+              </View>
+            }
           </Dialog.Content>
           <Dialog.Actions>
+            <Button
+              disabled={isLoadingSaveStatus}
+              icon={'arrow-left'}
+              onPress={() => {
+                if (confirmCancel)
+                  setConfirmCancel(false)
+                else
+                  closeModalStatus()
+              }}>
+              Voltar
+            </Button>
             {hasPrinter &&
               <Button
                 disabled={isLoadingSaveStatus}
@@ -468,14 +550,60 @@ export default function Orders() {
             }
             <Button
               disabled={isLoadingSaveStatus}
-              icon={'close-circle-outline'}
-              onPress={() => setIsChangeStatus(false)}>
-              Fechar
-            </Button>
+              icon={'details'}
+              onPress={() => {
+                closeModalStatus()
+                navigation.navigate('OrderDetails', { data: selectedOrder })
+              }}
+            >
+              Detalhes
+            </Button> 
           </Dialog.Actions>
         </Dialog>
       </Portal>
-      <Button onPress={() => console.log(hasPrinter, autoPrint)}>log</Button>
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  scrollViewContent: {
+    flexGrow: 1,
+  },
+  card: {
+    marginLeft: 8,
+    marginRight: 8,
+    marginBottom: 10,
+    paddingRight: 6,
+    backgroundColor: 'green'
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    width: 300,
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 18,
+    marginBottom: 20,
+    fontWeight: 'bold',
+  },
+  button: {
+    width: '100%',
+    padding: 15,
+    marginVertical: 5,
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'white'
+  },
+});

@@ -1,6 +1,6 @@
 import { ImageLibraryOptions, ImagePickerResponse, PhotoQuality, launchImageLibrary } from "react-native-image-picker";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
-import { PermissionsAndroid, Platform, Vibration } from "react-native";
+import { Linking, PermissionsAndroid, Platform, Vibration } from "react-native";
 import ThermalPrinterModule from 'react-native-thermal-printer'
 import NfcManager, { NfcTech } from 'react-native-nfc-manager';
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -415,4 +415,19 @@ export const urlNormalize = (establishmentName: string) => {
 
   return uniqueName
 }
+
+export const openUrl = async (url: string) => {
+  url = encodeURI(url)
+  console.log(url)
+  const canOpen = await Linking.canOpenURL(url)
+
+  if (canOpen) {
+    // Tenta abrir a URL
+    await Linking.openURL(url);
+  } else {
+    // Se a URL não puder ser aberta, você pode exibir um alerta ou fazer outra ação.
+    console.log('Não foi possível abrir a URL.');
+  }
+};
+
 

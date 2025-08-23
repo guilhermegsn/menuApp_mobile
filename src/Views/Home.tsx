@@ -169,7 +169,7 @@ export default function Home() {
     try {
       setIsLoading(true);
       const uid = auth.currentUser?.uid;
-      if (!uid) return console.error("Usuário não autenticado.");
+      if (!uid) return 
 
       const userDoc = await getDoc(doc(db, "User", uid));
       if (!userDoc.exists()) return console.warn("Usuário não encontrado no Firestore.");

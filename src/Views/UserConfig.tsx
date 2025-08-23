@@ -242,7 +242,7 @@ export default function UserConfig() {
                   {moment(dataSubscription?.lastAuthorizedPayment.toDate()).utcOffset(-3).format("DD/MM/YYYY HH:mm")}
                 </Text>
 
-                <View style={{ marginLeft: 'auto' }}>
+                <View style={{ alignItems: 'center' }}>
                   <Button
                     style={{ marginTop: 12, marginBottom: 25 }}
                     mode='outlined'
@@ -260,10 +260,43 @@ export default function UserConfig() {
             }
 
             <Divider />
-            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Habilitar Delivery</Text>
-
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Receber online</Text>
             <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 20 }}>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Button
+                style={{ marginTop: 12, marginBottom: 25 }}
+                mode='outlined'
+                onPress={() => setIsOpenDialogOnlinePayment(true)}
+              >Configurar conta</Button>
+            </View>
+
+            <Divider />
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Configurações de improssora</Text>
+
+            <View style={{ display: 'flex', flexDirection: 'row' }}>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginBottom: 20 }}>
+                <Text>Habilitado</Text>
+                <Switch
+                  value={hasPrinter}
+                  onValueChange={setHasPrinter}
+                />
+              </View>
               <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
+                <Text>Imprimir pedidos</Text>
+                <Switch
+                  disabled={!hasPrinter}
+                  value={autoPrint}
+                  onValueChange={setAutoPrint}
+                />
+              </View>
+
+            </View>
+
+            <Divider />
+            <Text variant="headlineSmall" style={{ marginTop: 12, fontSize: 20 }}>Aceitar pedidos automaticamente</Text>
+            <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 20 }}>
+              <View style={{ marginBottom: 10, marginTop: 20 }}>
                 <Text>Habilitado</Text>
                 <Switch
                   value={hasOnlinePayment}
@@ -271,13 +304,9 @@ export default function UserConfig() {
                 />
               </View>
             </View>
-            <View style={{ marginLeft: 'auto' }}>
-              <Button
-                style={{ marginTop: 12, marginBottom: 25 }}
-                mode='outlined'
-                onPress={() => setIsOpenDialogOnlinePayment(true)}
-              >Configurar conta</Button>
-            </View>
+
+
+
 
             <Divider />
 
@@ -299,7 +328,7 @@ export default function UserConfig() {
               ))}
             </DataTable>
 
-            <View style={{ marginLeft: 'auto' }}>
+            <View style={{ alignItems: 'center' }}>
               <Button
                 style={{ marginTop: 20, marginBottom: 25 }}
                 mode='outlined'
@@ -307,31 +336,10 @@ export default function UserConfig() {
                   // if (userContext?.expiredSubscription) {
                   //   Alert.alert("Wize Menu", "Não é possível criar um novo usuário")
                   // } else {
-                    setIsNewRegister(true)
+                  setIsNewRegister(true)
                   //}
                 }}
               >Adicionar Usuário</Button>
-            </View>
-            <Divider />
-            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Configurações de improssora</Text>
-
-            <View style={{ display: 'flex', flexDirection: 'row' }}>
-              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
-                <Text>Habilitado</Text>
-                <Switch
-                  value={hasPrinter}
-                  onValueChange={setHasPrinter}
-                />
-              </View>
-              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
-                <Text>Imprimir pedidos</Text>
-                <Switch
-                  disabled={!hasPrinter}
-                  value={autoPrint}
-                  onValueChange={setAutoPrint}
-                />
-              </View>
-
             </View>
             <Button onPress={() => console.log(hasPrinter, autoPrint)}>log</Button>
           </View>
@@ -439,18 +447,18 @@ export default function UserConfig() {
       {/* Modal Usuário */}
       <Portal>
         <Dialog visible={isOpenDialogOnlinePayment} onDismiss={() => setIsOpenDialogOnlinePayment(false)}>
-          <Dialog.Title style={{ textAlign: 'center' }}>{'Habilitar Delivery'}</Dialog.Title>
+          <Dialog.Title style={{ textAlign: 'center' }}>{'Receber online'}</Dialog.Title>
           {stepAccountMercadoPago === 0 ?
             <View style={{ margin: 20 }}>
-              <Text variant="titleSmall">Para habilitar o sistema de Delivery, é necessário possuir uma conta  
+              <Text variant="titleSmall">Para receber pagamentos online, é necessário possuir uma conta
                 no Mercado Pago para receber os pagamentos.
-                </Text>
+              </Text>
               <Text variant="titleSmall" style={{ marginTop: 10 }}>
                 Os pagamentos serão processados pelo Mercado Pago e cairá diretamente na sua conta no mesmo dia.
               </Text>
               <Text variant="titleMedium" style={{ marginTop: 10 }}>Confira as taxas:</Text>
               <Text variant="titleSmall" style={{ marginTop: 10 }}>Crédito à vista: 4,98%</Text>
-              <Text variant="titleSmall" style={{ marginTop: 10 }}>Taxa : 5,02%</Text>
+              <Text variant="titleSmall" >Taxa de serviço: 5,02%</Text>
               <Text variant="bodyMedium" style={{ marginTop: 30 }}>Ainda nâo possui uma conta  Mercado Pago?</Text>
 
               <Button style={{ marginTop: 10 }}
@@ -463,6 +471,9 @@ export default function UserConfig() {
                 onPress={authorizeMercadoPago}
                 mode='outlined'>Vincular minha conta Mercado Pago
               </Button>
+              <Text variant="bodySmall" style={{ marginTop: 20 }}>
+                Ao clicar nos botões acima, você será redirecionado para o Mercado Pago em seu navegador para finalizar a configuração.
+              </Text>
             </View>
             : stepAccountMercadoPago === 1 ?
               <View style={{ margin: 20 }}>
