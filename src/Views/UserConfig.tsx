@@ -10,6 +10,7 @@ import { updateUserClaims } from '../Services/Functions';
 import moment from 'moment';
 import ModalPlans from './ModalPlans';
 import { useStorage } from '../context/StorageContext';
+import { Image } from 'react-native';
 
 interface User {
   id: "",
@@ -232,9 +233,31 @@ export default function UserConfig() {
         style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         {isLoading ? <Loading /> :
           <View>
-            <Text variant="headlineSmall" style={{ marginBottom: 12 }}>Meu plano</Text>
-            {dataSubscription && dataPlans ?
+            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Configurações de improssora</Text>
+            <View style={{ display: 'flex', flexDirection: 'row' }}>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginBottom: 20 }}>
+                <Text>Habilitado</Text>
+                <Switch
+                  value={hasPrinter}
+                  onValueChange={setHasPrinter}
+                />
+              </View>
+              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
+                <Text>Imprimir pedidos automaticamente</Text>
+                <Switch
+                  disabled={!hasPrinter}
+                  value={autoPrint}
+                  onValueChange={setAutoPrint}
+                />
+              </View>
+
+            </View>
+
+            <Divider />
+
+            {/* {dataSubscription && dataPlans ?
               <View>
+               <Text variant="headlineSmall" style={{ marginBottom: 12 }}>Meu plano</Text>
                 <Text>Plano: {dataPlans.find(item => item.planId === dataSubscription.planId)?.name || ""}</Text>
                 <Text>Status: {dataSubscription?.status === 'active' ? 'Ativo' : 'paused' ? 'Cancelado' : 'Pendente'}</Text>
                 <Text>
@@ -257,13 +280,13 @@ export default function UserConfig() {
                   mode='outlined'
                   onPress={() => setIsOpenModalPlans(true)}>Assinar o Wise Menu</Button>
               </View>
-            }
+            } */}
 
             <Divider />
             <Text variant="headlineSmall" style={{ marginTop: 12 }}>Receber online</Text>
             <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 20 }}>
             </View>
-            <View style={{ alignItems: 'center' }}>
+            <View style={{ alignItems: 'flex-start' }}>
               <Button
                 style={{ marginTop: 12, marginBottom: 25 }}
                 mode='outlined'
@@ -272,45 +295,8 @@ export default function UserConfig() {
             </View>
 
             <Divider />
-            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Configurações de improssora</Text>
 
-            <View style={{ display: 'flex', flexDirection: 'row' }}>
-              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginBottom: 20 }}>
-                <Text>Habilitado</Text>
-                <Switch
-                  value={hasPrinter}
-                  onValueChange={setHasPrinter}
-                />
-              </View>
-              <View style={{ alignItems: 'flex-start', marginLeft: 10, marginTop: 30, marginRight: 20 }}>
-                <Text>Imprimir pedidos</Text>
-                <Switch
-                  disabled={!hasPrinter}
-                  value={autoPrint}
-                  onValueChange={setAutoPrint}
-                />
-              </View>
-
-            </View>
-
-            <Divider />
-            <Text variant="headlineSmall" style={{ marginTop: 12, fontSize: 20 }}>Aceitar pedidos automaticamente</Text>
-            <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 20 }}>
-              <View style={{ marginBottom: 10, marginTop: 20 }}>
-                <Text>Habilitado</Text>
-                <Switch
-                  value={hasOnlinePayment}
-                  onValueChange={setHasOnlinePayment}
-                />
-              </View>
-            </View>
-
-
-
-
-            <Divider />
-
-            <Text variant="headlineSmall" style={{ marginTop: 12 }}>Usuários do sistema</Text>
+            {/* <Text variant="headlineSmall" style={{ marginTop: 12 }}>Usuários do sistema</Text>
             <DataTable style={{ marginTop: 10 }}>
               <DataTable.Header>
                 <DataTable.Title style={{ flex: 5 }}>E-mail</DataTable.Title>
@@ -328,7 +314,7 @@ export default function UserConfig() {
               ))}
             </DataTable>
 
-            <View style={{ alignItems: 'center' }}>
+            <View style={{ alignItems: 'flex-start' }}>
               <Button
                 style={{ marginTop: 20, marginBottom: 25 }}
                 mode='outlined'
@@ -340,8 +326,7 @@ export default function UserConfig() {
                   //}
                 }}
               >Adicionar Usuário</Button>
-            </View>
-            <Button onPress={() => console.log(hasPrinter, autoPrint)}>log</Button>
+            </View> */}
           </View>
         }
 
@@ -448,13 +433,16 @@ export default function UserConfig() {
       <Portal>
         <Dialog visible={isOpenDialogOnlinePayment} onDismiss={() => setIsOpenDialogOnlinePayment(false)}>
           <Dialog.Title style={{ textAlign: 'center' }}>{'Receber online'}</Dialog.Title>
+          <View style={{ flexDirection: 'row', alignSelf: 'center' }}>
+            <Image source={require('../assets/images/wise.png')} style={{ height: 60, width: 80 }} />
+            <Image source={require('../assets/images/mplogo.png')} style={{ height: 30, width: 120, marginLeft: 10, marginTop: 15 }} />
+          </View>
           {stepAccountMercadoPago === 0 ?
             <View style={{ margin: 20 }}>
-              <Text variant="titleSmall">Para receber pagamentos online, é necessário possuir uma conta
-                no Mercado Pago para receber os pagamentos.
-              </Text>
+              <Text variant="titleSmall"> Para realizar o recebimento de pagamentos online, é imprescindível que você tenha uma conta no Mercado Pago. </Text>
+
               <Text variant="titleSmall" style={{ marginTop: 10 }}>
-                Os pagamentos serão processados pelo Mercado Pago e cairá diretamente na sua conta no mesmo dia.
+                Os pagamentos serão processados pelo Mercado Pago e serão creditados diretamente em sua conta no mesmo dia.
               </Text>
               <Text variant="titleMedium" style={{ marginTop: 10 }}>Confira as taxas:</Text>
               <Text variant="titleSmall" style={{ marginTop: 10 }}>Crédito à vista: 4,98%</Text>
