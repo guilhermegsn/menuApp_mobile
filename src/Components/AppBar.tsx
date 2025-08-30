@@ -23,10 +23,12 @@ import moment from 'moment';
 import { printThermalPrinter } from '../Services/Functions';
 import GenerateQrCodes from '../Views/GenerateQrCodes';
 import OrderDetails from '../Views/OrderDetails';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 export default function AppBar() {
 
   const Drawer = createDrawerNavigator();
+  const Tab = createBottomTabNavigator()
   const Stack = createStackNavigator();
   const userContext = useContext(UserContext);
 
@@ -54,142 +56,54 @@ export default function AppBar() {
 
   const DrawerNavigator = () => {
     return (
-      <Drawer.Navigator
-        screenOptions={{
-          // drawerStyle: { marginTop: '14.5%' },
-          drawerStyle: { backgroundColor: theme.colors.primary },
-          //     overlayColor: 'transparent',
-          headerTintColor: theme.colors.onBackground,
-          drawerLabelStyle: {
-            color: theme.colors.background,
-          },
-        }}
-        initialRouteName={userContext?.isAuthenticated ? 'Home' : 'Login'}
-      //initialRouteName={'Login'}
+      <Tab.Navigator
       >
-        {userContext?.isAuthenticated ?
-          <>
-            <Drawer.Screen name="Home"
-              component={Home}
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: userContext?.estabName || "wise menu",
-                drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="store" size={size} color={theme.colors.background} />
-                ),
-              }}
-            />
-            {userContext?.estabId !== "" && <>
-              <Drawer.Screen name="EstablishmentMenu"
-                component={EstablishmentMenu}
-                options={{
-                  headerStyle: { backgroundColor: theme.colors.primary },
-                  headerTitleStyle: { color: theme.colors.onBackground },
-                  title: "Cardápio",
-                  drawerIcon: ({ color, size }) => (
-                    <Icon source="book-open-variant" size={size} color={theme.colors.background} />
-                  ),
-                }}
-              />
-              <Drawer.Screen name="Orders"
-                component={Orders}
-                options={{
-                  headerStyle: { backgroundColor: theme.colors.primary },
-                  headerTitleStyle: { color: theme.colors.onBackground },
-                  title: "Pedidos",
-                  drawerIcon: ({ color, size }) => (
-                    <Icon source="circle-slice-8" size={size} color={theme.colors.background} />
-                  ),
-                }}
-              />
-              {/* <Drawer.Screen name="Tickets"
-                component={Tickets}
-                options={{
-                  headerStyle: { backgroundColor: theme.colors.primary },
-                  headerTitleStyle: { color: theme.colors.onBackground },
-                  title: "Comandas",
-                  drawerIcon: ({ color, size }) => (
-                    <Icon source="credit-card-multiple-outline" size={size} color={theme.colors.background} />
-                  ),
-                }}
-              /> */}
 
-              <Drawer.Screen name="GenerateQrCodes"
-                component={GenerateQrCodes}
-                options={{
-                  headerStyle: { backgroundColor: theme.colors.primary },
-                  headerTitleStyle: { color: theme.colors.onBackground },
-                  title: "Gerar QrCode",
-                  drawerIcon: ({ color, size }) => (
-                    <Icon source="qrcode" size={size} color={theme.colors.background} />
-                  ),
-                }}
-              />
+        <Tab.Screen name="Home"
+          component={Home}
+          options={{
+            headerShown: false,
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            title: userContext?.estabName || "wise menu",
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="store" size={size} color={theme.colors.primary} />
+            ),
+          }}
+        />
 
-              {userContext.userRole === 'ADM' &&
-                <Drawer.Screen name="UserConfig"
-                  component={UserConfig}
-                  options={{
-                    headerStyle: { backgroundColor: theme.colors.primary },
-                    headerTitleStyle: { color: theme.colors.onBackground },
-                    title: "Configurações",
-                    drawerIcon: ({ color, size }) => (
-                      <Icon source="cog" size={size} color={theme.colors.background} />
-                    ),
-                  }}
-                />
-              }
-            </>}
-            <Drawer.Screen
-              name="Logoff"
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: 'Logoff',
-                drawerIcon: ({ color, size }) => (
-                  <Icon source="logout" size={size} color={theme.colors.background} />
-                ),
-              }}
-            >
-              {() => <Button onPress={signOut}>sair</Button>}
-            </Drawer.Screen>
-            {/* <Drawer.Screen
-              name="Imprimir"
-              options={{
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                title: 'Imprimir',
-                drawerIcon: ({ color, size }) => (
-                  <Icon source="account-circle" size={size} color={theme.colors.background} />
-                ),
-              }}
-            >
-              {() => <Button onPress={()=>printExpirationDate(4)}>Imprimir </Button>}
-            </Drawer.Screen> */}
-          </> :
-          <>
-            <Drawer.Screen name="Login"
-              component={Login}
-              options={{
-                title: "wise menu",
-                headerStyle: { backgroundColor: theme.colors.primary },
-                headerTitleStyle: { color: theme.colors.onBackground },
-                drawerIcon: ({ color, size }) => (
-                  <MaterialIcons name="account-circle" size={size} color={theme.colors.background} />
-                ),
-              }}
-            />
-          </>
-        }
-      </Drawer.Navigator>
+        <Tab.Screen name="EstablishmentMenu"
+          component={EstablishmentMenu}
+          options={{
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            title: "Cardápio",
+            tabBarIcon: ({ color, size }) => (
+              <Icon source="book-open-variant" size={size} color={theme.colors.primary} />
+            ),
+          }}
+        />
+        <Tab.Screen name="Orders"
+          component={Orders}
+          options={{
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTitleStyle: { color: theme.colors.onBackground },
+            title: "Pedidos",
+            tabBarIcon: ({ color, size }) => (
+              <Icon source="circle-slice-8" size={size} color={theme.colors.primary} />
+            ),
+          }}
+        />
+
+      </Tab.Navigator>
     )
   }
 
   return (
     <NavigationContainer>
       <StatusBar
-        backgroundColor={theme.colors.primary}
+        barStyle={'dark-content'}
+        backgroundColor={theme.colors.surface}
       />
       <Stack.Navigator initialRouteName="DrawerNavigator">
         <Stack.Screen name="DrawerNavigator" component={DrawerNavigator} options={{ headerShown: false }} />

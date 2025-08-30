@@ -2383,6 +2383,15 @@
     invariant "^2.2.4"
     nullthrows "^1.1.1"
 
+"@react-navigation/bottom-tabs@^6.5.16":
+  version "6.5.16"
+  resolved "https://registry.npmjs.org/@react-navigation/bottom-tabs/-/bottom-tabs-6.5.16.tgz"
+  integrity sha512-zw6hlP1YI4APbOoeJSg1JS9h3OPZIp4O2ccAkiIPgw7T6wyKs8dGJyrkkUtTryXoRUqL1D14xp6K1Etgqm7F2A==
+  dependencies:
+    "@react-navigation/elements" "^1.3.26"
+    color "^4.2.3"
+    warn-once "^0.1.0"
+
 "@react-navigation/core@^6.4.17":
   version "6.4.17"
   resolved "https://registry.npmjs.org/@react-navigation/core/-/core-6.4.17.tgz"
@@ -2404,10 +2413,10 @@
     color "^4.2.3"
     warn-once "^0.1.0"
 
-"@react-navigation/elements@^1.3.20", "@react-navigation/elements@^1.3.21":
-  version "1.3.21"
-  resolved "https://registry.npmjs.org/@react-navigation/elements/-/elements-1.3.21.tgz"
-  integrity sha512-eyS2C6McNR8ihUoYfc166O1D8VYVh9KIl0UQPI8/ZJVsStlfSTgeEEh+WXge6+7SFPnZ4ewzEJdSAHH+jzcEfg==
+"@react-navigation/elements@^1.3.20", "@react-navigation/elements@^1.3.21", "@react-navigation/elements@^1.3.26":
+  version "1.3.31"
+  resolved "https://registry.npmjs.org/@react-navigation/elements/-/elements-1.3.31.tgz"
+  integrity sha512-bUzP4Awlljx5RKEExw8WYtif8EuQni2glDaieYROKTnaxsu9kEIA515sXQgUDZU4Ob12VoL7+z70uO3qrlfXcQ==
 
 "@react-navigation/native-stack@^6.9.15":
   version "6.9.15"

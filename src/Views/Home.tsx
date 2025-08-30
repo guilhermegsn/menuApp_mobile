@@ -169,7 +169,7 @@ export default function Home() {
     try {
       setIsLoading(true);
       const uid = auth.currentUser?.uid;
-      if (!uid) return 
+      if (!uid) return
 
       const userDoc = await getDoc(doc(db, "User", uid));
       if (!userDoc.exists()) return console.warn("Usuário não encontrado no Firestore.");
@@ -312,123 +312,22 @@ export default function Home() {
   };
 
 
-  const styles = StyleSheet.create({
-    scrollViewContent: {
-      flexGrow: 1,
-      padding: 10
-    },
-    container: {
-      flex: 1,
-      backgroundColor: '#f8f9fa',
-    },
-    banner: {
-      padding: 30,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderBottomLeftRadius: 40,
-      borderBottomRightRadius: 40,
-      overflow: 'hidden', // Necessário para os cantos arredondados
-      height: 400, // Ajuste conforme necessário
-    },
-
-    bannerImage: {
-      borderBottomLeftRadius: 40,
-      borderBottomRightRadius: 40,
-    },
-    bannerTitle: {
-      color: '#fff',
-      fontSize: 28,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginBottom: 60
-    },
-    cardsContainer: {
-      padding: 20,
-    },
-    sectionTitle: {
-      marginTop: 30,
-      fontSize: 22,
-      fontWeight: 'bold',
-      marginBottom: 20,
-      color: '#333',
-      textAlign: 'center',
-    },
-    sectionSubTitle: {
-      fontSize: 17,
-      marginBottom: 30,
-      color: '#566573',
-      textAlign: 'center',
-    },
-    card: {
-      backgroundColor: '#fff',
-      borderRadius: 10,
-      padding: 15,
-      marginBottom: 20,
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      elevation: 5,
-    },
-    cardImage: {
-      width: '100%',
-      height: 150,
-      borderRadius: 10,
-    },
-    cardTitle: {
-      fontSize: 15,
-      fontWeight: 'bold',
-      marginTop: 10,
-      color: theme.colors.primary,
-    },
-    cardDescription: {
-      fontSize: 12,
-      color: '#555',
-      marginTop: 5,
-    },
-    button: {
-      backgroundColor: '#6c63ff',
-      padding: 15,
-      borderRadius: 30,
-      alignItems: 'center',
-      margin: 20,
-    },
-    buttonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    footer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      alignItems: 'center',
-      // paddingBottom: 20, // Ajuste para que a imagem não fique colada na borda
-    },
-    footerImage: {
-      // marginTop: 15,
-      width: '40%',   // Ajuste o tamanho da imagem conforme necessário
-      height: 30,   // Ajuste o tamanho da imagem conforme necessário
-    },
-    buttomBar: {
-      position: 'absolute',
-      bottom: 10,
-      width: "100%",
-      display: 'flex',
-      flexDirection: 'row',
-      justifyContent: 'space-evenly'
-    }
-  })
-
-  useEffect(()=> {
+ 
+  useEffect(() => {
     const now = new Date('2025-03-31T00:00:00Z'); // Data de hoje
-const sevenDaysLater = new Date(now.getTime() + (5 * 24 * 60 * 60 * 1000)); // Adicionar 7 dias em milissegundos
-const timestamp_ms_7_days_later = sevenDaysLater.getTime(); // Timestamp em milissegundos
-console.log(timestamp_ms_7_days_later); // Resultado final
+    const sevenDaysLater = new Date(now.getTime() + (5 * 24 * 60 * 60 * 1000)); // Adicionar 7 dias em milissegundos
+    const timestamp_ms_7_days_later = sevenDaysLater.getTime(); // Timestamp em milissegundos
+    console.log(timestamp_ms_7_days_later); // Resultado final
   }, [])
 
   return (
     <View style={{ flex: 1, flexGrow: 1 }}>
+      <View style={styles.logoContent}>
+        <Image
+          source={require('../assets/images/wisemenu.png')}
+          style={styles.logoImage}
+        />
+      </View>
       <ModalPlans
         isOpenModalPlans={isOpenModalPlans}
         setIsOpenModalPlans={setIsOpenModalPlans}
@@ -725,17 +624,17 @@ console.log(timestamp_ms_7_days_later); // Resultado final
 
         {regStage === 4 &&
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, marginTop: 20 }}>
+            <Text style={{ fontSize: 20, marginTop: 10 }}>
               {userContext?.estabName}
             </Text>
             <Text style={{ fontSize: 15 }}>{auth.currentUser?.email}</Text>
-            <Text style={{ fontSize: 15, marginTop: "2%", marginBottom: 10 }} onPress={() => signOut()}>
+            {/* <Text style={{ fontSize: 15, marginTop: "2%", marginBottom: 10 }} onPress={() => signOut()}>
               <Icon
                 source="logout"
                 size={20}
               />{"Sair"}
-            </Text>
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginLeft: 3 }}>
+            </Text> */}
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginLeft: 3, marginTop: 10 }}>
 
               <Card
                 style={{ width: "46%", margin: "2%", height: 240 }}
@@ -792,3 +691,118 @@ console.log(timestamp_ms_7_days_later); // Resultado final
     </View >
   )
 }
+
+const styles = StyleSheet.create({
+  scrollViewContent: {
+    flexGrow: 1,
+    padding: 10
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  banner: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    overflow: 'hidden', // Necessário para os cantos arredondados
+    height: 400, // Ajuste conforme necessário
+  },
+
+  bannerImage: {
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 60
+  },
+  cardsContainer: {
+    padding: 20,
+  },
+  sectionTitle: {
+    marginTop: 30,
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+    textAlign: 'center',
+  },
+  sectionSubTitle: {
+    fontSize: 17,
+    marginBottom: 30,
+    color: '#566573',
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  cardImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginTop: 10,
+    color: theme.colors.primary,
+  },
+  cardDescription: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 5,
+  },
+  button: {
+    backgroundColor: '#6c63ff',
+    padding: 15,
+    borderRadius: 30,
+    alignItems: 'center',
+    margin: 20,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  footer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    // paddingBottom: 20, // Ajuste para que a imagem não fique colada na borda
+  },
+  footerImage: {
+    // marginTop: 15,
+    width: '40%',   // Ajuste o tamanho da imagem conforme necessário
+    height: 30,   // Ajuste o tamanho da imagem conforme necessário
+  },
+  buttomBar: {
+    position: 'absolute',
+    bottom: 10,
+    width: "100%",
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-evenly'
+  },
+  logoImage: {
+    width:150,
+    height:40
+  },
+  logoContent:{
+    margin: 10
+  }
+})
