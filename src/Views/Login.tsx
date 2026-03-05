@@ -11,6 +11,7 @@ import { theme } from '../Services/ThemeConfig';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification, sendPasswordResetEmail, signInWithCredential, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { refreshUserToken } from '../Services/Functions';
 import Loading from '../Components/Loading';
+import { ios_only_SCOPES_ALREADY_GRANTED } from '@react-native-google-signin/google-signin/lib/typescript/src/errors/errorCodes';
 
 export default function Login() {
   const { width } = Dimensions.get('window');
@@ -79,13 +80,25 @@ export default function Login() {
   }, []);
 
   const signIn = async () => {
+    if (!dataUser.email || !dataUser.password) {
+      Alert.alert('Informe usuário e senha.')
+      return
+    }
     setIsLoading(true)
     try {
       const userCredential = await signInWithEmailAndPassword(auth, dataUser.email, dataUser.password);
       await refreshUserToken();
       console.log("Usuário autenticado com sucesso!", userCredential.user);
-    } catch (error) {
-      Alert.alert('Erro durante login:', error?.toString() || "")
+    } catch (error: any) {
+      let errorStr = ''
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorStr = 'Usuário não cadastrado. Verifique.'; break;
+        case 'auth/wrong-password':
+          errorStr = 'Usuário ou senha inválido. Verifique.'; break;
+      }
+
+      Alert.alert('Erro durante login:', errorStr || "")
     } finally {
       setIsLoading(false)
     }
@@ -133,8 +146,6 @@ export default function Login() {
   }
 
 
-
-
   const signInWithGoogle = async () => {
     setIsLoading(true);
     try {
@@ -180,7 +191,6 @@ export default function Login() {
       Alert.alert('Erro', 'Por favor, insira um e-mail válido.');
       return;
     }
-
     try {
       await sendPasswordResetEmail(auth, email);
       Alert.alert(

@@ -64,7 +64,7 @@ export default function GenerateQrCodes() {
 
       <Portal>
         <Modal visible={isOpenModal} onDismiss={() => setIsOpenModal(false)} contentContainerStyle={styles.modal}>
-          <Text style={styles.title}>Imprimir QR Code para Mesas</Text>
+          <Text style={styles.title}>Imprimir QR Code Autoatendimento</Text>
 
           <RadioButton.Group onValueChange={value => setType(value as 'single' | 'range')} value={type}>
             <View style={styles.option}>
@@ -134,7 +134,7 @@ export default function GenerateQrCodes() {
 
       <Portal>
         <Modal visible={isOpenPrintModal} onDismiss={() => setIsOpenModal(false)} contentContainerStyle={styles.modal}>
-          <Text style={styles.title}>Imprimir QR Code para Mesas</Text>
+          <Text style={styles.title}>Imprimir QR Code Autoatendimento</Text>
 
           <RadioButton.Group onValueChange={value => setTypePrint(value as 'print' | 'browser')} value={typePrint}>
             <View style={styles.option}>

@@ -13,7 +13,7 @@ exports.sendNewOrderNotification = functions.firestore
     }
 
     const establishmentId = orderData.establishment;
-
+    
     if (!establishmentId) {
       console.error('ID do estabelecimento não encontrado no pedido.');
       return null;
